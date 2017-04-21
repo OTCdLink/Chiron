@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <properties>
+
+
+  </properties>
+
+
+  <parent>
+    <relativePath>bill-of-materials/pom.xml</relativePath>
+    <groupId>io.github.otcdlink.chiron</groupId>
+    <artifactId>Chiron-bill-of-materials</artifactId>
+    <version>dev-SNAPSHOT</version>
+  </parent>
+
+
+  <groupId>io.github.otcdlink.chiron</groupId>
+  <artifactId>Chiron</artifactId>
+  <packaging>pom</packaging>
+  <name>Chiron</name>
+	<description>⚷</description>
+
+  <modules>
+    <module>toolbox</module>
+    <module>configuration</module>
+    <module>middle</module>
+    <module>downend</module>
+    <module>testing</module>
+    <module>fixture</module>
+    <module>middle-fixture</module>
+    <module>upend</module>
+    <module>reactor</module>
+    <module>keystore-fixture</module>
+    <module>twilio</module>
+    <module>integration-fixture</module>
+    <module>integration</module>
+    <module>lab-middle</module>
+    <module>lab-upend</module>
+    <module>lab-downend</module>
+    <module>lab-integration</module>
+    <module>reactor-benchmark</module>
+<!--
+-->      
+  </modules>
+
+
+  <build>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${plugin.maven-surefire-plugin.version}</version>
+<!--
+        <configuration>
+          <parallel>methods</parallel>
+          <threadCount>4</threadCount>
+        </configuration>
+-->
+      </plugin>
+
+
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>${plugin.maven-site-plugin.version}</version>
+        <configuration>
+          <generateReports>false</generateReports>
+       </configuration>
+     </plugin>
+
+   </plugins>
+
+  </build>
+
+
+  <dependencies>
+    
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+    
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+    </dependency>
+    
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+    
+    <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+    </dependency>
+
+
+
+    <!--Must appear before JUnit dependency.-->
+    <dependency>
+      <groupId>org.jmockit</groupId>
+      <artifactId>jmockit</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+    </dependency>
+    
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava-testlib</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.easytesting</groupId>
+      <artifactId>fest-util</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.easytesting</groupId>
+      <artifactId>fest-reflect</artifactId>
+    </dependency>
+    
+  </dependencies>
+
+
+  <reporting>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${plugin.maven-surefire-plugin.version}</version>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>${plugin.maven-javadoc-plugin.version}</version>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+    
+    </plugins>
+  </reporting>
+
+
+  <profiles>
+
+    <profile>
+      <id>windows_profile</id>
+      <activation>
+        <os>
+          <family>Windows</family>
+        </os>
+      </activation>
+      <properties>
+        <toolsjar>${java.home}/../lib/tools.jar</toolsjar>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>osx_profile</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <properties>
+        <toolsjar>${java.home}/../Classes/classes.jar</toolsjar>
+      </properties>
+    </profile>
+
+  </profiles>
+
+</project>

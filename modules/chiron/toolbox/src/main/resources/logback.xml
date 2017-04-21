@@ -1,0 +1,45 @@
+<configuration scan="true" scanPeriod="1 seconds" debug="false" >
+
+  <!-- This is default configuration for classes not using LoggingConfigurationTools. -->
+
+  <appender
+      name="STDOUT"
+      class="ch.qos.logback.core.ConsoleAppender"
+      >
+
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+    </encoder>
+
+  </appender>
+
+  <appender
+      name="FILE"
+      class="ch.qos.logback.core.FileAppender"
+  >
+    <!-- Requires the directory to exist.-->
+    <File>run/chiron.log</File>
+
+    <append>false</append>
+
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+    </encoder>
+
+  </appender>
+
+
+  <logger name="com.otcdlink" level="DEBUG" />
+  <logger name="io.github.otcdlink" level="DEBUG" />
+  <logger name="io.github.caillette" level="DEBUG" />
+  <logger name="PortForwarder" level="DEBUG" />
+  <logger name="net.schmizz" level="WARN" />
+
+  <root>
+    <appender-ref ref="STDOUT" />
+    <appender-ref ref="FILE" />
+    <level value="DEBUG" />
+  </root>
+
+
+</configuration>

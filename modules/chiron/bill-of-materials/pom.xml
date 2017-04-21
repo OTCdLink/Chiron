@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+
+  <parent>
+    <relativePath>../../../pom.xml</relativePath>
+    <groupId>com.otcdlink</groupId>
+    <artifactId>OTCdLink-version</artifactId>
+    <version>dev-SNAPSHOT</version>
+  </parent>
+
+
+  <groupId>io.github.otcdlink.chiron</groupId>
+  <artifactId>Chiron-bill-of-materials</artifactId>
+  <packaging>pom</packaging>
+  <version>dev-SNAPSHOT</version>
+	<description>Dependencies declaration for Chiron</description>
+
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- Dependency versions appearing more than once -->
+    
+    <library.logback.version>1.2.2</library.logback.version>
+    <library.slf4j.version>1.7.25</library.slf4j.version>
+    <library.google-guava.version>21.0</library.google-guava.version>
+    <library.netty.version>4.1.9.Final</library.netty.version>
+    <library.bouncycastle.version>1.56</library.bouncycastle.version>
+    <library.jmh.version>1.18</library.jmh.version>
+
+    <plugin.maven-surefire-plugin.version>2.19.1</plugin.maven-surefire-plugin.version>
+    <plugin.maven-site-plugin.version>3.6</plugin.maven-site-plugin.version>
+    <plugin.maven-compiler-plugin.version>3.6.1</plugin.maven-compiler-plugin.version>
+    <plugin.maven-enforcer-plugin.version>1.3.1</plugin.maven-enforcer-plugin.version>
+    <plugin.maven-javadoc-plugin.version>2.10.4</plugin.maven-javadoc-plugin.version>
+    <plugin.maven-source-plugin.version>3.0.1</plugin.maven-source-plugin.version>
+    <plugin.maven-deploy-plugin.version>2.8.2</plugin.maven-deploy-plugin.version>
+
+  </properties>
+  
+  <build>
+    <pluginManagement>
+      <plugins>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>${plugin.maven-compiler-plugin.version}</version>
+            <configuration>
+              <fork>true</fork>
+              <target>1.8</target>
+              <source>1.8</source>
+              <encoding>UTF-8</encoding>
+              <debug>true</debug>
+              <debuglevel>lines,vars,source</debuglevel>
+            </configuration>
+          </plugin>
+          
+          
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <version>${plugin.maven-enforcer-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>enforce-maven</id>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireMavenVersion>
+                      <version>3.3.3</version>
+                    </requireMavenVersion>
+                  </rules>
+                </configuration>
+              </execution>
+              <execution>
+                <id>enforce-java</id>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireJavaVersion>
+                      <version>1.8.0-66</version>
+                    </requireJavaVersion>
+                  </rules>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>${plugin.maven-source-plugin.version}</version>
+          <configuration>
+            <skipSource>true</skipSource>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>${plugin.maven-deploy-plugin.version}</version>
+          <configuration>
+            <skip>true</skip>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>${plugin.maven-javadoc-plugin.version}</version>
+          <configuration>
+            <skip>true</skip>
+          </configuration>
+        </plugin>
+
+
+      </plugins>
+    </pluginManagement>    
+  </build>
+
+  <dependencyManagement>
+    <dependencies>
+
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${library.slf4j.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jcl-over-slf4j</artifactId>
+        <version>${library.slf4j.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-core</artifactId>
+        <version>${library.logback.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>${library.logback.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${library.google-guava.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>joda-time</groupId>
+        <artifactId>joda-time</artifactId>
+        <version>2.9.9</version>
+      </dependency>
+      
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-http</artifactId>
+        <version>${library.netty.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-handler</artifactId>
+        <version>${library.netty.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-handler-proxy</artifactId>
+        <version>${library.netty.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport</artifactId>
+        <version>${library.netty.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.javassist</groupId>
+        <artifactId>javassist</artifactId>
+        <version>3.19.0-GA</version> <!-- Must be compatible with Netty version. -->
+      </dependency>
+      
+      <dependency>
+        <groupId>commons-codec</groupId>
+        <artifactId>commons-codec</artifactId>
+        <version>1.10</version>
+      </dependency>
+      
+
+      <dependency>
+        <groupId>com.google.code.findbugs</groupId>
+        <artifactId>jsr305</artifactId>
+        <version>3.0.2</version>
+      </dependency>
+
+
+
+      <dependency>
+        <groupId>io.github.lukehutch</groupId>
+        <artifactId>fast-classpath-scanner</artifactId>
+        <version>2.0.18</version>
+      </dependency>
+      
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk15on</artifactId>
+        <version>${library.bouncycastle.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk15on</artifactId>
+        <version>${library.bouncycastle.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.projectreactor</groupId>
+        <artifactId>reactor-stream</artifactId>
+        <version>2.0.8.RELEASE</version>
+      </dependency>
+      
+
+      
+
+
+      <!--Must appear before JUnit dependency.-->
+      <dependency>
+        <groupId>org.jmockit</groupId>
+        <artifactId>jmockit</artifactId>
+        <version>1.20</version>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.12</version>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava-testlib</artifactId>
+        <version>${library.google-guava.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>3.6.2</version>
+        <scope>test</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <version>1.9.5</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- fest-reflect doesn't seem to declare this dependency correctly -->
+      <dependency>
+        <groupId>org.easytesting</groupId>
+        <artifactId>fest-util</artifactId>
+        <version>1.1.4</version> <!-- Not the same as fest-reflect -->
+      </dependency>
+
+      <dependency>
+        <groupId>org.easytesting</groupId>
+        <artifactId>fest-reflect</artifactId>
+        <version>1.4.1</version> <!-- Not the same as fest-util -->
+      </dependency>
+
+      <dependency>
+        <groupId>org.openjdk.jmh</groupId>
+        <artifactId>jmh-core</artifactId>
+        <version>${library.jmh.version}</version>
+        <scope>test</scope>
+      </dependency>
+      
+      <dependency>
+        <groupId>org.openjdk.jmh</groupId>
+        <artifactId>jmh-generator-annprocess</artifactId>
+        <version>${library.jmh.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      
+
+    </dependencies>
+
+  </dependencyManagement>
+  
+
+
+
+
+</project>

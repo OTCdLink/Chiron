@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <relativePath>../pom.xml</relativePath>
+    <groupId>io.github.otcdlink.chiron</groupId>
+    <artifactId>Chiron</artifactId>
+    <version>dev-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>Chiron-downend</artifactId>
+  <name>${project.artifactId}</name>
+  <packaging>jar</packaging>
+
+
+
+  <dependencies>
+		
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-middle</artifactId>
+			<version>${project.version}</version>				
+		</dependency>
+		
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-testing</artifactId>
+			<version>${project.version}</version>
+      <scope>test</scope>
+		</dependency>
+
+
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-handler-proxy</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.easytesting</groupId>
+      <artifactId>fest-util</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.easytesting</groupId>
+      <artifactId>fest-reflect</artifactId>
+      <scope>compile</scope> <!-- TODO: remove -->
+    </dependency>
+    
+  </dependencies>
+
+
+</project>
+

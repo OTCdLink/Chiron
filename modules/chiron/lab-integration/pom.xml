@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <relativePath>../pom.xml</relativePath>
+    <groupId>io.github.otcdlink.chiron</groupId>
+    <artifactId>Chiron</artifactId>
+    <version>dev-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>Chiron-lab-integration</artifactId>
+  <name>${project.artifactId}</name>
+  <packaging>jar</packaging>
+
+
+  <dependencies>
+
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-lab-downend</artifactId>
+			<version>${project.version}</version>				
+		</dependency>
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-lab-middle</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-lab-upend</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-fixture</artifactId>
+			<version>${project.version}</version>
+      <scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-middle-fixture</artifactId>
+			<version>${project.version}</version>
+      <scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-integration-fixture</artifactId>
+			<version>${project.version}</version>
+      <scope>test</scope>
+		</dependency>
+  </dependencies>
+
+
+</project>
+
