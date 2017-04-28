@@ -14,6 +14,58 @@ public final class TextTools {
     return Strings.nullToEmpty( string ).trim().isEmpty() ;
   }
 
+  public static String trimToLength(
+      final String text,
+      final int maximumLength
+  ) {
+    return trimToLength( text, maximumLength, "...[trimmed]" ) ;
+  }
+
+
+  public static String toPrintableAscii( final String string ) {
+    out : {
+      for( int i = 0 ; i < string.length() ; i ++ ) {
+        final char c = string.charAt( i ) ;
+        if( ! isPrintableAscii( c ) ) {
+          break out ;
+        }
+      }
+      return string ;
+    }
+
+    final StringBuilder stringBuilder = new StringBuilder() ;
+    for( int i = 0 ; i < string.length() ; i ++ ) {
+      final char c = string.charAt( i ) ;
+      if( isPrintableAscii( c ) ) {
+        stringBuilder.append( c ) ;
+      } else {
+        // http://stackoverflow.com/a/27359340/1923328
+        stringBuilder.append( "\\u" ).append( String.format( "%04X", ( int ) c ) ) ;
+      }
+    }
+    return stringBuilder.toString() ;
+  }
+
+  private static boolean isPrintableAscii( final char c ) {
+    return c >= ' ' && c <= '~' ;
+  }
+
+  @SuppressWarnings( "SameParameterValue" )
+  public static String trimToLength(
+      final String text,
+      final int maximumLength,
+      final String trimMarker
+  ) {
+    if( text.length() > maximumLength ) {
+      return text.substring( 0, maximumLength ) + trimMarker ;
+    } else {
+      return text ;
+    }
+  }
+
+// ===============================
+// Copied from Apache Commons-Lang
+// ===============================
 
   /**
    * Copied from

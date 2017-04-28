@@ -17,8 +17,8 @@
       name="FILE"
       class="ch.qos.logback.core.FileAppender"
   >
-    <!-- Requires the directory to exist.-->
-    <File>run/chiron.log</File>
+    <!-- If the path contains a directory, this must exist.-->
+    <File>chiron.log</File>
 
     <append>false</append>
 
@@ -29,7 +29,6 @@
   </appender>
 
 
-  <logger name="com.otcdlink" level="DEBUG" />
   <logger name="io.github.otcdlink" level="DEBUG" />
   <logger name="io.github.caillette" level="DEBUG" />
   <logger name="PortForwarder" level="DEBUG" />

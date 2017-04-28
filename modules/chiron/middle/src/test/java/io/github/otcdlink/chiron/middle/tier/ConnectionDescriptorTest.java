@@ -2,6 +2,8 @@ package io.github.otcdlink.chiron.middle.tier;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,6 +24,9 @@ public class ConnectionDescriptorTest {
     ) ;
     final HttpHeaders httpHeaders = connectionDescriptor.httpHeaders() ;
 
+    LOGGER.info(
+        "Created " + HttpHeaders.class.getSimpleName() + ": " + httpHeaders.entries() + "." ) ;
+
     final ConnectionDescriptor deserialized = ConnectionDescriptor.from( httpHeaders ) ;
     assertThat( deserialized.upendVersion ).isEqualTo( "someVersion" ) ;
     assertThat( deserialized.authenticationRequired ).isTrue() ;
@@ -32,4 +37,10 @@ public class ConnectionDescriptorTest {
     assertThat( deserialized.timeBoundary.pingTimeoutMs ).isEqualTo( 15 ) ;
     assertThat( deserialized.timeBoundary.sessionInactivityMaximumMs ).isEqualTo( 16 ) ;
   }
+
+// =======
+// Fixture
+// =======
+
+  private static final Logger LOGGER = LoggerFactory.getLogger( ConnectionDescriptorTest.class ) ;
 }

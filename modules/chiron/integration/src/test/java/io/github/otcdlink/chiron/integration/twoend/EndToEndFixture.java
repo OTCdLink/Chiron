@@ -158,7 +158,7 @@ public class EndToEndFixture
         null,
         null,
         CommandInterceptor.Factory.always( commandInterceptor ),
-        TimeBoundary.DEFAULT,
+        ( TimeBoundary.ForAll ) downendSetup.primingTimeBoundary,
         null,
         null,
         downendSetup.websocketFrameSizer
@@ -204,7 +204,7 @@ public class EndToEndFixture
           UpendConnector.Setup< EchoUpwardDuty<Designator> >
       > upendSetupSupplier
   ) throws Exception {
-    initialize( downendSetupSupplier, upendSetupSupplier, true, true );
+    initialize( downendSetupSupplier, upendSetupSupplier, true, true ) ;
   }
 
   public void initialize(

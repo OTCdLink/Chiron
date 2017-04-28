@@ -61,6 +61,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -405,12 +406,19 @@ public abstract class AbstractConnectorFixture<
   }
 
   public final ImmutableList< DownendConnector.Change > drainDownendChanges() {
-    final Collection<DownendConnector.Change> collection = new ArrayList<>() ;
+    final Collection< DownendConnector.Change > collection = new ArrayList<>() ;
     downendChangeQueue.drainTo( collection ) ;
     return ImmutableList.copyOf( collection ) ;
   }
 
   public final void waitForDownendConnectorState(
+      final DownendConnector.ChangeDescriptor... statesWaitedFor
+  ) throws InterruptedException {
+    waitForDownendConnectorState( Ø -> { }, statesWaitedFor ) ;
+  }
+
+  public final void waitForDownendConnectorState(
+      final Consumer< DownendConnector.Change > changeDescriptorConsumer,
       final DownendConnector.ChangeDescriptor... statesWaitedFor
   )
       throws InterruptedException
@@ -418,6 +426,7 @@ public abstract class AbstractConnectorFixture<
     final ImmutableSet states = ImmutableSet.copyOf( statesWaitedFor ) ;
     while( true ) {
       final DownendConnector.Change stateWatch = nextDownendChange() ;
+      changeDescriptorConsumer.accept( stateWatch ) ;
       if( states.contains( stateWatch.kind ) ) {
         LOGGER.info( "Got expected " + CHANGE_NAME + ": " + stateWatch + "." ) ;
         break ;

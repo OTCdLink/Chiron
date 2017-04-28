@@ -1,26 +1,20 @@
 package io.github.otcdlink.chiron.middle.tier;
 
+import com.google.common.base.Equivalence;
+import com.google.common.collect.ImmutableMap;
 import io.github.otcdlink.chiron.toolbox.ToStringTools;
 import io.github.otcdlink.chiron.toolbox.number.PositiveIntegerRange;
 
+import javax.annotation.Nonnull;
 import java.util.Random;
+import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static io.github.otcdlink.chiron.middle.tier.TimeBoundary.ForAll.Key.PING_TIMEOUT_MS;
 
 public interface TimeBoundary {
 
-  /**
-   * Sensible defaults for production use.
-   */
-  ForAll SAFE = Builder.createNew()
-      .pingInterval( 1000 )
-      .pongTimeoutOnDownend( 100 )  // Need this to support a lag of 500 ms induced by HttpProxy.
-      .reconnectDelay( 1000, 3000 )
-      .pingTimeoutOnUpend( 1500 )    // Need this to support a lag of 500 ms induced by HttpProxy.
-      .maximumSessionInactivity( 10_000 )
-      .build()
-  ;
   /**
    * Timeout used by {@code DownendConnector} for initial connection, at the time
    * {@link ConnectionDescriptor} is not available.
@@ -320,6 +314,86 @@ public interface TimeBoundary {
       return pongTimeoutMs ;
     }
 
+    @Override
+    public boolean equals( Object other ) {
+      if( this == other ) {
+        return true ;
+      }
+      if( other == null || getClass() != other.getClass() ) {
+        return false ;
+      }
+      final ForAll that = ( ForAll ) other ;
+      return EQUIVALENCE.equivalent( this, that ) ;
+    }
+    
+    public enum Key {
+      PING_INTERVAL_MS,
+      PONG_TIMEOUT_MS,
+      RECONNECT_DELAY_RANGE_MS_LOWER_BOUND,
+      RECONNECT_DELAY_RANGE_MS_UPPER_BOUND,
+      PING_TIMEOUT_MS,
+      SESSION_INACTIVITY_MAXIMUM_MS
+    }
+    
+    public ImmutableMap< Key, Integer > asMap() {
+      return ImmutableMap.< Key, Integer > builder()
+          .put( Key.PING_INTERVAL_MS, pingIntervalMs )
+          .put( Key.PONG_TIMEOUT_MS, pongTimeoutMs )
+          .put( Key.RECONNECT_DELAY_RANGE_MS_LOWER_BOUND, reconnectDelayRangeMs.lowerBound )
+          .put( Key.RECONNECT_DELAY_RANGE_MS_UPPER_BOUND, reconnectDelayRangeMs.upperBound )
+          .put( PING_TIMEOUT_MS, pingTimeoutMs )
+          .put( Key.SESSION_INACTIVITY_MAXIMUM_MS, sessionInactivityMaximumMs )
+          .build()
+      ;
+    }
 
+    public static ForAll parse( Function< Key, Integer > valueResolver ) {
+      return TimeBoundary.Builder.createNew()
+          .pingInterval( valueResolver.apply( Key.PING_INTERVAL_MS ) )
+          .pongTimeoutOnDownend( valueResolver.apply( Key.PONG_TIMEOUT_MS ) )
+          .reconnectDelay(
+              valueResolver.apply( Key.RECONNECT_DELAY_RANGE_MS_LOWER_BOUND ),
+              valueResolver.apply( Key.RECONNECT_DELAY_RANGE_MS_UPPER_BOUND )
+          )
+          .pingTimeoutOnUpend( valueResolver.apply( Key.PING_TIMEOUT_MS ) )
+          .maximumSessionInactivity( valueResolver.apply( Key.SESSION_INACTIVITY_MAXIMUM_MS ) )
+          .build()
+      ;
+    }
+
+    @Override
+    public int hashCode() {
+      return EQUIVALENCE.hash( this ) ;
+    }
+
+    public static final Equivalence< ForAll > EQUIVALENCE = new Equivalence< ForAll >() {
+      @Override
+      protected boolean doEquivalent( @Nonnull final ForAll first, @Nonnull final ForAll second ) {
+        if( first.pingIntervalMs != second.pingIntervalMs ) {
+          return false ;
+        }
+        if( first.pongTimeoutMs != second.pongTimeoutMs ) {
+          return false ;
+        }
+        if( first.pingTimeoutMs != second.pingTimeoutMs ) {
+          return false ;
+        }
+        if( first.sessionInactivityMaximumMs != second.sessionInactivityMaximumMs ) {
+          return false ;
+        }
+        return first.reconnectDelayRangeMs.equals( second.reconnectDelayRangeMs ) ;
+      }
+
+      @Override
+      protected int doHash( @Nonnull final ForAll forAll ) {
+        int result = forAll.pingIntervalMs ;
+        result = 31 * result + forAll.pongTimeoutMs ;
+        result = 31 * result + forAll.reconnectDelayRangeMs.hashCode() ;
+        result = 31 * result + forAll.pingTimeoutMs ;
+        result = 31 * result + forAll.sessionInactivityMaximumMs ;
+        return result ;
+      }
+    };
   }
+
 }

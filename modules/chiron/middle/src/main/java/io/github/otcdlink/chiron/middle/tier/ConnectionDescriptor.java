@@ -1,17 +1,16 @@
 package io.github.otcdlink.chiron.middle.tier;
 
+import com.google.common.base.CaseFormat;
+import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableMap;
 import io.github.otcdlink.chiron.toolbox.ToStringTools;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
 
+import java.util.Map;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 import static io.github.otcdlink.chiron.middle.tier.ConnectionDescriptor.HttpHeaderKeys.AUTHENTICATED;
-import static io.github.otcdlink.chiron.middle.tier.ConnectionDescriptor.HttpHeaderKeys.TIMEBOUNDARY_PING_INTERVAL_MS;
-import static io.github.otcdlink.chiron.middle.tier.ConnectionDescriptor.HttpHeaderKeys.TIMEBOUNDARY_PING_TIMEOUT_MS;
-import static io.github.otcdlink.chiron.middle.tier.ConnectionDescriptor.HttpHeaderKeys.TIMEBOUNDARY_PONG_TIMEOUT_MS;
-import static io.github.otcdlink.chiron.middle.tier.ConnectionDescriptor.HttpHeaderKeys.TIMEBOUNDARY_RECONNECT_DELAY_MS_LOWERBOUND;
-import static io.github.otcdlink.chiron.middle.tier.ConnectionDescriptor.HttpHeaderKeys.TIMEBOUNDARY_RECONNECT_DELAY_MS_UPPERBOUND;
-import static io.github.otcdlink.chiron.middle.tier.ConnectionDescriptor.HttpHeaderKeys.TIMEBOUNDARY_SESSION_INACTIVITY_MAXIMUM_MS;
 import static io.github.otcdlink.chiron.middle.tier.ConnectionDescriptor.HttpHeaderKeys.VERSION;
 
 /**
@@ -43,21 +42,13 @@ public final class ConnectionDescriptor {
 
     httpHeaders.add( AUTHENTICATED, Boolean.toString( authenticationRequired ) ) ;
 
-    httpHeaders.add( TIMEBOUNDARY_PING_INTERVAL_MS, timeBoundary.pingIntervalMs ) ;
-
-    httpHeaders.add( TIMEBOUNDARY_PONG_TIMEOUT_MS, timeBoundary.pongTimeoutMs ) ;
-
-    httpHeaders.add( TIMEBOUNDARY_RECONNECT_DELAY_MS_LOWERBOUND,
-        timeBoundary.reconnectDelayRangeMs.lowerBound ) ;
-
-    httpHeaders.add( TIMEBOUNDARY_RECONNECT_DELAY_MS_UPPERBOUND,
-        timeBoundary.reconnectDelayRangeMs.upperBound ) ;
-
-    httpHeaders.add( TIMEBOUNDARY_SESSION_INACTIVITY_MAXIMUM_MS,
-        timeBoundary.sessionInactivityMaximumMs ) ;
-
-    httpHeaders.add( TIMEBOUNDARY_PING_TIMEOUT_MS, timeBoundary.pingTimeoutMs ) ;
-
+    final ImmutableMap< TimeBoundary.ForAll.Key, Integer > timeBoundaryAsMap =
+        timeBoundary.asMap() ;
+    for(
+        final Map.Entry< TimeBoundary.ForAll.Key, Integer > entry : timeBoundaryAsMap.entrySet()
+    ) {
+      httpHeaders.add( TIMEBOUNDARY_KEY_MAP.get( entry.getKey() ), entry.getValue() ) ;
+    }
     return httpHeaders ;
   }
 
@@ -65,7 +56,8 @@ public final class ConnectionDescriptor {
   public String toString() {
     return ToStringTools.getNiceClassName( this ) + '{' +
         "upendVersion=" + upendVersion + ';' +
-        "authenticated=" + authenticationRequired +
+        "authenticated=" + authenticationRequired + ';' +
+        "timeBoundary=" + timeBoundary +
     '}' ;
   }
 
@@ -95,27 +87,24 @@ public final class ConnectionDescriptor {
   }
 
 
-  interface HttpHeaderKeys {
-
+  public interface HttpHeaderKeys {
     String VERSION = "Chiron-Version" ;
-
     String AUTHENTICATED = "Chiron-Authenticated" ;
+  }
 
-    String TIMEBOUNDARY_PING_INTERVAL_MS = "Chiron-TimeBoundary-PingInterval-Ms" ;
+  private static final String TIMEBOUNDARY_HEADER_PREFIX = "Chiron-TimeBoundary-" ;
 
-    String TIMEBOUNDARY_PONG_TIMEOUT_MS = "Chiron-TimeBoundary-PongTimeout-Ms" ;
 
-    String TIMEBOUNDARY_RECONNECT_DELAY_MS_LOWERBOUND =
-        "Chiron-TimeBoundary-ReconnectDelayMsLowerbound" ;
-
-    String TIMEBOUNDARY_RECONNECT_DELAY_MS_UPPERBOUND =
-        "Chiron-TimeBoundary-ReconnectDelayMsUpperbound" ;
-
-    String TIMEBOUNDARY_SESSION_INACTIVITY_MAXIMUM_MS =
-        "Chiron-TimeBoundary-SessionInactivityMaximumMs" ;
-
-    String TIMEBOUNDARY_PING_TIMEOUT_MS = "Chiron-TimeBoundary-PingTimeoutMs" ;
-
+  private static final ImmutableBiMap< TimeBoundary.ForAll.Key, String > TIMEBOUNDARY_KEY_MAP ;
+  static {
+    final ImmutableBiMap.Builder< TimeBoundary.ForAll.Key, String > builder =
+        ImmutableBiMap.builder() ;
+    for( final TimeBoundary.ForAll.Key key : TimeBoundary.ForAll.Key.values() ) {
+      final String upperCamel =
+          CaseFormat.UPPER_UNDERSCORE.to( CaseFormat.UPPER_CAMEL, key.name() ) ;
+      builder.put( key, TIMEBOUNDARY_HEADER_PREFIX + upperCamel ) ;
+    }
+    TIMEBOUNDARY_KEY_MAP = builder.build() ;
   }
 
   public static ConnectionDescriptor from( final HttpHeaders httpHeaders ) {
@@ -130,32 +119,32 @@ public final class ConnectionDescriptor {
   }
 
   private static TimeBoundary.ForAll parseTimeBoundary( HttpHeaders httpHeaders ) {
-    return TimeBoundary.Builder.createNew()
-        .pingInterval( parseInt( httpHeaders, TIMEBOUNDARY_PING_INTERVAL_MS ) )
-        .pongTimeoutOnDownend( parseInt( httpHeaders, TIMEBOUNDARY_PONG_TIMEOUT_MS ) )
-        .reconnectDelay(
-            parseInt( httpHeaders, TIMEBOUNDARY_RECONNECT_DELAY_MS_LOWERBOUND ),
-            parseInt( httpHeaders, TIMEBOUNDARY_RECONNECT_DELAY_MS_UPPERBOUND )
-        )
-        .pingTimeoutOnUpend( parseInt( httpHeaders, TIMEBOUNDARY_PING_TIMEOUT_MS ) )
-        .maximumSessionInactivity(
-            parseInt( httpHeaders, TIMEBOUNDARY_SESSION_INACTIVITY_MAXIMUM_MS ) )
-        .build()
-    ;
+    return TimeBoundary.ForAll.parse( key -> extractInteger( httpHeaders, key ) ) ;
   }
 
-  private static int parseInt( HttpHeaders httpHeaders, String headerName ) {
-    final String value = httpHeaders.get( headerName ) ;
+  private static Integer extractInteger(
+      HttpHeaders httpHeaders,
+      TimeBoundary.ForAll.Key timeBoundaryKey
+  ) {
+    final String stringKey = TIMEBOUNDARY_KEY_MAP.get( timeBoundaryKey ) ;
+    final String value = httpHeaders.get( stringKey ) ;
+    if( value == null ) {
+      throw new ParseException( "No value for " + stringKey + " in " + httpHeaders ) ;
+    }
     try {
       return Integer.parseInt( value ) ;
     } catch( NumberFormatException e ) {
       throw new ParseException(
-          "Could not parse value '" + value + " for header '" + headerName + "'", e ) ;
+          "Could not parse value '" + value + "' for header '" + stringKey + "'", e ) ;
     }
   }
 
   public static class ParseException extends RuntimeException {
-    public ParseException( String message, Throwable cause ) {
+    ParseException( String message ) {
+      super( message ) ;
+    }
+
+    ParseException( String message, Throwable cause ) {
       super( message, cause ) ;
     }
   }

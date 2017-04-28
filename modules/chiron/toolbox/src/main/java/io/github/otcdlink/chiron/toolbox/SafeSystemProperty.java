@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -75,7 +76,7 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
     this.wellFormed = malformationMessage == null ;
 
     if( wellFormed ) {
-      LOGGER.info( "Successfully parsed " + this + "." ) ;
+      LOGGER.debug( "Successfully parsed " + this.toString( 100, true ) + "." ) ;
     } else {
       LOGGER.warn( "Malformed property '" + key + "': " + malformationMessage + "." ) ;
     }
@@ -117,7 +118,19 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
 
   @Override
   public String toString() {
-    return ToStringTools.getNiceClassName( this ) + '{' + key + "->" + value + '}' ;
+    return toString( Integer.MAX_VALUE, false ) ;
+  }
+
+  public String toString( final int maximumValueLength, final boolean sanitize ) {
+    final String rawValue = Objects.toString( value ) ;
+    final String printableText ;
+    printableText = sanitize ? TextTools.toPrintableAscii( rawValue ) : rawValue ;
+    return
+        ToStringTools.getNiceClassName( this ) + "{" +
+        key + "=>" +
+        TextTools.trimToLength( printableText, maximumValueLength ) +
+        "}"
+    ;
   }
 
   public abstract static class Valued< PROPERTY, VALUE >
@@ -189,15 +202,26 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
   }
 
   public static class StringListType extends Valued< StringListType, ImmutableList< String > > {
+    @SuppressWarnings( "unused" )
     private final String separator ;
     protected StringListType( final String key, final String separator ) {
-      super( key ) ;
+      super( capture( key, separator ) ) ;
       checkArgument( ! TextTools.isBlank( separator ) ) ;
       this.separator = separator ;
+      SEPARATOR_CAPTURE.remove() ;
+    }
+
+    private static final ThreadLocal< String > SEPARATOR_CAPTURE = new ThreadLocal<>() ;
+
+    private static String capture( final String key, final String separator ) {
+      checkArgument( ! Strings.isNullOrEmpty( separator ) ) ;
+      SEPARATOR_CAPTURE.set( separator ) ;
+      return key ;
     }
 
     @Override
     protected ImmutableList< String > decode( final String value ) {
+      final String separator = SEPARATOR_CAPTURE.get() ;
       return ImmutableList.copyOf( Splitter.on( separator ).splitToList( value ) ) ;
     }
   }

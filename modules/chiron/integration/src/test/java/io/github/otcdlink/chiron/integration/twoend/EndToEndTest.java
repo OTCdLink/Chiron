@@ -12,7 +12,9 @@ import io.github.otcdlink.chiron.integration.echo.EchoUpwardDuty;
 import io.github.otcdlink.chiron.integration.echo.UpwardEchoCommand;
 import io.github.otcdlink.chiron.middle.CommandAssert;
 import io.github.otcdlink.chiron.middle.tier.CommandInterceptor;
+import io.github.otcdlink.chiron.middle.tier.TimeBoundary;
 import io.github.otcdlink.chiron.middle.tier.WebsocketFrameSizer;
+import io.github.otcdlink.chiron.toolbox.ObjectTools;
 import io.github.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
 import io.netty.channel.Channel;
 import mockit.FullVerificationsInOrder;
@@ -24,7 +26,9 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 
+import static io.github.otcdlink.chiron.downend.DownendConnector.State.CONNECTING;
 import static io.github.otcdlink.chiron.fixture.TestNameTools.setTestThreadName;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * To sniff local traffic on Mavericks:
@@ -119,6 +123,52 @@ public class EndToEndTest {
 
   }
 
+  @Test( timeout = TIMEOUT_MS )
+  public void newTimeBoundary() throws Exception {
+    setTestThreadName() ;
+
+    final TimeBoundary.ForAll initialTimeBoundary = TimeBoundary.Builder.createNew()
+        .pingInterval( 888_888_888 )
+        .pongTimeoutOnDownend( 2500 )
+        .reconnectDelay( 1000, 2000 )
+        .pingTimeoutNever()
+        .sessionInactivityForever()
+        .build()
+    ;
+    final TimeBoundary.ForAll newTimeBoundary = TimeBoundary.Builder.createNew()
+        .pingInterval( 999_999_999 )
+        .pongTimeoutOnDownend( 2500 )
+        .reconnectDelay( 1000, 2000 )
+        .pingTimeoutNever()
+        .sessionInactivityForever()
+        .build()
+    ;
+
+    fixture.initialize(
+        fixture.downendSetup( initialTimeBoundary ),
+        fixture::websocketUnauthenticatedUpendSetup,
+        false,
+        true
+    ) ;
+
+    fixture.downend().start() ;
+
+    waitForConnectionDescriptor( initialTimeBoundary ) ;
+
+    fixture.commandRoundtrip( fixture.dummySessionIdentifier() ) ;
+
+    LOGGER.info( "Setting new " + TimeBoundary.class.getSimpleName() + " and restarting ..." ) ;
+    fixture.upendConnector().timeBoundary( newTimeBoundary ) ;
+    fixture.upendConnector().stop().join() ;
+
+    fixture.waitForDownendConnectorState( CONNECTING ) ;
+
+    fixture.upendConnector().start().join() ;
+    waitForConnectionDescriptor( newTimeBoundary ) ;
+
+  }
+
+
 
 // =======
 // Fixture
@@ -140,6 +190,29 @@ public class EndToEndTest {
   }
 
 
+  private void waitForConnectionDescriptor( TimeBoundary.ForAll timeBoundary )
+      throws InterruptedException
+  {
+    LOGGER.info( "Waiting for " + DownendConnector.class.getSimpleName() +
+        " to receive expected " + TimeBoundary.class.getSimpleName() + " ..." ) ;
+
+    final ObjectTools.Holder< DownendConnector.Change > connectionDescriptorHolder =
+        ObjectTools.newHolder() ;
+
+    fixture.waitForMatch( change -> {
+      if( change.kind == DownendConnector.State.CONNECTED ) {
+        connectionDescriptorHolder.set( change ) ;
+        return true ;
+      } else {
+        return false ;
+      }
+    } ) ;
+
+    final DownendConnector.Change.SuccessfulConnection successfulConnection =
+        ( DownendConnector.Change.SuccessfulConnection ) connectionDescriptorHolder.get() ;
+    LOGGER.info( "Obtained: " + successfulConnection ) ;
+    assertThat( successfulConnection.connectionDescriptor.timeBoundary ).isEqualTo( timeBoundary ) ;
+  }
 
 
 }

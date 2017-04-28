@@ -25,4 +25,6 @@ public interface Diagnostic {
       return ImmutableList.of() ;
     }
   } ;
+
+
 }

@@ -56,9 +56,31 @@ final class EndToEndTestFragments {
           UpendConnector.Setup<EchoUpwardDuty< Designator > >
       > upendSetupSupplier,
       @Injectable final SignonMaterializer signonMaterializer,
-      @Injectable final OutwardSessionSupervisor<Channel, InetAddress> outboundSessionSupervisor
+      @Injectable final OutwardSessionSupervisor< Channel, InetAddress > outboundSessionSupervisor
   ) throws Exception {
-    setTestThreadName();
+    authenticate(
+        fixture,
+        downendSetupSupplier,
+        upendSetupSupplier,
+        signonMaterializer,
+        outboundSessionSupervisor,
+        Ø -> { }
+    ) ;
+  }
+
+  protected static void authenticate(
+      final EndToEndFixture fixture,
+      final Supplier< DownendConnector.Setup< Command.Tag, EchoDownwardDuty< Command.Tag > > >
+          downendSetupSupplier,
+      final Function<
+          DownendConnector.Setup< Command.Tag, EchoDownwardDuty< Command.Tag > >,
+          UpendConnector.Setup< EchoUpwardDuty< Designator > >
+      > upendSetupSupplier,
+      @Injectable final SignonMaterializer signonMaterializer,
+      @Injectable final OutwardSessionSupervisor< Channel, InetAddress > outboundSessionSupervisor,
+      final Consumer< DownendConnector.Change > changeConsumer
+  ) throws Exception {
+    setTestThreadName() ;
     fixture.initialize(
         downendSetupSupplier,
         upendSetupSupplier,
@@ -99,7 +121,7 @@ final class EndToEndTestFragments {
 
     primarySignonAttemptCallback.sessionAttributed( SESSION_IDENTIFIER ) ;
 
-    fixture.waitForDownendConnectorState( DownendConnector.State.SIGNED_IN ) ;
+    fixture.waitForDownendConnectorState( changeConsumer, DownendConnector.State.SIGNED_IN ) ;
     startConcluder.join() ;
 
     new FullVerifications() {{ }} ;

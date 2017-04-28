@@ -16,6 +16,11 @@ import static org.junit.Assert.fail;
 public class SafeSystemPropertyTest {
 
   @Test
+  public void logDefaultSystemProperties() throws Exception {
+    assert SafeSystemProperty.Standard.JAVA_CLASS_PATH.defined ;
+  }
+
+  @Test
   public void wellFormedInteger() throws Exception {
     System.setProperty( INTEGER_KEY, "12" ) ;
     final SafeSystemProperty.IntegerType integerProperty = forInteger( INTEGER_KEY ) ;
@@ -26,6 +31,19 @@ public class SafeSystemPropertyTest {
     assertThat( integerProperty.value ).isEqualTo( 12 ) ;
     assertThat( integerProperty.intValue( 3 ) ).isEqualTo( 12 ) ;
   }
+
+  @Test
+  public void valuedStringList() throws Exception {
+    System.setProperty( STRINGLIST_KEY, "foo:bar" ) ;
+    final SafeSystemProperty.StringListType stringListProperty =
+        SafeSystemProperty.forStringList( STRINGLIST_KEY, ":" ) ;
+    assertThat( stringListProperty.defined ).isTrue() ;
+    assertThat( stringListProperty.wellFormed ).isTrue() ;
+    assertThat( stringListProperty.key ).isEqualTo( STRINGLIST_KEY ) ;
+    assertThat( stringListProperty.value ).isEqualTo( ImmutableList.of( "foo", "bar" ) ) ;
+  }
+
+
 
   @Test
   public void reloadInteger() throws Exception {
@@ -112,8 +130,6 @@ public class SafeSystemPropertyTest {
     assertThat( unvaluedProperty.isSet()).isFalse() ;
   }
 
-
-
 // =======
 // Fixture
 // =======
@@ -121,6 +137,9 @@ public class SafeSystemPropertyTest {
   private static final Logger LOGGER = LoggerFactory.getLogger( SafeSystemPropertyTest.class ) ;
 
   private static final String INTEGER_KEY = SafeSystemPropertyTest.class.getName() + ".integer" ;
+
+  private static final String STRINGLIST_KEY =
+      SafeSystemPropertyTest.class.getName() + ".stringList" ;
 
   private static final String BOOLEAN_KEY = SafeSystemPropertyTest.class.getName() + ".boolean" ;
 

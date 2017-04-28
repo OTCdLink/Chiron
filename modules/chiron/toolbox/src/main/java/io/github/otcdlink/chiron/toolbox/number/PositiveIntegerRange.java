@@ -1,7 +1,9 @@
 package io.github.otcdlink.chiron.toolbox.number;
 
+import com.google.common.base.Equivalence;
 import io.github.otcdlink.chiron.toolbox.ComparatorTools;
 
+import javax.annotation.Nonnull;
 import java.util.Comparator;
 import java.util.Random;
 
@@ -72,4 +74,44 @@ public final class PositiveIntegerRange {
 
   public static final PositiveIntegerRange ONE_ONE = new PositiveIntegerRange( 1, 1 ) ;
   public static final PositiveIntegerRange ZERO_ZERO = new PositiveIntegerRange( 0, 0 ) ;
+
+
+  @Override
+  public boolean equals( Object other ) {
+    if( this == other ) {
+      return true ;
+    }
+    if( other == null || getClass() != other.getClass() ) {
+      return false ;
+    }
+
+    final PositiveIntegerRange that = ( PositiveIntegerRange ) other ;
+
+    return EQUIVALENCE.equivalent( this, that ) ;
+
+  }
+
+  @Override
+  public int hashCode() {
+    return EQUIVALENCE.hash( this ) ;
+  }
+
+  public static final Equivalence< PositiveIntegerRange > EQUIVALENCE =
+      new Equivalence< PositiveIntegerRange >() {
+        @Override
+        protected boolean doEquivalent(
+            @Nonnull final PositiveIntegerRange first,
+            @Nonnull final PositiveIntegerRange second
+        ) {
+          return first.lowerBound == second.lowerBound && first.upperBound == second.upperBound ;
+        }
+
+        @Override
+        protected int doHash( @Nonnull final PositiveIntegerRange positiveIntegerRange ) {
+          int result = positiveIntegerRange.lowerBound ;
+          result = 31 * result + positiveIntegerRange.upperBound ;
+          return result ;
+        }
+      }
+  ;
 }

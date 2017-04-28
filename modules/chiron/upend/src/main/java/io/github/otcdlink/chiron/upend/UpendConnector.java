@@ -117,8 +117,6 @@ public class UpendConnector<
 
     public final SslEngineFactory.ForServer sslEngineFactory ;
 
-    public final ConnectionDescriptor connectionDescriptor ;
-
     public final URL websocketUrl ;
 
     public final OutwardSessionSupervisor< Channel, InetAddress > sessionSupervisor ;
@@ -132,6 +130,8 @@ public class UpendConnector<
     public final Designator.Factory designatorFactory ;
 
     public final String applicationVersion ;
+
+    public final TimeBoundary.ForAll initialTimeBoundary ;
 
     public final CommandBodyDecoder< Designator, UPWARD_DUTY > websocketCommandDecoder ;
 
@@ -171,7 +171,7 @@ public class UpendConnector<
         final HttpRequestRelayer immediateHttpRequestRelayer,
         final HttpRequestRelayer authenticatedHttpRequestRelayer,
         final CommandInterceptor.Factory commandInterceptorFactory,
-        final TimeBoundary.ForAll timeBoundary,
+        final TimeBoundary.ForAll initialTimeBoundary,
         final OldHttpCommandRenderer httpCommandRenderer,
         final HttpSessionLifecyclePhaseRenderer httpSessionLifecyclePhaseRenderer,
         final WebsocketFrameSizer websocketFrameSizer
@@ -203,16 +203,15 @@ public class UpendConnector<
       this.commandConsumer = commandConsumer ;
       this.designatorFactory = designatorFactory ;
       this.applicationVersion = checkNotNull( applicationVersion ) ;
+      this.initialTimeBoundary = initialTimeBoundary ;
 
       // Websocket
       if( websocketUrlPath == null ) {
         checkArgument( websocketCommandDecoder == null ) ;
-        checkArgument( timeBoundary == null ) ;
+        checkArgument( initialTimeBoundary == null ) ;
         checkArgument( websocketFrameSizer == null ) ;
         websocketUrl = null ;
         this.websocketFrameSizer = null ;
-        this.connectionDescriptor = null ;
-
       } else {
         checkArgument(
             WEBSOCKET_PATH_PATTERN.matcher( websocketUrlPath ).matches(),
@@ -226,9 +225,6 @@ public class UpendConnector<
             websocketUrlPath
         ) ;
         this.websocketFrameSizer = checkNotNull( websocketFrameSizer ) ;
-        this.connectionDescriptor = new ConnectionDescriptor(
-            applicationVersion, sessionSupervisor != null, timeBoundary ) ;
-
       }
       this.websocketCommandDecoder = websocketCommandDecoder ;
 
@@ -286,9 +282,9 @@ public class UpendConnector<
       return getClass().getSimpleName() + '{' + Joiner.on( ';' ).skipNulls().join(
           "eventLoop=" + eventLoopGroup,
           "listenAddress=" + listenAddress,
-          "connectionDescriptor=" + connectionDescriptor,
           websocketUrl == null ? null : "websocketUrl=" + websocketUrl.toExternalForm(),
-          connectionDescriptor == null ? null : "timeBoundary=" + connectionDescriptor.timeBoundary
+          "applicationVersion=" + applicationVersion,
+          "initialTimeBoundary=" + initialTimeBoundary
       ) + '}' ;
     }
 
@@ -322,6 +318,7 @@ public class UpendConnector<
       final ChannelRegistrationHacker channelRegistrationHacker
   ) {
     this.setup = checkNotNull( setup ) ;
+    this.currentTimeBoundary = setup.initialTimeBoundary ;
     this.channelRegistrationHacker = channelRegistrationHacker ;
     LOGGER.info( "Created " + this + " using " + setup + "." ) ;
     channels = new DefaultChannelGroup( setup.eventLoopGroup.next() ) ;
@@ -418,7 +415,7 @@ public class UpendConnector<
           UpendTierName.WEBSOCKET_UPGRADER.tierName(),
           new UpendUpgradeTier(
               UpendConnector.this::afterWebsocketHandshake,
-              setup.connectionDescriptor,
+              connectionDescriptor(),
               setup.websocketUrl,
               setup.websocketFrameSizer.maximumPayloadSize
           )
@@ -529,6 +526,7 @@ public class UpendConnector<
       final ChannelGroupFuture channelGroupFuture = channels.flush().close() ;
       final CompletableFuture< ? > concluder = new CompletableFuture<>() ;
       channelGroupFuture.addListener( future -> {
+        state.set( STOPPED ) ;
         if( future.isSuccess() ) {
           concluder.complete( null ) ;
           LOGGER.info( "Stopped " + UpendConnector.this + "." ) ;
@@ -537,7 +535,6 @@ public class UpendConnector<
           concluder.completeExceptionally( e ) ;
           LOGGER.error( "Exception while stopping " + UpendConnector.this + ":" , e ) ;
         }
-        state.set( STOPPED ) ;
       } ) ;
       return concluder ;
     } catch( final Exception e ) {
@@ -623,11 +620,12 @@ public class UpendConnector<
 
     }
 
-    if( setup.connectionDescriptor != null ) {
+    final ConnectionDescriptor currentConnectionDescriptor = connectionDescriptor() ;
+    if( currentConnectionDescriptor != null ) {
       pipeline.addAfter(
           UpendTierName.WSENCODER.tierName(),
           UpendTierName.WEBSOCKET_PONG.tierName(),
-          new PongTier( setup.connectionDescriptor.timeBoundary.pingTimeoutMs )
+          new PongTier( currentConnectionDescriptor.timeBoundary.pingTimeoutMs )
       ) ;
     }
 
@@ -638,11 +636,27 @@ public class UpendConnector<
 
   }
 
+  private volatile TimeBoundary.ForAll currentTimeBoundary ;
 
+  public void timeBoundary( final TimeBoundary.ForAll newTimeBoundary ) {
+    checkNotNull( newTimeBoundary ) ;
+    currentTimeBoundary = newTimeBoundary ;
+    LOGGER.info( "Using now " + newTimeBoundary + ", will affect only new connections." ) ;
+  }
 
-// ===============
+  public TimeBoundary.ForAll currentTimeBoundary() {
+    return currentTimeBoundary;
+  }
+
+  // ===============
 // Session-related
 // ===============
+
+  public ConnectionDescriptor connectionDescriptor() {
+    return new ConnectionDescriptor(
+        setup.applicationVersion, setup.sessionSupervisor != null, currentTimeBoundary ) ;
+  }
+
 
   /**
    * Send a {@link Command} to the Downend.
