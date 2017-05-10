@@ -45,6 +45,7 @@ public abstract class SessionPhaseWebsocketCodecTier
       final ChannelHandlerContext channelHandlerContext,
       final WebSocketFrame webSocketFrame
   ) throws Exception {
+    webSocketFrame.touch( "Deserializing inbound message " + webSocketFrame ) ;
     final BytebufCoat coat = coating.coat( webSocketFrame.content() ) ;
 
     final SessionLifecycle.Phase phase ;
@@ -54,6 +55,7 @@ public abstract class SessionPhaseWebsocketCodecTier
     try {
       if( MAGIC_MATCHER.matchThenSkip( coat ) ) {
         phase = SessionLifecycle.deserialize( coat ) ;
+        webSocketFrame.release() ;
       } else {
         phase = null ;
       }

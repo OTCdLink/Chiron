@@ -53,6 +53,7 @@ public class UpendUpgradeTier extends SimpleChannelInboundHandler< Object > {
       final FullHttpRequest fullHttpRequest = ( FullHttpRequest ) inboundMessage ;
       if( websocketUrl.getPath().equals( fullHttpRequest.uri() ) ) {
         handshake( channelHandlerContext, fullHttpRequest ) ;
+        fullHttpRequest.release() ;
         return ;
       }
     }
@@ -70,10 +71,6 @@ public class UpendUpgradeTier extends SimpleChannelInboundHandler< Object > {
       WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(
           channelHandlerContext.channel() ) ;
     } else {
-//      if( ! channelHandlerContext.channel().isWritable() ) {
-//        throw new IllegalStateException( "Channel not writable: " +
-//            channelHandlerContext.channel() ) ;
-//      }
       handshaker.handshake(
           channelHandlerContext.channel(),
           fullHttpRequest,

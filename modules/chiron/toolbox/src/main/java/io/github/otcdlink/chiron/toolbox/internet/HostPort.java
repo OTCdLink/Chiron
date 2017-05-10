@@ -5,6 +5,7 @@ import io.github.otcdlink.chiron.toolbox.ToStringTools;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.net.InetSocketAddress;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.regex.Matcher;
 
@@ -91,6 +92,15 @@ public final class HostPort {
       return new HostPort( hostname, port ) ;
     } else {
       return null ;
+    }
+  }
+
+  public static HostPort create( final URL url ) throws CreationException
+  {
+    try {
+      return HostPort.create( Hostname.parse( url.getHost() ), url.getPort() ) ;
+    } catch( final Hostname.ParseException e ) {
+      throw new CreationException( "Cound not parse '" + url.toExternalForm() + "'" ) ;
     }
   }
 

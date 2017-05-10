@@ -70,12 +70,18 @@ abstract class FileSlicer {
 
   private static final Logger LOGGER = LoggerFactory.getLogger( FileSlicer.class ) ;
 
+  /**
+   * Default buffer size for mapping a file into memory.
+   * It turns out that using a 100 times greater size doesn't affect Replay duration.
+   */
+  private static final int DEFAULT_PORTION_MAXIMUM_LENGTH = 1024 * 1024 ;
+
   private final byte[] delimiter ;
   private final int delimiterLastIndex;
   private final int portionMaximumLength ;
 
   public FileSlicer( final byte[] delimiter ) {
-    this( delimiter, 1024 * 1024 ) ;
+    this( delimiter, DEFAULT_PORTION_MAXIMUM_LENGTH ) ;
   }
 
   public FileSlicer( final byte[] delimiter, final int portionMaximumLength ) {

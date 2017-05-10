@@ -11,11 +11,15 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.Permission;
+import java.security.PermissionCollection;
 import java.security.cert.CertificateException;
+import java.util.Map;
 
 public enum KeystoreTools { ;
 
@@ -55,7 +59,7 @@ public enum KeystoreTools { ;
     final KeyStore keyStore = KeyStore.getInstance( "JKS" ) ;
     try( final InputStream inputStream = UrxTools.getByteSource( url ).openStream() ) {
       keyStore.load( inputStream, null ) ;
-      LOGGER.info( "Loaded keystore/truststore from '" + url + "'." );
+      LOGGER.info( "Loaded keystore/truststore from '" + url + "'." ) ;
     }
     return keyStore ;
   }
@@ -128,13 +132,35 @@ public enum KeystoreTools { ;
   /**
    * Legal restrictions for cryptographic tools still applies. Ask your lawyer if you can call
    * this method that enables Java Cryptography Extensions.
+   * Java 1.8.0_112 added some checks but nothing that couldn't be bypassed using this
+   * <a href="http://stackoverflow.com/a/22492582/1923328" >hack</a>.
    */
   public static void activateJavaCryptographyExtensions() {
     try {
-      final Field field = Class.forName( "javax.crypto.JceSecurity" )
-          .getDeclaredField( "isRestricted" ) ;
-      field.setAccessible( true ) ;
-      field.set( null, Boolean.FALSE ) ;
+      final Class< ? > jceSecurity = Class.forName( "javax.crypto.JceSecurity" ) ;
+      final Class< ? > cryptoPermissions = Class.forName( "javax.crypto.CryptoPermissions" ) ;
+      final Class< ? > cryptoAllPermission = Class.forName( "javax.crypto.CryptoAllPermission" ) ;
+
+      final Field isRestrictedField = jceSecurity.getDeclaredField( "isRestricted" ) ;
+      isRestrictedField.setAccessible( true ) ;
+      final Field modifiersField = Field.class.getDeclaredField( "modifiers" ) ;
+      modifiersField.setAccessible( true ) ;
+      modifiersField.setInt( isRestrictedField,
+          isRestrictedField.getModifiers() & ~Modifier.FINAL ) ;
+      isRestrictedField.set( null, false ) ;
+
+      final Field defaultPolicyField = jceSecurity.getDeclaredField( "defaultPolicy" ) ;
+      defaultPolicyField.setAccessible( true ) ;
+      final PermissionCollection defaultPolicy =
+          ( PermissionCollection ) defaultPolicyField.get( null ) ;
+
+      final Field perms = cryptoPermissions.getDeclaredField( "perms" ) ;
+      perms.setAccessible( true ) ;
+      ( ( Map< ?, ? > ) perms.get( defaultPolicy ) ).clear() ;
+
+      final Field instance = cryptoAllPermission.getDeclaredField( "INSTANCE" ) ;
+      instance.setAccessible( true ) ;
+      defaultPolicy.add( ( Permission ) instance.get( null ) ) ;
       LOGGER.info( "Installed Java Cryptography Extension programmatically." ) ;
     } catch( final Exception ex ) {
       LOGGER.error( "Could not force Java Cryptography Extension", ex ) ;

@@ -16,4 +16,11 @@ public final class KeystoreToolsTest {
     Assertions.assertThat( KeystoreTools.loadKeystore( url ) ).isNotNull() ;
   }
 
+  /**
+   * We had to adjust some reflexion hack following to a Java update, so we check it still works.
+   */
+  @Test
+  public void activateCryptographyExtensions() throws Exception {
+    KeystoreTools.activateJavaCryptographyExtensions() ;
+  }
 }

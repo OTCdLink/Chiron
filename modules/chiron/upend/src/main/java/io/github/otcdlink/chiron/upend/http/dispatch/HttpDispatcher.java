@@ -5,10 +5,10 @@ import io.github.otcdlink.chiron.command.CommandConsumer;
 import io.github.otcdlink.chiron.designator.Designator;
 import io.github.otcdlink.chiron.toolbox.UrxTools;
 import io.github.otcdlink.chiron.toolbox.internet.SchemeHostPort;
-import io.github.otcdlink.chiron.upend.http.caching.BytebufContent;
-import io.github.otcdlink.chiron.upend.http.caching.StaticContent;
-import io.github.otcdlink.chiron.upend.http.caching.StaticContentCache;
-import io.github.otcdlink.chiron.upend.http.caching.StaticFileContentProvider;
+import io.github.otcdlink.chiron.upend.http.content.StaticContent;
+import io.github.otcdlink.chiron.upend.http.content.caching.BytebufContent;
+import io.github.otcdlink.chiron.upend.http.content.caching.StaticContentCache;
+import io.github.otcdlink.chiron.upend.http.content.file.StaticFileContentProvider;
 
 import java.util.function.Function;
 

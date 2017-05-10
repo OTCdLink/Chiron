@@ -455,7 +455,7 @@ public class UpendConnector<
 
     // ChannelTools.dumpPipelineAsynchronously( pipeline ) ;
 
-    LOGGER.debug( "Built " + pipeline + " for " + socketChannel + "." ) ;
+    // LOGGER.debug( "Built " + pipeline + " for " + socketChannel + "." ) ;
   }
 
   private static < UPWARD_DUTY > void addCommandInterceptorIfNeeded(

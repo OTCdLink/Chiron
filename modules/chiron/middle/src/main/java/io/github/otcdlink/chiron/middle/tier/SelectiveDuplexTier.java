@@ -6,7 +6,6 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
 /**
@@ -16,38 +15,15 @@ public abstract class SelectiveDuplexTier< INBOUND, OUTBOUND >
     extends ChannelDuplexHandler
 {
 
-  private final boolean autoRelease ;
   private final TypeParameterMatcher inboundMessageMatcher ;
   private final TypeParameterMatcher outboundMessageMatcher ;
 
 
   protected SelectiveDuplexTier() {
-    this( false ) ;
-  }
-
-  protected SelectiveDuplexTier( final boolean autoRelease ) {
     inboundMessageMatcher = TypeParameterMatcher.find(
         this, SelectiveDuplexTier.class, "INBOUND" ) ;
     outboundMessageMatcher = TypeParameterMatcher.find(
         this, SelectiveDuplexTier.class, "OUTBOUND" ) ;
-    this.autoRelease = autoRelease ;
-  }
-
-  protected SelectiveDuplexTier(
-      final Class< ? extends INBOUND > inboundMessageType,
-      final Class< ? extends OUTBOUND > outboundMessageType
-  ) {
-    this( inboundMessageType, outboundMessageType, false ) ;
-  }
-
-  protected SelectiveDuplexTier(
-      final Class< ? extends INBOUND > inboundMessageType,
-      final Class< ? extends OUTBOUND > outboundMessageType,
-      final boolean autoRelease
-  ) {
-    inboundMessageMatcher = TypeParameterMatcher.get( inboundMessageType ) ;
-    outboundMessageMatcher = TypeParameterMatcher.get( outboundMessageType ) ;
-    this.autoRelease = autoRelease ;
   }
 
 
@@ -68,19 +44,11 @@ public abstract class SelectiveDuplexTier< INBOUND, OUTBOUND >
       final ChannelHandlerContext channelHandlerContext,
       final Object inbound
   ) throws Exception {
-    boolean release = true ;
-    try {
-      if( acceptInboundMessage( inbound ) ) {
-        @SuppressWarnings( "unchecked" ) final INBOUND imsg = ( INBOUND ) inbound ;
-        inboundMessage( channelHandlerContext, imsg ) ;
-      } else {
-        release = false ;
-        forwardInbound( channelHandlerContext, inbound ) ;
-      }
-    } finally {
-      if( autoRelease && release ) {
-        ReferenceCountUtil.release( inbound ) ;
-      }
+    if( acceptInboundMessage( inbound ) ) {
+      @SuppressWarnings( "unchecked" ) final INBOUND imsg = ( INBOUND ) inbound ;
+      inboundMessage( channelHandlerContext, imsg ) ;
+    } else {
+      forwardInbound( channelHandlerContext, inbound ) ;
     }
   }
 
@@ -115,20 +83,12 @@ public abstract class SelectiveDuplexTier< INBOUND, OUTBOUND >
       final Object outbound,
       final ChannelPromise promise
   ) throws Exception {
-    boolean release = true ;
-    try {
-      if( acceptOutboundMessage( outbound ) ) {
-        @SuppressWarnings( "unchecked" )
-        final OUTBOUND outboundMessage = ( OUTBOUND ) outbound ;
-        outboundMessage( channelHandlerContext, outboundMessage, promise ) ;
-      } else {
-        release = false ;
-        forwardOutbound( channelHandlerContext, outbound, promise ) ;
-      }
-    } finally {
-      if( autoRelease && release ) {
-        ReferenceCountUtil.release( outbound ) ;
-      }
+    if( acceptOutboundMessage( outbound ) ) {
+      @SuppressWarnings( "unchecked" )
+      final OUTBOUND outboundMessage = ( OUTBOUND ) outbound ;
+      outboundMessage( channelHandlerContext, outboundMessage, promise ) ;
+    } else {
+      forwardOutbound( channelHandlerContext, outbound, promise ) ;
     }
   }
 

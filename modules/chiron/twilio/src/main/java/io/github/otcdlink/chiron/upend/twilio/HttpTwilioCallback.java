@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static io.github.otcdlink.chiron.upend.http.dispatch.UsualConditions.relativeMatch;
-import static io.github.otcdlink.chiron.upend.http.dispatch.UsualHttpCommands.Redirect.APPEND_TRAILING_SLASH_IF_CONTEXT_PATH_MATCHES;
+import static io.github.otcdlink.chiron.upend.http.dispatch.UsualHttpCommands.Redirect.APPEND_MISSING_SLASH_TO_URL;
 
 /**
  * Configures an {@link HttpDispatcher} to respond to Twilio's HTTP requests, delegating logic
@@ -34,7 +34,7 @@ public final class HttpTwilioCallback {
 
   public Consumer< HttpDispatcher< ?, ?, Void, Void, ? extends HttpDispatcher > > setup() {
     return httpDispatcher -> httpDispatcher
-        .response( APPEND_TRAILING_SLASH_IF_CONTEXT_PATH_MATCHES )
+        .response( APPEND_MISSING_SLASH_TO_URL )
         .responseIf(
             relativeMatch( "/" ),
             UsualHttpCommands.Html.outbound( "Twilio callback service" )

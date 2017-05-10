@@ -6,6 +6,7 @@ import io.github.otcdlink.chiron.middle.session.SessionIdentifier;
 import io.github.otcdlink.chiron.middle.session.SessionLifecycle;
 import io.github.otcdlink.chiron.middle.session.SignonFailureNotice;
 import io.github.otcdlink.chiron.toolbox.ToStringTools;
+import io.github.otcdlink.chiron.toolbox.netty.NettyTools;
 import io.github.otcdlink.chiron.upend.UpendConnector;
 import io.github.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
 import io.github.otcdlink.chiron.upend.session.SessionSupervisor;
@@ -300,10 +301,12 @@ public class SessionEnforcerTier< ADDRESS >
       final Object inbound
   ) {
     if( ChannelTools.hasSession( channelHandlerContext ) ) {
+      NettyTools.touchMaybe( inbound, "Sending upward because there is a valid session" ) ;
       channelHandlerContext.fireChannelRead( inbound ) ;
     } else {
       LOGGER.warn( "Preventing " + inbound +
           " to go upward because there is no session for " + this + "." ) ;
+      NettyTools.releaseMaybe( inbound );
     }
   }
 

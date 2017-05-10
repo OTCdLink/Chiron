@@ -1,10 +1,12 @@
 package io.github.otcdlink.chiron.toolbox;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import io.github.otcdlink.chiron.toolbox.internet.Hostname;
 import io.github.otcdlink.chiron.toolbox.text.TextTools;
+import io.netty.util.ResourceLeakDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +16,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Adds various checks when accessing to System Properties.
@@ -24,6 +28,9 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
 
   private static final Logger LOGGER = LoggerFactory.getLogger( SafeSystemProperty.class ) ;
 
+  /**
+   * The property key as used by {@code System.getProperty( key )}.
+   */
   public final String key ;
 
   /**
@@ -32,18 +39,25 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
    */
   public final VALUE value ;
 
-  protected final boolean expectsValue ;
+  protected final boolean requiresValue ;
+
+  /**
+   * If {@code true} and there is no such property, a warning gets logged.
+   */
+  protected final boolean expected ;
+
   protected final boolean defined ;
   protected final boolean wellFormed ;
 
-  protected SafeSystemProperty( final String key, final boolean expectsValue ) {
+  protected SafeSystemProperty( final String key, final boolean requiresValue, boolean expected ) {
+    this.expected = expected ;
     checkArgument( ! Strings.isNullOrEmpty( key ) ) ;
     this.key = key ;
-    this.expectsValue = expectsValue ;
+    this.requiresValue = requiresValue;
     final String rawValue = System.getProperty( key ) ;
     final String malformationMessage ;
 
-    if( expectsValue ) {
+    if( requiresValue ) {
       this.defined = ! Strings.isNullOrEmpty( rawValue ) ;
       String malformationMessageMaybe = null ;
       if( this.defined ) {
@@ -78,7 +92,9 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
     if( wellFormed ) {
       LOGGER.debug( "Successfully parsed " + this.toString( 100, true ) + "." ) ;
     } else {
-      LOGGER.warn( "Malformed property '" + key + "': " + malformationMessage + "." ) ;
+      if( expected ) {
+        LOGGER.warn( "Malformed property '" + key + "': " + malformationMessage + "." ) ;
+      }
     }
 
   }
@@ -93,19 +109,42 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
    */
   protected abstract VALUE decode( String value ) throws Exception ;
 
+  /**
+   * Call {@code System.setProperty( key, value )} back again, and reload.
+   */
+  public abstract PROPERTY save() ;
+
+  public final PROPERTY clear() {
+    System.clearProperty( key ) ;
+    return reload() ;
+  }
+
+  /**
+   * Default implementation uses reflexion.
+   * Subclasses with custom fields should override this method.
+   */
   @Override
   public PROPERTY reload() {
     final Constructor< ? >[] constructors = getClass().getDeclaredConstructors() ;
     Throwable problem = null ;
-    for( final Constructor constructor : constructors ) {
-      final Class[] parameterTypes = constructor.getParameterTypes() ;
-      if( parameterTypes.length == 1 && String.class.equals( parameterTypes[ 0 ] ) ) {
-        try {
-          return ( PROPERTY ) constructor.newInstance( key ) ;
-        } catch( InstantiationException | IllegalAccessException | InvocationTargetException e ) {
-          problem = e ;
+    try {
+      for( final Constructor constructor : constructors ) {
+        final Class[] parameterTypes = constructor.getParameterTypes() ;
+        if( parameterTypes.length == 2 &&
+            String.class.equals( parameterTypes[ 0 ] ) &&
+            Boolean.TYPE.equals( parameterTypes[ 1 ] )
+        ) {
+            return ( PROPERTY ) constructor.newInstance( key, expected ) ;
+        } else if( parameterTypes.length == 3 &&
+            String.class.equals( parameterTypes[ 0 ] ) &&
+            Boolean.TYPE.equals( parameterTypes[ 1 ] ) &&
+            Boolean.TYPE.equals( parameterTypes[ 2 ] )
+          ) {
+          return ( PROPERTY ) constructor.newInstance( key, requiresValue, expected ) ;
         }
       }
+    } catch( InstantiationException | IllegalAccessException | InvocationTargetException e ) {
+      problem = e ;
     }
     final String message ;
     if( problem == null ) {
@@ -136,14 +175,32 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
   public abstract static class Valued< PROPERTY, VALUE >
       extends SafeSystemProperty< PROPERTY, VALUE >
   {
-    public Valued( final String key ) {
-      super( key, true ) ;
+    protected Valued( final String key, final boolean expected ) {
+      super( key, true, expected ) ;
     }
+
+    public final PROPERTY set( final VALUE value ) {
+      System.setProperty( key, encode( value ) ) ;
+      return reload() ;
+    }
+
+    protected abstract String encode( VALUE value ) ;
+
+    public final PROPERTY save() {
+      if( value == null ) {
+        clear() ;
+      } else {
+        checkState( wellFormed, "Can't save because an ill-formed value for " + this ) ;
+        System.setProperty( key, encode( value ) ) ;
+      }
+      return reload() ;
+    }
+
   }
 
   public static final class Unvalued extends SafeSystemProperty< Unvalued, Unvalued.NoValue > {
-    public Unvalued( final String key ) {
-      super( key, false ) ;
+    protected Unvalued( final String key, final boolean expected) {
+      super( key, false, expected ) ;
     }
 
     public boolean isSet() {
@@ -155,28 +212,35 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
       throw new Exception( "Should have no value" ) ;
     }
 
-    public static final class NoValue {
-      public final NoValue INSTANCE = new NoValue() ;
-
-      @Override
-      public String toString() {
-        return ToStringTools.getNiceClassName( this ) + "{}" ;
+    public Unvalued save() {
+      if( isSet() ) {
+        System.setProperty( key, "" ) ;
+      } else {
+        clear() ;
       }
+      return reload() ;
     }
+
+    public static final class NoValue { }
   }
 
 
 
 
   public static class BooleanType extends Valued< BooleanType, Boolean > {
-    protected BooleanType( final String key ) {
-      super( key ) ;
+    protected BooleanType( final String key, final boolean expected ) {
+      super( key, expected ) ;
     }
 
 
     @Override
     protected Boolean decode( final String value ) {
       return Boolean.parseBoolean( value ) ;
+    }
+
+    @Override
+    protected String encode( final Boolean aBoolean ) {
+      return Boolean.toString( aBoolean ) ;
     }
 
     public final boolean explicitelyTrue() {
@@ -190,13 +254,19 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
       return valueOrDefault( defaultValue ) ;
     }
   }
+
   public static class StringType extends Valued< StringType, String > {
-    protected StringType( final String key ) {
-      super( key ) ;
+    protected StringType( final String key, final boolean expected ) {
+      super( key, expected ) ;
     }
 
     @Override
-    protected String decode( final String value ) {
+    protected String decode( final String rawString ) {
+      return rawString ;
+    }
+
+    @Override
+    protected String encode( String value ) {
       return value ;
     }
   }
@@ -204,8 +274,8 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
   public static class StringListType extends Valued< StringListType, ImmutableList< String > > {
     @SuppressWarnings( "unused" )
     private final String separator ;
-    protected StringListType( final String key, final String separator ) {
-      super( capture( key, separator ) ) ;
+    protected StringListType( final String key, final String separator, final boolean expected ) {
+      super( capture( key, separator ), expected ) ;
       checkArgument( ! TextTools.isBlank( separator ) ) ;
       this.separator = separator ;
       SEPARATOR_CAPTURE.remove() ;
@@ -224,17 +294,70 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
       final String separator = SEPARATOR_CAPTURE.get() ;
       return ImmutableList.copyOf( Splitter.on( separator ).splitToList( value ) ) ;
     }
+
+    @Override
+    protected String encode( final ImmutableList< String > strings ) {
+      return Joiner.on( separator ).join( strings ) ;
+    }
   }
+
+  public static class EnumType< E extends Enum< E > >
+      extends Valued< SafeSystemProperty.EnumType< E >, E >
+  {
+    private final Class< E > enumClass ;
+
+    protected EnumType( final String key, final Class< E > enumClass, final boolean expected ) {
+      super( captureEnumClass( key, enumClass ), expected ) ;
+      this.enumClass = checkNotNull( enumClass ) ;
+    }
+
+    @Override
+    public EnumType< E > reload() {
+      return new EnumType<>( key, enumClass, expected ) ;
+    }
+
+    private static final ThreadLocal< Class< ? extends Enum > > ENUMCLASS_CAPTURE =
+        new ThreadLocal<>() ;
+
+    private static String captureEnumClass(
+        final String s,
+        final Class< ? extends Enum > enumClass
+    ) {
+      ENUMCLASS_CAPTURE.set( enumClass ) ;
+      return s ;
+    }
+
+
+
+
+
+    @Override
+    protected E decode( final String value ) {
+      final Class< E > aClass = ( Class<E> ) ENUMCLASS_CAPTURE.get() ;
+      return Enum.valueOf( aClass, value ) ;
+    }
+
+    @Override
+    protected String encode( E enumElement ) {
+      return enumElement.name() ;
+    }
+  }
+
 
   public static class IntegerType extends Valued< IntegerType, Integer > {
 
-    protected IntegerType( final String key ) {
-      super( key ) ;
+    protected IntegerType( final String key, final boolean expected ) {
+      super( key, expected ) ;
     }
 
     @Override
     protected Integer decode( final String value ) throws Exception {
       return Integer.parseInt( value ) ;
+    }
+
+    @Override
+    protected String encode( Integer integer ) {
+      return Integer.toString( integer ) ;
     }
 
     /**
@@ -247,8 +370,8 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
 
   public static class StrictlyPositiveIntegerType extends IntegerType {
 
-    protected StrictlyPositiveIntegerType( final String key ) {
-      super( key ) ;
+    protected StrictlyPositiveIntegerType( final String key, final boolean expected ) {
+      super( key, expected ) ;
     }
 
     @Override
@@ -262,8 +385,8 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
 
   public static class FileType extends Valued< FileType, File > {
 
-    protected FileType( final String key ) {
-      super( key ) ;
+    protected FileType( final String key, final boolean expected ) {
+      super( key, expected ) ;
     }
 
     @Override
@@ -271,12 +394,16 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
       return new File( value ) ;
     }
 
+    @Override
+    protected String encode( File file ) {
+      return file.getAbsolutePath() ;
+    }
   }
 
   public static class HostnameType extends Valued< HostnameType, Hostname > {
 
-    protected HostnameType( final String key ) {
-      super( key ) ;
+    protected HostnameType( final String key, final boolean expected ) {
+      super( key, expected ) ;
     }
 
     @Override
@@ -284,38 +411,92 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
       return Hostname.parse( value ) ;
     }
 
+    @Override
+    protected String encode( final Hostname hostname ) {
+      return hostname.asString() ;
+    }
   }
 
   public static Unvalued forUnvalued( final String key ){
-    return new Unvalued( key ) ;
+    return new Unvalued( key, false ) ;
+  }
+
+  public static Unvalued forUnvalued( final String key, final boolean expected ){
+    return new Unvalued( key, expected ) ;
   }
 
   public static BooleanType forBoolean( final String key ){
-    return new BooleanType( key ) ;
+    return new BooleanType( key, true ) ;
+  }
+
+  public static BooleanType forBoolean( final String key, final boolean expected ){
+    return new BooleanType( key, expected ) ;
   }
 
   public static StringType forString( final String key ){
-    return new StringType( key ) ;
+    return new StringType( key, true ) ;
+  }
+
+  public static StringType forString( final String key, final boolean expected ){
+    return new StringType( key, expected ) ;
   }
 
   public static StringListType forStringList( final String key, final String separator ){
-    return new StringListType( key, separator ) ;
+    return new StringListType( key, separator, true ) ;
+  }
+
+  public static StringListType forStringList(
+      final String key,
+      final String separator,
+      final boolean expected
+  ){
+    return new StringListType( key, separator, expected ) ;
+  }
+
+  public static < E extends Enum< E > > EnumType< E > forEnum(
+      final String key,
+      final Class< E > enumClass
+  ) {
+    return forEnum( key, enumClass, true ) ;
+  }
+
+  public static < E extends Enum< E > > EnumType< E > forEnum(
+      final String key,
+      final Class< E > enumClass,
+      final boolean expected
+  ) {
+    return new EnumType<>( key, enumClass, expected ) ;
   }
 
   public static IntegerType forInteger( final String key ){
-    return new IntegerType( key ) ;
+    return new IntegerType( key, true ) ;
+  }
+
+  public static IntegerType forInteger( final String key, final boolean expected ){
+    return new IntegerType( key, expected ) ;
   }
 
   public static IntegerType forStrictlyPositiveInteger( final String key ){
-    return new StrictlyPositiveIntegerType( key ) ;
+    return new StrictlyPositiveIntegerType( key, true ) ;
+  }
+
+  public static IntegerType forStrictlyPositiveInteger( final String key, final boolean expected ){
+    return new StrictlyPositiveIntegerType( key, expected ) ;
   }
 
   public static FileType forFile( final String key ){
-    return new FileType( key ) ;
+    return new FileType( key, true ) ;
+  }
+
+  public static FileType forFile( final String key, final boolean expected ){
+    return new FileType( key, expected ) ;
   }
 
   public static HostnameType forHostname( final String key ){
-    return new HostnameType( key ) ;
+    return new HostnameType( key, true ) ;
+  }
+  public static HostnameType forHostname( final String key, final boolean expected ){
+    return new HostnameType( key, expected ) ;
   }
 
   /**
@@ -342,6 +523,22 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
         return OS_NAME.defined && OS_NAME.value.startsWith( "Mac OS X" ) ;
       }
     }
+  }
+
+  /**
+   * Most of time we don't need to access those properties but it's quicker to have a look here
+   * than to run a Google search.
+   */
+  public interface Netty {
+
+    /**
+     * It turns out that this property only makes sense when setting a system property
+     * when launching an external process.
+     *
+     * @see io.netty.util.ResourceLeakDetector#setLevel(ResourceLeakDetector.Level)
+     */
+    EnumType< ResourceLeakDetector.Level > LEAK_DETECTION_LEVEL =
+        forEnum( "io.netty.leakDetectionLevel", ResourceLeakDetector.Level.class, false ) ;
   }
 
 }

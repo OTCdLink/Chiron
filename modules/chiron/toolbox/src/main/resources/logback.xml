@@ -13,20 +13,18 @@
 
   </appender>
 
+<!--
   <appender
       name="FILE"
       class="ch.qos.logback.core.FileAppender"
   >
-    <!-- If the path contains a directory, this must exist.-->
     <File>chiron.log</File>
-
     <append>false</append>
-
     <encoder>
       <pattern>%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
     </encoder>
-
   </appender>
+-->
 
 
   <logger name="io.github.otcdlink" level="DEBUG" />
@@ -36,7 +34,7 @@
 
   <root>
     <appender-ref ref="STDOUT" />
-    <appender-ref ref="FILE" />
+    <!--<appender-ref ref="FILE" />-->
     <level value="DEBUG" />
   </root>
 

@@ -14,33 +14,51 @@
   <packaging>jar</packaging>
 
 
-  <dependencies>
+  <dependencyManagement>
+    <dependencies>
 
+      <!-- Don't make part of Chiron's BOM yet, it's experimental for now. -->
+      <dependency>
+        <groupId>io.projectreactor</groupId>
+        <artifactId>reactor-bom</artifactId>
+        <version>Aluminium-SR2</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
 		<dependency>
 			<groupId>${project.parent.groupId}</groupId>
 			<artifactId>Chiron-toolbox</artifactId>
 			<version>${project.version}</version>				
 		</dependency>
-
+    
     <dependency>
-      <groupId>io.github.otcdlink.chiron</groupId>
-      <artifactId>Chiron-testing</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport</artifactId>
     </dependency>
-
-    <dependency>
-      <groupId>io.github.otcdlink.chiron</groupId>
-      <artifactId>Chiron-fixture</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-
+    
     <dependency>
       <groupId>io.projectreactor</groupId>
-      <artifactId>reactor-stream</artifactId>
+      <artifactId>reactor-core</artifactId>
     </dependency>
+
+<!--
+    <dependency>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-test</artifactId>
+    </dependency>
+-->
+
+    <dependency>
+      <groupId>${project.parent.groupId}</groupId>
+      <artifactId>Chiron-testing</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+
 
   </dependencies>
 

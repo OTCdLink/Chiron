@@ -3,8 +3,10 @@ package io.github.otcdlink.chiron.toolbox.netty;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMultimap;
 import io.github.otcdlink.chiron.toolbox.ObjectTools;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
@@ -21,6 +23,7 @@ import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.util.NetUtil;
+import io.netty.util.ReferenceCounted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,6 +130,32 @@ public final class NettyTools {
       }
     } catch( final IOException e ) {
       throw new IllegalStateException( "Cannot parse http request data", e ) ;
+    }
+  }
+
+  /**
+   * {@link Unpooled#unmodifiableBuffer(io.netty.buffer.ByteBuf)} is deprecated but its
+   * replacement {@link ByteBuf#asReadOnly()} gives strange results.
+   */
+  public static ByteBuf unmodifiableBufferSafe( ByteBuf byteBuf ) {
+    return Unpooled.unmodifiableBuffer( byteBuf );
+  }
+
+  public static void touchMaybe( final Object object ) {
+    if( object instanceof ReferenceCounted ) {
+      ( ( ReferenceCounted ) object ).touch() ;
+    }
+  }
+
+  public static void touchMaybe( final Object object, final String hint ) {
+    if( object instanceof ReferenceCounted ) {
+      ( ( ReferenceCounted ) object ).touch( hint ) ;
+    }
+  }
+
+  public static void releaseMaybe( Object inbound ) {
+    if( inbound instanceof ReferenceCounted ) {
+      ( ( ReferenceCounted ) inbound ).release() ;
     }
   }
 

@@ -12,6 +12,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +56,7 @@ public class DownendSupervisionTier extends SimpleChannelInboundHandler< Object 
   private boolean notifyOfDisconnection = true ;
 
   public DownendSupervisionTier( final Claim claim ) {
+    super( false ) ;
     this.claim = checkNotNull( claim ) ;
   }
 
@@ -107,6 +109,7 @@ public class DownendSupervisionTier extends SimpleChannelInboundHandler< Object 
           .finishHandshake( channel, connectionDescriptor, fullHttpResponse ) ;
       handshakeFuture.setSuccess() ;
       claim.afterWebsocketHandshake( connectionDescriptor ) ;
+      fullHttpResponse.release() ;
       LOGGER.debug( "Handshake complete, now HTTP responses must be about WebSockets." ) ;
       // ChannelTools.dumpPipeline( context.pipeline() ) ;
       return ;
@@ -115,6 +118,7 @@ public class DownendSupervisionTier extends SimpleChannelInboundHandler< Object 
     if( messageAsObject instanceof FullHttpResponse ) {
       final FullHttpResponse fullHttpResponse = ( FullHttpResponse ) messageAsObject ;
       if( HttpResponseStatus.SWITCHING_PROTOCOLS.code() == fullHttpResponse.status().code() ) {
+        ReferenceCountUtil.release( messageAsObject ) ;
         return ;
       } else {
         throw new IllegalStateException(
@@ -128,6 +132,8 @@ public class DownendSupervisionTier extends SimpleChannelInboundHandler< Object 
       notifyOfDisconnection = false ;
       claim.kickoutHappened( context ) ;
       context.close() ;
+      ReferenceCountUtil.release( messageAsObject ) ;
+
       return ;
     }
 

@@ -74,7 +74,7 @@ public class NettySocketServer extends EventLoopGroupOwner implements SocketServ
 
   @Override
   @SuppressWarnings( "WeakerAccess" )
-  protected final void augmentToString(
+  protected void augmentToString(
       @SuppressWarnings( "unused" ) final StringBuilder stringBuilder
   ) {
     stringBuilder.append( HostPort.niceHumanReadableString( listenAddress ) ) ;

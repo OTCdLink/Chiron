@@ -9,6 +9,7 @@ import io.github.otcdlink.chiron.command.Command;
 import io.github.otcdlink.chiron.command.Command.Tag;
 import io.github.otcdlink.chiron.fixture.BlockingMonolist;
 import io.github.otcdlink.chiron.fixture.CpuStress;
+import io.github.otcdlink.chiron.fixture.NettyLeakDetectorRule;
 import io.github.otcdlink.chiron.integration.echo.DownwardEchoCommand;
 import io.github.otcdlink.chiron.integration.echo.EchoDownwardDuty;
 import io.github.otcdlink.chiron.integration.echo.EchoUpwardDuty;
@@ -28,6 +29,7 @@ import mockit.Mocked;
 import mockit.StrictExpectations;
 import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -462,6 +464,10 @@ public class DownendConnectorTest
 
   private static final Logger LOGGER =
       LoggerFactory.getLogger( DownendConnectorTest.class ) ;
+
+  @Rule
+  public final NettyLeakDetectorRule nettyLeakDetectorRule = new NettyLeakDetectorRule() ;
+
 
   public DownendConnectorTest() {
     super( DownendFixture.newDownendConnectorFixture() ) ;

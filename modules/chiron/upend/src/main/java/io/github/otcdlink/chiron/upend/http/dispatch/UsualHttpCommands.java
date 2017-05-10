@@ -6,10 +6,10 @@ import io.github.otcdlink.chiron.toolbox.ToStringTools;
 import io.github.otcdlink.chiron.toolbox.netty.NettyTools;
 import io.github.otcdlink.chiron.toolbox.netty.RichHttpRequest;
 import io.github.otcdlink.chiron.toolbox.text.Plural;
-import io.github.otcdlink.chiron.upend.http.caching.BytebufContent;
-import io.github.otcdlink.chiron.upend.http.caching.StaticContent;
-import io.github.otcdlink.chiron.upend.http.caching.StaticContentCache;
-import io.github.otcdlink.chiron.upend.http.caching.StaticContentResolver;
+import io.github.otcdlink.chiron.upend.http.content.StaticContent;
+import io.github.otcdlink.chiron.upend.http.content.caching.BytebufContent;
+import io.github.otcdlink.chiron.upend.http.content.caching.StaticContentCache;
+import io.github.otcdlink.chiron.upend.http.content.caching.StaticContentResolver;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -219,7 +219,35 @@ public final class UsualHttpCommands {
       ;
     }
 
-    public static final HttpResponder.Outbound APPEND_TRAILING_SLASH_IF_CONTEXT_PATH_MATCHES =
+    public static final HttpResponder.Outbound
+    APPEND_MISSING_SLASH_TO_URI_PATH =
+        new HttpResponder.Outbound() {
+          @Override
+          public PipelineFeeder outbound(
+              final EvaluationContext evaluationContext,
+              final RichHttpRequest httpRequest
+          ) {
+            final UriPath.MatchKind match =
+                evaluationContext.contextPath().pathMatch( httpRequest.uriPath ) ;
+            if( match == UriPath.MatchKind.TOTAL_MATCH ) {
+              final StringBuilder redirectionUriBuilder = new StringBuilder() ;
+              redirectionUriBuilder.append( httpRequest.uriPath ).append( '/' ) ;
+              final String redirectionUri = redirectionUriBuilder.toString() ;
+
+              return new Redirect( redirectionUri ) ;
+            }
+            return null ;
+          }
+
+          @Override
+          public String toString() {
+            return ToStringTools.nameAndCompactHash( this ) +
+                "#APPEND_MISSING_SLASH_TO_URI_PATH{}" ;
+          }
+        }
+    ;
+
+    public static final HttpResponder.Outbound APPEND_MISSING_SLASH_TO_URL =
         new HttpResponder.Outbound() {
           @Override
           public PipelineFeeder outbound(
@@ -249,7 +277,8 @@ public final class UsualHttpCommands {
 
           @Override
           public String toString() {
-            return ToStringTools.nameAndCompactHash( this ) + "#APPEND_TRAILING_SLASH{}" ;
+            return ToStringTools.nameAndCompactHash( this ) +
+                "#APPEND_MISSING_SLASH_TO_URL{}" ;
           }
         }
     ;

@@ -5,6 +5,7 @@ import io.github.otcdlink.chiron.buffer.PositionalFieldReader;
 import io.github.otcdlink.chiron.buffer.PositionalFieldWriter;
 import io.github.otcdlink.chiron.codec.CommandBodyDecoder;
 import io.github.otcdlink.chiron.command.Command;
+import io.github.otcdlink.chiron.toolbox.netty.NettyTools;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -56,6 +57,7 @@ public abstract class AbstractCommandWebsocketCodecTier<
       final TextWebSocketFrame textWebSocketFrame
   ) throws Exception {
     try {
+      NettyTools.touchMaybe( textWebSocketFrame, "About to decode inbound message" ) ;
       final PositionalFieldReader fieldReader = readerCoating.coat( textWebSocketFrame.content() );
       final String commandName = fieldReader.readDelimitedString();
       final INBOUND_ENDPOINT_SPECIFIC endpointSpecific =
@@ -68,8 +70,9 @@ public abstract class AbstractCommandWebsocketCodecTier<
         );
         return;
       }
-      final Command<INBOUND_ENDPOINT_SPECIFIC, INBOUND_DUTY> command =
-          commandDecoder.decodeBody( endpointSpecific, commandName, fieldReader );
+      final Command< INBOUND_ENDPOINT_SPECIFIC, INBOUND_DUTY > command =
+          commandDecoder.decodeBody( endpointSpecific, commandName, fieldReader ) ;
+      textWebSocketFrame.release() ;
       if( command == null ) {
         LOGGER.error( "Obtained null " + Command.class.getSimpleName() +
             " for '" + commandName + "'." );
@@ -82,6 +85,7 @@ public abstract class AbstractCommandWebsocketCodecTier<
       throw e ;
     } finally {
       readerCoating.recycle() ;
+//      textWebSocketFrame.release() ;
     }
 
   }
@@ -101,19 +105,13 @@ public abstract class AbstractCommandWebsocketCodecTier<
     try {
       final PositionalFieldWriter fieldWriter = writerCoating.coat( byteBuf ) ;
       fieldWriter.writeDelimitedString( command.description().name() ) ;
-//      try {
       if( command.description().tracked() ) {
         writeEndpointSpecific( channelHandlerContext, fieldWriter, command.endpointSpecific ) ;
       } else {
         writeEndpointSpecific( channelHandlerContext, fieldWriter, null ) ;
       }
       command.encodeBody( fieldWriter ) ;
-        forwardOutbound( channelHandlerContext, new TextWebSocketFrame( byteBuf ), promise ) ;
-//      } catch( final Exception e ) {
-//        LoggerFactory.getLogger( AbstractCommandWebsocketCodecChannelHandler.class )
-//            .error( "Error in " + channelHandlerContext.pipeline(), e ) ;
-//        throw e ;
-//      }
+      forwardOutbound( channelHandlerContext, new TextWebSocketFrame( byteBuf ), promise ) ;
     } finally {
       writerCoating.recycle() ;
     }

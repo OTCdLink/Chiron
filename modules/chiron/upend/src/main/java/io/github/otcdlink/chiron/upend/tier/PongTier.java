@@ -2,7 +2,6 @@ package io.github.otcdlink.chiron.upend.tier;
 
 import io.github.otcdlink.chiron.middle.ChannelTools;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -40,6 +39,7 @@ public class PongTier extends SimpleChannelInboundHandler< PingWebSocketFrame > 
 
 
   public PongTier( final long timeoutIfNoPingMs ) {
+    super( true ) ;
     checkArgument( timeoutIfNoPingMs > 0 ) ;
     this.timeoutIfNoPingMs = timeoutIfNoPingMs ;
   }
@@ -64,8 +64,9 @@ public class PongTier extends SimpleChannelInboundHandler< PingWebSocketFrame > 
       final PingWebSocketFrame pingWebSocketFrame
   ) throws Exception {
     final Long pingCounter = ChannelTools.extractLongOrNull( LOGGER, pingWebSocketFrame ) ;
-    final ByteBuf buffer = Unpooled.buffer() ;
+    final ByteBuf buffer = channelHandlerContext.alloc().buffer() ;
     buffer.writeLong( pingCounter ) ;
+    buffer.touch( "Buffer for pong " + pingCounter ) ;
     final PongWebSocketFrame pongWebSocketFrame = new PongWebSocketFrame( buffer ) ;
     channelHandlerContext.writeAndFlush( pongWebSocketFrame ).addListener( future -> {
       if( future.isSuccess() ) {

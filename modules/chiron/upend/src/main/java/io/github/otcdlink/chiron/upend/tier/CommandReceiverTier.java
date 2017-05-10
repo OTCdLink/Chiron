@@ -14,7 +14,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static io.github.otcdlink.chiron.upend.UpendConnector.State.STARTED;
 
 public class CommandReceiverTier< UPWARD_DUTY >
-    extends SimpleChannelInboundHandler< Command<Designator, UPWARD_DUTY > >
+    extends SimpleChannelInboundHandler< Command< Designator, UPWARD_DUTY > >
 {
   private static final Logger LOGGER = LoggerFactory.getLogger( CommandReceiverTier.class ) ;
 
@@ -32,7 +32,7 @@ public class CommandReceiverTier< UPWARD_DUTY >
   @Override
   protected void channelRead0(
       final ChannelHandlerContext channelHandlerContext,
-      final Command<Designator, UPWARD_DUTY > command
+      final Command< Designator, UPWARD_DUTY > command
   ) throws Exception {
     final UpendConnector.State currentState = readableState.get() ;
     if( currentState == STARTED ) {

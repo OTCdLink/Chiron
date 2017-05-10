@@ -1,7 +1,6 @@
 package io.github.otcdlink.chiron.fixture.http;
 
 import com.google.common.collect.ImmutableCollection;
-import io.github.otcdlink.chiron.toolbox.UrxTools;
 import io.github.otcdlink.chiron.toolbox.netty.NettyHttpClient;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.assertj.core.api.AbstractAssert;
@@ -130,7 +129,7 @@ public class WatchedResponseAssert
 
     public HttpMoved302ResponseAssert hasTargetMatching( final Pattern pattern ) {
       isNotNull() ;
-      final URL redirectionTarget = actual.redirectionTarget();
+      final URL redirectionTarget = actual.redirectionTargetUrl();
       if( redirectionTarget == null ) {
         failWithMessage( "No redirection target" ) ;
       }
@@ -146,12 +145,21 @@ public class WatchedResponseAssert
     }
 
     public HttpMoved302ResponseAssert hasTargetMatching( final URI target ) {
-      return hasTargetMatching( UrxTools.toUrlQuiet( target ) ) ;
+      isNotNull() ;
+      final URI redirectionTarget = actual.redirectionTargetUri() ;
+      if( redirectionTarget == null ) {
+        failWithMessage( "No redirection target" ) ;
+      }
+      if( ! target.equals( redirectionTarget ) ) {
+        failWithMessage( "Expected redirection target to match <%s> but found <%s>",
+            target, redirectionTarget ) ;
+      }
+      return this ;
     }
 
     public HttpMoved302ResponseAssert hasTargetMatching( final String targetUrlAsString ) {
       isNotNull() ;
-      final URL redirectionTarget = actual.redirectionTarget() ;
+      final URL redirectionTarget = actual.redirectionTargetUrl() ;
       if( redirectionTarget == null ) {
         failWithMessage( "No redirection target" ) ;
       }

@@ -42,10 +42,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * <h2>Renaming</h2>
  * <p>
  * We could rename into something better. Candidates (favorites first):
+ * - IntegralHttpRequest
  * - RichHttpRequest
+ * - JumboHttpRequest
+ * - TallyHttpRequest
  * - RefinedHttpRequest
  * - ThickHttpRequest
- * - EphemeralHttpRequest
  * - BulkyHttpRequest
  * - ExtensiveHttpRequest
  * - TotalHttpRequest

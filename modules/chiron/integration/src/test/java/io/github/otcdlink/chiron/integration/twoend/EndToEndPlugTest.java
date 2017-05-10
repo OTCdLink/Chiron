@@ -4,7 +4,7 @@ import io.github.otcdlink.chiron.downend.DownendConnector;
 import io.github.otcdlink.chiron.downend.DownendConnectorTest;
 import io.github.otcdlink.chiron.downend.SignonMaterializer;
 import io.github.otcdlink.chiron.fixture.BlockingMonolist;
-import io.github.otcdlink.chiron.fixture.httpproxy.ConnectProxy;
+import io.github.otcdlink.chiron.fixture.tcp.http.ConnectProxy;
 import io.github.otcdlink.chiron.middle.tier.TimeBoundary;
 import io.github.otcdlink.chiron.toolbox.netty.NettyTools;
 import io.github.otcdlink.chiron.upend.session.OutwardSessionSupervisor;

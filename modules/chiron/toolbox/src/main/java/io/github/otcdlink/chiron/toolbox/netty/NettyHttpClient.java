@@ -274,7 +274,7 @@ public class NettyHttpClient extends NettySocketClient {
     /**
      * Calculate redirection with support for relative URL in redirection location.
      */
-    public URL redirectionTarget() {
+    public URL redirectionTargetUrl() {
       final String relocation = NettyTools.headerWithOptionalCapitalisation(
           response.headers,
           HttpHeaderNames.LOCATION.toString()
@@ -307,6 +307,19 @@ public class NettyHttpClient extends NettySocketClient {
         redirectionUrl = UrxTools.derive( originalBaseUrl, relocation ) ;
       }
       return redirectionUrl ;
+    }
+    /**
+     * Redirection target as it is, may be relative with no scheme-host-port.
+     */
+    public URI redirectionTargetUri() {
+      final String relocation = NettyTools.headerWithOptionalCapitalisation(
+          response.headers,
+          HttpHeaderNames.LOCATION.toString()
+      ) ;
+      if( relocation == null ) {
+        return null ;
+      }
+      return UrxTools.parseUriQuiet( relocation ) ;
     }
 
   }
@@ -408,7 +421,7 @@ public class NettyHttpClient extends NettySocketClient {
             ( ( CompleteResponse ) outcome ).response.responseStatus.code() == responseStatus.code()
         ) {
           httpClient.httpGet(
-              ( ( CompleteResponse ) outcome ).redirectionTarget(), this ) ;
+              ( ( CompleteResponse ) outcome ).redirectionTargetUrl(), this ) ;
         } else {
           break ;
         }
@@ -586,6 +599,10 @@ public class NettyHttpClient extends NettySocketClient {
       this.timeoutFuture = checkNotNull( timeoutFuture ) ;
     }
 
+    /**
+     * Implicitely makes use of {@link SimpleChannelInboundHandler#autoRelease} which
+     * is {@code true} by default.
+     */
     @Override
     protected void channelRead0(
         final ChannelHandlerContext channelHandlerContext,

@@ -28,7 +28,7 @@ public class PongTier extends SimpleChannelInboundHandler< PongWebSocketFrame > 
       final ChannelHandlerContext channelHandlerContext,
       final PongWebSocketFrame pongWebSocketFrame
   ) {
-    pongWebSocketFrame.retain() ; // Why do we need this?
+//    pongWebSocketFrame.retain() ; // Why do we need this?
     final Long pingCounter = ChannelTools.extractLongOrNull( LOGGER, pongWebSocketFrame ) ;
     claim.pongFrameReceived( pingCounter ) ;
   }

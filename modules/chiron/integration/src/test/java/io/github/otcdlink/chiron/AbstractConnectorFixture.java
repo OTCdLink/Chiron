@@ -16,8 +16,8 @@ import io.github.otcdlink.chiron.downend.DownendFixture.CommandTransceiverFixtur
 import io.github.otcdlink.chiron.downend.SignonMaterializer;
 import io.github.otcdlink.chiron.downend.TrackerCurator;
 import io.github.otcdlink.chiron.downend.babyupend.BabyUpend;
-import io.github.otcdlink.chiron.fixture.httpproxy.ConnectProxy;
-import io.github.otcdlink.chiron.fixture.httpproxy.HttpProxy;
+import io.github.otcdlink.chiron.fixture.tcp.http.ConnectProxy;
+import io.github.otcdlink.chiron.fixture.tcp.http.HttpProxy;
 import io.github.otcdlink.chiron.integration.echo.DownwardEchoCommand;
 import io.github.otcdlink.chiron.integration.echo.EchoDownwardDuty;
 import io.github.otcdlink.chiron.integration.echo.EchoUpwardDuty;

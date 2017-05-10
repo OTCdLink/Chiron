@@ -24,11 +24,22 @@ public interface TimeBoundary {
   /**
    * Supports a lag of 500 ms (upstream <i>and</i> downstream).
    */
+  @SuppressWarnings( "unused" )
   ForAll LENIENT_500 = Builder.createNew()
       .pingInterval( 1000 )
       .pongTimeoutOnDownend( 2500 )  // Need this to support a lag of 500 ms induced by HttpProxy.
       .reconnectDelay( DEFAULT_CONNECT_TIMEOUT_MS, 3000 )
       .pingTimeoutOnUpend( 2500 )    // Need this to support a lag of 500 ms induced by HttpProxy.
+      .maximumSessionInactivity( 10_000 )
+      .build()
+  ;
+
+  @SuppressWarnings( "unused" )
+  ForAll NOPE = Builder.createNew()
+      .pingIntervalNever()
+      .pongTimeoutNever()
+      .reconnectDelay( 1000, 1000 )
+      .pingTimeoutNever()
       .maximumSessionInactivity( 10_000 )
       .build()
   ;

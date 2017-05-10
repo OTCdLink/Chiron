@@ -17,9 +17,11 @@ import io.github.otcdlink.chiron.middle.tier.WebsocketFrameSizer;
 import io.github.otcdlink.chiron.toolbox.ObjectTools;
 import io.github.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
 import io.netty.channel.Channel;
+import io.netty.util.ResourceLeakDetector;
 import mockit.FullVerificationsInOrder;
 import mockit.Injectable;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -181,12 +183,23 @@ public class EndToEndTest {
   //    private static final long TIMEOUT_MS = 5_000 ;
   private static final long TIMEOUT_MS = 1_000_000 ;
 
+  private static final ResourceLeakDetector.Level INITIAL_RESOURCELEAKDETECTOR_LEVEL =
+      ResourceLeakDetector.getLevel() ;
+
+
   private final EndToEndFixture fixture = new EndToEndFixture() ;
 
+  @Before
+  public void setUp() throws Exception {
+    ResourceLeakDetector.setLevel( ResourceLeakDetector.Level.PARANOID ) ;
+  }
 
   @After
   public void tearDown() throws Exception {
     fixture.stopAll() ;
+    System.gc() ;
+    ResourceLeakDetector.setLevel( INITIAL_RESOURCELEAKDETECTOR_LEVEL ) ;
+
   }
 
 

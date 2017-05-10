@@ -66,7 +66,7 @@ public class UsualHttpCommandsTest {
     }} ;
     final RichHttpRequest request = httpRequest( requestUriPath ) ;
     final UsualHttpCommands.Redirect command = ( UsualHttpCommands.Redirect )
-        UsualHttpCommands.Redirect.APPEND_TRAILING_SLASH_IF_CONTEXT_PATH_MATCHES.outbound( evaluationContext, request ) ;
+        UsualHttpCommands.Redirect.APPEND_MISSING_SLASH_TO_URL.outbound( evaluationContext, request ) ;
     final String description =
         "context path: '" + contextPath + ", " +
         "request URI path: '" + requestUriPath + "', " +

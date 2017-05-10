@@ -58,6 +58,7 @@ public class BabyTier extends SimpleChannelInboundHandler< Object > {
       final Responder< PingWebSocketFrame, PongWebSocketFrame > pingpongGuide,
       final Responder< CloseWebSocketFrame, Void > closeFrameResponder
   ) {
+    super( true ) ;
     this.ssl = ssl ;
     this.connectionDescriptor = checkNotNull( connectionDescriptor ) ;
     this.channelGroup = checkNotNull( channelGroup ) ;

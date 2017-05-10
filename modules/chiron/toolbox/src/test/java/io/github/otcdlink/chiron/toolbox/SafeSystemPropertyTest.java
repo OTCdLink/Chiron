@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static io.github.otcdlink.chiron.toolbox.SafeSystemProperty.forBoolean;
+import static io.github.otcdlink.chiron.toolbox.SafeSystemProperty.forEnum;
 import static io.github.otcdlink.chiron.toolbox.SafeSystemProperty.forInteger;
 import static io.github.otcdlink.chiron.toolbox.SafeSystemProperty.forUnvalued;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +31,9 @@ public class SafeSystemPropertyTest {
     assertThat( integerProperty.key ).isEqualTo( INTEGER_KEY ) ;
     assertThat( integerProperty.value ).isEqualTo( 12 ) ;
     assertThat( integerProperty.intValue( 3 ) ).isEqualTo( 12 ) ;
+
+    final SafeSystemProperty.IntegerType modified = integerProperty.set( 133 ) ;
+    assertThat( modified.value ).isEqualTo( 133 ) ;
   }
 
   @Test
@@ -130,6 +134,31 @@ public class SafeSystemPropertyTest {
     assertThat( unvaluedProperty.isSet()).isFalse() ;
   }
 
+  @Test
+  public void enumDefined() throws Exception {
+    System.setProperty( ENUM_KEY, "FIRST" ) ;
+    final SafeSystemProperty.EnumType< PrivateEnum > enumProperty =
+        forEnum( ENUM_KEY,PrivateEnum.class ) ;
+    assertThat( enumProperty.defined ).isTrue() ;
+    assertThat( enumProperty.wellFormed ).isTrue() ;
+    assertThat( enumProperty.key ).isEqualTo( ENUM_KEY ) ;
+    assertThat( enumProperty.value ).isEqualTo( PrivateEnum.FIRST ) ;
+  }
+
+  @Test
+  public void enumReloaded() throws Exception {
+    System.setProperty( ENUM_KEY, "FIRST" ) ;
+    final SafeSystemProperty.EnumType< PrivateEnum > enumProperty =
+        forEnum( ENUM_KEY,PrivateEnum.class ) ;
+    final SafeSystemProperty.EnumType< PrivateEnum > reloaded =
+        enumProperty. set( PrivateEnum.SECOND ) ;
+
+    assertThat( reloaded.defined ).isTrue() ;
+    assertThat( reloaded.wellFormed ).isTrue() ;
+    assertThat( reloaded.key ).isEqualTo( ENUM_KEY ) ;
+    assertThat( reloaded.value ).isEqualTo( PrivateEnum.SECOND ) ;
+  }
+
 // =======
 // Fixture
 // =======
@@ -145,10 +174,13 @@ public class SafeSystemPropertyTest {
 
   private static final String UNVALUED_KEY = SafeSystemPropertyTest.class.getName() + ".unvalued" ;
 
+  private static final String ENUM_KEY = SafeSystemPropertyTest.class.getName() + ".enum" ;
+
   private static final ImmutableList< String > KEYS = ImmutableList.of(
       INTEGER_KEY,
       BOOLEAN_KEY,
-      UNVALUED_KEY
+      UNVALUED_KEY,
+      ENUM_KEY
   ) ;
 
   @Before
@@ -166,5 +198,7 @@ public class SafeSystemPropertyTest {
   public void tearDown() throws Exception {
     KEYS.forEach( System::clearProperty ) ;
   }
+
+  public enum PrivateEnum { FIRST, SECOND }
 
 }
