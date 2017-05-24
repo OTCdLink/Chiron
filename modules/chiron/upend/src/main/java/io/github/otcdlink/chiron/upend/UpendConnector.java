@@ -23,8 +23,6 @@ import io.github.otcdlink.chiron.toolbox.netty.NettyTools;
 import io.github.otcdlink.chiron.toolbox.netty.RichHttpRequest;
 import io.github.otcdlink.chiron.toolbox.security.SslEngineFactory;
 import io.github.otcdlink.chiron.upend.http.dispatch.HttpRequestRelayer;
-import io.github.otcdlink.chiron.upend.oldhttp.HttpSessionLifecyclePhaseRenderer;
-import io.github.otcdlink.chiron.upend.oldhttp.OldHttpCommandRenderer;
 import io.github.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
 import io.github.otcdlink.chiron.upend.session.SessionSupervisor;
 import io.github.otcdlink.chiron.upend.session.SignonInwardDuty;
@@ -54,8 +52,10 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrameAggregator;
@@ -141,10 +141,6 @@ public class UpendConnector<
 
     public final CommandInterceptor.Factory commandInterceptorFactory ;
 
-    public final OldHttpCommandRenderer httpCommandRenderer ;
-
-    public final HttpSessionLifecyclePhaseRenderer httpSessionLifecyclePhaseRenderer ;
-
     public final WebsocketFrameSizer websocketFrameSizer ;
 
 
@@ -164,16 +160,14 @@ public class UpendConnector<
         final SslEngineFactory.ForServer sslEngineFactory,
         final String websocketUrlPath,
         final String applicationVersion,
-        final OutwardSessionSupervisor< Channel, InetAddress > sessionSupervisor,
-        final CommandConsumer< Command< Designator, UPWARD_DUTY > > commandConsumer,
+        final OutwardSessionSupervisor<Channel, InetAddress> sessionSupervisor,
+        final CommandConsumer<Command<Designator, UPWARD_DUTY>> commandConsumer,
         final Designator.Factory designatorFactory,
-        final CommandBodyDecoder< Designator, UPWARD_DUTY > websocketCommandDecoder,
+        final CommandBodyDecoder<Designator, UPWARD_DUTY> websocketCommandDecoder,
         final HttpRequestRelayer immediateHttpRequestRelayer,
         final HttpRequestRelayer authenticatedHttpRequestRelayer,
         final CommandInterceptor.Factory commandInterceptorFactory,
         final TimeBoundary.ForAll initialTimeBoundary,
-        final OldHttpCommandRenderer httpCommandRenderer,
-        final HttpSessionLifecyclePhaseRenderer httpSessionLifecyclePhaseRenderer,
         final WebsocketFrameSizer websocketFrameSizer
     ) {
 
@@ -232,16 +226,9 @@ public class UpendConnector<
 
       // HTTP
       if( sessionSupervisor == null ) {
-        checkArgument( httpSessionLifecyclePhaseRenderer == null ) ;
         checkArgument( authenticatedHttpRequestRelayer == null ) ;
-      }
-      if( httpCommandRenderer == null ) {
-        checkArgument( authenticatedHttpRequestRelayer == null ) ;
-        checkArgument( httpSessionLifecyclePhaseRenderer == null ) ;
       }
       this.immediateHttpRequestRelayer = immediateHttpRequestRelayer ;
-      this.httpCommandRenderer = httpCommandRenderer ;
-      this.httpSessionLifecyclePhaseRenderer = httpSessionLifecyclePhaseRenderer ;
       this.authenticatedHttpRequestRelayer = authenticatedHttpRequestRelayer;
     }
 
@@ -680,7 +667,7 @@ public class UpendConnector<
     final Channel channel ;
     final SessionIdentifier sessionIdentifier = command.endpointSpecific.sessionIdentifier ;
     final Object outbound ;
-    final boolean shouldClose ;
+    final boolean keepAlive ;
     if( sessionIdentifier == null ) {
       if( command instanceof RenderingAwareCommand &&
           command.endpointSpecific instanceof RenderingAwareDesignator
@@ -690,7 +677,7 @@ public class UpendConnector<
         if( maybeChannel == NettyTools.NULL_CHANNEL ) {
           channel = null ;
           outbound = null ;
-          shouldClose = false ;
+          keepAlive = false ;
           LOGGER.warn(
               "Not sending anything because hitting a " + maybeChannel + " in " + command + ". " +
               "TODO: find a less magic approach to handle this case."
@@ -705,12 +692,12 @@ public class UpendConnector<
              * obtained the request to keep it usable until now. */
             renderingAwareDesignator.richHttpRequest.release() ;
           }
-          shouldClose = true ;
+          keepAlive = HttpUtil.isKeepAlive( renderingAwareDesignator.richHttpRequest ) ;
         }
       } else {
         channel = null ;
         outbound = null ;
-        shouldClose = false ;
+        keepAlive = true ;
 //        throw new IllegalArgumentException(
 //            "Invalid " + command.endpointSpecific + ": " +
 //            "no " + SessionIdentifier.class.getSimpleName() + " and " +
@@ -720,7 +707,7 @@ public class UpendConnector<
     } else {
       channel = sessionChannelMap.get( sessionIdentifier ) ;
       outbound = command ;
-      shouldClose = false ;
+      keepAlive = true ;
       if( channel == null ) {
         // Piston causes this a lot when stopping Injectors while there are unsent Downward Commands.
         LOGGER.info(
@@ -732,8 +719,11 @@ public class UpendConnector<
       }
     }
     if( channel != null ) {
+      if( outbound instanceof FullHttpResponse ) {
+        NettyTools.setHeadersForKeepAliveIfNeeded( ( FullHttpResponse ) outbound, keepAlive ) ;
+      }
       final ChannelFuture channelFuture = channel.writeAndFlush( outbound ) ;
-      if( shouldClose ) {
+      if( ! keepAlive ) {
         channelFuture.addListener( ChannelFutureListener.CLOSE ) ;
       }
       if( command.endpointSpecific instanceof SendingAware ) {

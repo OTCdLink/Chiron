@@ -20,6 +20,7 @@ import io.github.otcdlink.chiron.toolbox.ObjectTools;
 import io.github.otcdlink.chiron.toolbox.TcpPortBooker;
 import io.github.otcdlink.chiron.toolbox.internet.HostPort;
 import io.github.otcdlink.chiron.toolbox.internet.LocalAddressTools;
+import io.github.otcdlink.chiron.toolbox.netty.NettyTools;
 import io.github.otcdlink.chiron.upend.session.SecondaryAuthenticator;
 import mockit.FullVerificationsInOrder;
 import mockit.Injectable;
@@ -162,7 +163,7 @@ public class LabIntegrationTest {
       @Injectable final SecondaryAuthenticator secondaryAuthenticator
   ) throws Exception {
     final LabDaemon labDaemon = new LabDaemon( hostPort, secondaryAuthenticator ) ;
-    labDaemon.start() ;
+    labDaemon.start().join() ;
 
     final QueuingChangeWatcher changeWatcher ;
     final LabDownend labDownend ;
@@ -225,11 +226,12 @@ public class LabIntegrationTest {
 
     LOGGER.info( "Obtained expected response." ) ;
 
-    labDownend.stop() ;
-    assertStateChanges( changeWatcher, STOPPING, STOPPED ) ;
+    labDownend.stop().join() ;
+    assertStateChangeEventually( changeWatcher, STOPPING ) ;
+    assertStateChangeEventually( changeWatcher, STOPPED ) ;
     LOGGER.info( "Successfully stopped " + labDownend + "." ) ;
 
-    labDaemon.stop() ;
+    labDaemon.stop().join() ;
     LOGGER.info( "Successfully stopped " + labDaemon + "." ) ;
   }
 
@@ -240,6 +242,11 @@ public class LabIntegrationTest {
 // =======
 
   private static final Logger LOGGER = LoggerFactory.getLogger( LabIntegrationTest.class ) ;
+
+  static {
+    NettyTools.forceNettyClassesToLoad() ;
+    LOGGER.info( "**** Netty classes loaded, test begins here ****" ) ;
+  }
 
   private final HostPort hostPort = LocalAddressTools.LOCALHOST_HOSTNAME
       .hostPort( TcpPortBooker.THIS.find() ) ;
@@ -310,6 +317,18 @@ public class LabIntegrationTest {
   ) throws InterruptedException {
     for( final DownendConnector.State kind : kinds ) {
       ConnectorChangeAssert.assertThat( changeWatcher.nextChange() ).hasKind( kind ) ;
+    }
+  }
+
+  private static void assertStateChangeEventually(
+      final QueuingChangeWatcher changeWatcher,
+      final DownendConnector.State kind
+  ) throws InterruptedException {
+    while( true ) {
+      DownendConnector.Change change = changeWatcher.nextChange() ;
+      if( change.kind == kind ) {
+        break ;
+      }
     }
   }
 

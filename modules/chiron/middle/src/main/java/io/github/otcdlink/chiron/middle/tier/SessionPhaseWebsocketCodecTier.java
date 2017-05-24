@@ -70,6 +70,7 @@ public abstract class SessionPhaseWebsocketCodecTier
       ) ;
     } else if( webSocketFrame instanceof CloseWebSocketFrame ) {
       inboundCloseFrame( channelHandlerContext ) ;
+      webSocketFrame.release() ;
     } else {
       channelHandlerContext.fireChannelRead( webSocketFrame ) ;
     }

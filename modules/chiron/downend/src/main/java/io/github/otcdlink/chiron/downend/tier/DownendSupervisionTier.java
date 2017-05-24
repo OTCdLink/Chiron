@@ -43,7 +43,7 @@ public class DownendSupervisionTier extends SimpleChannelInboundHandler< Object 
 
     void afterWebsocketHandshake( ConnectionDescriptor connectionDescriptor ) ;
 
-    void disconnectionHappened( ChannelHandlerContext channelHandlerContext ) ;
+    void channelInactiveOrExceptionCaught( ChannelHandlerContext channelHandlerContext ) ;
 
     void kickoutHappened( ChannelHandlerContext channelHandlerContext ) ;
 
@@ -88,11 +88,8 @@ public class DownendSupervisionTier extends SimpleChannelInboundHandler< Object 
    */
   @Override
   public void channelInactive( final ChannelHandlerContext channelHandlerContext ) {
-    LOGGER.debug(
-        "Channel " + channelHandlerContext.channel().id() +
-            " got inactive. Notifying of state change, and scheduling next connection ..."
-    ) ;
-    disconnectedForAnyReason( channelHandlerContext ) ;
+    LOGGER.debug( "Channel " + channelHandlerContext.channel().id() + " got inactive." ) ;
+    channelInactiveOrExceptionCaught( channelHandlerContext ) ;
   }
 
   @Override
@@ -151,7 +148,7 @@ public class DownendSupervisionTier extends SimpleChannelInboundHandler< Object 
 
     if( cause instanceof IOException ) {
       /** TODO: factor with {@link #channelInactive(io.netty.channel.ChannelHandlerContext)} */
-      disconnectedForAnyReason( channelHandlerContext );
+      channelInactiveOrExceptionCaught( channelHandlerContext );
     } else {
       channelHandlerContext.close() ;
       LOGGER.error( "Exeption occured within " + channelHandlerContext + ", now closed.", cause ) ;
@@ -161,12 +158,14 @@ public class DownendSupervisionTier extends SimpleChannelInboundHandler< Object 
 
   }
 
-  private void disconnectedForAnyReason( final ChannelHandlerContext channelHandlerContext ) {
+  private void channelInactiveOrExceptionCaught(
+      final ChannelHandlerContext channelHandlerContext
+  ) {
     handshaker = null ;
     handshakeFuture = null ;
     if( notifyOfDisconnection ) {
       try {
-        claim.disconnectionHappened( channelHandlerContext ) ;
+        claim.channelInactiveOrExceptionCaught( channelHandlerContext ) ;
       } catch( final Exception e ) {
         LOGGER.error( "Problem while notifying " + claim + ".", e ) ;
       }

@@ -23,10 +23,10 @@
 
     <!-- Dependency versions appearing more than once -->
     
-    <library.logback.version>1.2.2</library.logback.version>
+    <library.logback.version>1.2.3</library.logback.version>
     <library.slf4j.version>1.7.25</library.slf4j.version>
     <library.google-guava.version>21.0</library.google-guava.version>
-    <library.netty.version>4.1.9.Final</library.netty.version>
+    <library.netty.version>4.1.10.Final</library.netty.version>
     <library.bouncycastle.version>1.56</library.bouncycastle.version>
     <library.jmh.version>1.18</library.jmh.version>
 

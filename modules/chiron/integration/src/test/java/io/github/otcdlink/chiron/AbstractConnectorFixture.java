@@ -284,6 +284,10 @@ public abstract class AbstractConnectorFixture<
 
   public interface PingTimingPresets {
 
+    /**
+     * This is nice for tests, not pinging avoids to pollute logs, and immediate reconnection
+     * unveiled interesting bugs in {@link DownendConnector} state transitions.
+     */
     TimeBoundary.ForAll NO_PING = TimeBoundary.Builder.createNew()
         .pingInterval( 1_000_000 )
         .pongTimeoutOnDownend( 1_000_000 )
@@ -372,7 +376,7 @@ public abstract class AbstractConnectorFixture<
   private final CommandTransceiver.ChangeWatcher stateWatcher =
       ExtendedChange.recordingDownendWatcher(
           LOGGER,
-          () -> downend.toString(),
+          () -> downend == null ? "undefined" : downend.toString(),
           downendChangeQueue
       )
   ;

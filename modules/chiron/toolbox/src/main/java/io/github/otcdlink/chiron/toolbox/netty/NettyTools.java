@@ -13,11 +13,14 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.multipart.Attribute;
 import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
@@ -156,6 +159,29 @@ public final class NettyTools {
   public static void releaseMaybe( Object inbound ) {
     if( inbound instanceof ReferenceCounted ) {
       ( ( ReferenceCounted ) inbound ).release() ;
+    }
+  }
+
+  public static boolean addKeepAliveIfNeeded(
+      final FullHttpRequest fullHttpRequest,
+      final FullHttpResponse fullHttpResponse
+  ) {
+    final boolean keepAlive = HttpUtil.isKeepAlive( fullHttpRequest ) ;
+    setHeadersForKeepAliveIfNeeded( fullHttpResponse, keepAlive );
+    return keepAlive ;
+  }
+
+  public static void setHeadersForKeepAliveIfNeeded(
+      final FullHttpResponse fullHttpResponse,
+      final boolean keepAlive
+  ) {
+    if( keepAlive ) {
+      fullHttpResponse.headers().setInt(
+          HttpHeaderNames.CONTENT_LENGTH,
+          fullHttpResponse.content().readableBytes()
+      ) ;
+      fullHttpResponse.headers().set(
+          HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE ) ;
     }
   }
 

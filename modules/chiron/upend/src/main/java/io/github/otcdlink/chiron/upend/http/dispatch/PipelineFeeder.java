@@ -17,10 +17,5 @@ import io.netty.channel.ChannelPipeline;
  * (but Netty doesn't support such contract restriction).
  */
 public interface PipelineFeeder {
-  void feed( final ChannelHandlerContext channelHandlerContext ) ;
-
-  static PipelineFeeder just( final Object object ) {
-    return pipeline -> pipeline.writeAndFlush( object ) ;
-  }
-
+  void feed( final ChannelHandlerContext channelHandlerContext, boolean keepAlive ) ;
 }

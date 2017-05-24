@@ -42,7 +42,7 @@ public class EndToEndPlugTest {
   }
 
 
-  @Test( /*timeout = TIMEOUT_MS*/ )
+  @Test( timeout = TIMEOUT_MS )
   public void simpleReconnect(
       @Injectable final SignonMaterializer signonMaterializer,
       @Injectable final OutwardSessionSupervisor< Channel, InetAddress >
@@ -79,7 +79,7 @@ public class EndToEndPlugTest {
       }
     }
     fixture.commandRoundtrip( SESSION_IDENTIFIER ) ;
-    EndToEndTestFragments.terminate( fixture ) ;
+    EndToEndTestFragments.terminate( fixture, outboundSessionSupervisor ) ;
   }
 
 

@@ -13,10 +13,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import mockit.FullVerifications;
 import mockit.FullVerificationsInOrder;
 import mockit.Injectable;
@@ -34,6 +31,7 @@ import static io.github.otcdlink.chiron.upend.http.dispatch.HttpDispatcherFixtur
 import static io.github.otcdlink.chiron.upend.http.dispatch.HttpDispatcherFixture.httpRequest;
 import static io.github.otcdlink.chiron.upend.http.dispatch.UsualConditions.ALWAYS;
 import static io.github.otcdlink.chiron.upend.http.dispatch.UsualConditions.NEVER;
+import static io.netty.channel.ChannelFutureListener.CLOSE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -92,7 +90,12 @@ public class BareHttpDispatcherTest {
 
     final RichHttpRequest richHttpRequest = httpRequest( channel, "" ) ;
 
-    final PipelineFeeder pipelineFeeder = chc -> chc.writeAndFlush( "Done" ) ;
+    final PipelineFeeder pipelineFeeder = ( chc, keepAlive ) -> {
+      final ChannelFuture channelFuture = chc.writeAndFlush( "Done" ) ;
+      if( ! keepAlive ) {
+        channelFuture.addListener( CLOSE ) ;
+      }
+    } ;
 
     final Monolist< EvaluationContext > evaluationContextCaptor = new Monolist<>() ;
     final Monolist<RichHttpRequest> richHttpRequestCaptor =
@@ -134,7 +137,7 @@ public class BareHttpDispatcherTest {
 
     class CapturingDutyCaller implements HttpResponder.DutyCaller< SecondDuty > {
       @Override
-      public HttpResponse call(
+      public FullHttpResponse call(
           final EvaluationContext< SecondDuty > evaluationContext,
           final RichHttpRequest httpRequest
       ) {
@@ -206,8 +209,8 @@ public class BareHttpDispatcherTest {
           richHttpRequest
       ) ; result = immediateResponse ;
       channelHandlerContext.writeAndFlush( immediateResponse ) ;
-      channelFuture.addListener(
-          ( GenericFutureListener< ? extends Future< ? super Void > > ) any ) ;
+//      channelFuture.addListener(
+//          ( GenericFutureListener< ? extends Future< ? super Void > > ) any ) ;
     }} ;
 
     httpRequestRelayer.relay( richHttpRequest, channelHandlerContext ) ;
@@ -461,8 +464,8 @@ public class BareHttpDispatcherTest {
       ) ; result = new RuntimeException( "Boom" ) ;
       channelHandlerContext.alloc() ; result = new UnpooledByteBufAllocator( false ) ;
       channelHandlerContext.writeAndFlush( withCapture( immediateResponseCapture ) ) ;
-      channelFuture.addListener(
-          ( GenericFutureListener< ? extends Future< ? super Void > > ) any ) ;
+//      channelFuture.addListener(
+//          ( GenericFutureListener< ? extends Future< ? super Void > > ) any ) ;
     }} ;
 
     httpRequestRelayer.relay( richHttpRequest, channelHandlerContext ) ;

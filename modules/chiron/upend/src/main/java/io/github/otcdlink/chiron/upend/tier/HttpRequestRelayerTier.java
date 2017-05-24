@@ -35,7 +35,7 @@ public class HttpRequestRelayerTier
       LOGGER.error( "Could not handle " + fullHttpRequest + ".", e ) ;
 
       new UsualHttpCommands.BadRequest( "Bad request: " + fullHttpRequest.uri() )
-          .feed( channelHandlerContext ) ;
+          .feed( channelHandlerContext, true ) ;
       return ;
     }
     if( ! httpRequestRelayer.relay( richHttpRequest, channelHandlerContext ) ) {

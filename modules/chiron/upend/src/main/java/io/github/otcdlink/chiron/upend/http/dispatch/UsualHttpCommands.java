@@ -68,12 +68,19 @@ public final class UsualHttpCommands {
     }
 
     @Override
-    public final void feed( final ChannelHandlerContext channelHandlerContext ) {
+    public final void feed(
+        final ChannelHandlerContext channelHandlerContext,
+        final boolean keepAlive
+    ) {
       final FullHttpResponse fullHttpResponse = newHttpResponse( channelHandlerContext.alloc() ) ;
       final FullHttpResponse httpResponse = fullHttpResponse ;
       httpResponse.headers().set( HttpHeaderNames.CONTENT_TYPE, "text/html" ) ;
       httpResponse.retain() ;
-      writeAndFlushAndClose( channelHandlerContext, httpResponse ) ;
+      NettyTools.setHeadersForKeepAliveIfNeeded( fullHttpResponse, keepAlive ) ;
+      final ChannelFuture channelFuture = channelHandlerContext.writeAndFlush( httpResponse ) ;
+      if( ! keepAlive ) {
+        channelFuture.addListener( ChannelFutureListener.CLOSE ) ;
+      }
     }
 
     public FullHttpResponse newHttpResponse( final ByteBufAllocator byteBufAllocator ) {
@@ -188,7 +195,7 @@ public final class UsualHttpCommands {
     }
 
     @Override
-    public void feed( final ChannelHandlerContext channelHandlerContext ) {
+    public void feed( final ChannelHandlerContext channelHandlerContext, boolean keepAlive ) {
       final FullHttpResponse httpResponse =
           httpResponse( channelHandlerContext.alloc(), redirectionTargetUri ) ;
       writeAndFlushAndClose( channelHandlerContext, httpResponse ) ;
@@ -306,17 +313,21 @@ public final class UsualHttpCommands {
     }
 
     @Override
-    public void feed( final ChannelHandlerContext channelHandlerContext ) {
+    public void feed( final ChannelHandlerContext channelHandlerContext, boolean keepAlive ) {
       if( staticContentAsByteBuf == null ) {
-        new NotFound( absoluteUriPath ).feed( channelHandlerContext ) ;
+        new NotFound( absoluteUriPath ).feed( channelHandlerContext, keepAlive ) ;
       } else {
         final FullHttpResponse httpResponse = new DefaultFullHttpResponse(
             HttpVersion.HTTP_1_1, OK, staticContentAsByteBuf.bytebuf() ) ;
         httpResponse.headers().set(
             HttpHeaderNames.CONTENT_TYPE, staticContentAsByteBuf.mimeType ) ;
         NettyTools.noCache( httpResponse ) ;  // One day we'll be less brutal.
+        NettyTools.setHeadersForKeepAliveIfNeeded( httpResponse, keepAlive ) ;
         httpResponse.retain() ;
-        channelHandlerContext.writeAndFlush( httpResponse ).addListener( CLOSE ) ;
+        ChannelFuture channelFuture = channelHandlerContext.writeAndFlush( httpResponse ) ;
+        if( ! keepAlive ) {
+          channelFuture.addListener( CLOSE ) ;
+        }
       }
     }
 
@@ -375,9 +386,9 @@ public final class UsualHttpCommands {
     }
 
     @Override
-    public void feed( final ChannelHandlerContext channelHandlerContext ) {
+    public void feed( final ChannelHandlerContext channelHandlerContext, boolean keepAlive ) {
       if( staticContentFromFile == null ) {
-        new NotFound( requestUri ).feed( channelHandlerContext ) ;
+        new NotFound( requestUri ).feed( channelHandlerContext, keepAlive ) ;
         return ;
       }
 
@@ -385,7 +396,7 @@ public final class UsualHttpCommands {
       try {
         randomAccessFile = new RandomAccessFile( staticContentFromFile.file, "r" ) ;
       } catch( final FileNotFoundException e ) {
-        new NotFound( requestUri ).feed( channelHandlerContext ) ;
+        new NotFound( requestUri ).feed( channelHandlerContext, keepAlive ) ;
         return ;
       }
       final long fileLength = staticContentFromFile.file.length() ;
@@ -399,7 +410,7 @@ public final class UsualHttpCommands {
           HttpHeaderNames.CONTENT_TYPE, staticContentFromFile.mimeType ) ;
       NettyTools.noCache( httpResponse ) ;
 
-      if( keepAlive ) {
+      if( this.keepAlive ) {
         httpResponse.headers().set( HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE ) ;
       }
 
@@ -420,11 +431,14 @@ public final class UsualHttpCommands {
           } catch( final IOException e ) {
             LOGGER.error( "Could not load '" +
                 staticContentFromFile.file.getAbsolutePath() + "'", e ) ;
-            writeAndFlushAndClose(
-                channelHandlerContext,
+
+            final ChannelFuture channelFuture = channelHandlerContext.writeAndFlush(
                 new ServerError( "Could not load " + requestUri )
                     .newHttpResponse( channelHandlerContext.alloc() )
-            ) ;
+            );
+            if( ! keepAlive ) {
+              channelFuture.addListener( CLOSE ) ;
+            }
             return ;
           }
           lastContentFuture = sendFileFuture = channelHandlerContext.pipeline().writeAndFlush(
@@ -464,7 +478,7 @@ public final class UsualHttpCommands {
         } ) ;
       }
 
-      if( ! keepAlive ) {
+      if( ! this.keepAlive ) {
         lastContentFuture.addListener( ChannelFutureListener.CLOSE ) ;
       }
     }

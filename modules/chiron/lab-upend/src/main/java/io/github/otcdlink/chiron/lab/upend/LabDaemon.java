@@ -98,8 +98,6 @@ public class LabDaemon {
         null,
         null,
         TimeBoundary.DEFAULT,
-        null,
-        null,
         LabMiddleConstants.WEBSOCKET_FRAME_SIZER
     ) ) ;
 

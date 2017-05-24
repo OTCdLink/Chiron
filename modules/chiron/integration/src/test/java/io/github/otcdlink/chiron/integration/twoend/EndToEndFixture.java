@@ -159,8 +159,6 @@ public class EndToEndFixture
         null,
         CommandInterceptor.Factory.always( commandInterceptor ),
         ( TimeBoundary.ForAll ) downendSetup.primingTimeBoundary,
-        null,
-        null,
         downendSetup.websocketFrameSizer
     ) ;
   }
@@ -185,8 +183,6 @@ public class EndToEndFixture
         null,
         null,
         ( TimeBoundary.ForAll ) downendSetup.primingTimeBoundary,
-        null,
-        null,
         WEBSOCKET_FRAME_SIZER
     ) ;
   }

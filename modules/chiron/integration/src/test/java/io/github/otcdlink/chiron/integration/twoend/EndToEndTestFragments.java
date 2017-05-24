@@ -8,6 +8,7 @@ import io.github.otcdlink.chiron.downend.SignonMaterializer;
 import io.github.otcdlink.chiron.fixture.BlockingMonolist;
 import io.github.otcdlink.chiron.integration.echo.EchoDownwardDuty;
 import io.github.otcdlink.chiron.integration.echo.EchoUpwardDuty;
+import io.github.otcdlink.chiron.middle.session.SessionIdentifier;
 import io.github.otcdlink.chiron.toolbox.Credential;
 import io.github.otcdlink.chiron.upend.UpendConnector;
 import io.github.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
@@ -44,7 +45,7 @@ final class EndToEndTestFragments {
 
     fixture.commandRoundtrip( SESSION_IDENTIFIER ) ;
 
-    terminate( fixture ) ;
+    terminate( fixture, outboundSessionSupervisor ) ;
   }
 
   protected static void authenticate(
@@ -159,7 +160,17 @@ final class EndToEndTestFragments {
 
   }
 
-  public static void terminate( final EndToEndFixture fixture ) throws InterruptedException {
+  public static void terminate(
+      final EndToEndFixture fixture,
+      final OutwardSessionSupervisor< Channel, InetAddress > outwardSessionSupervisor
+  ) throws InterruptedException {
+    if( outwardSessionSupervisor != null ) {
+      new StrictExpectations() {{
+        outwardSessionSupervisor.closed( ( Channel ) any, ( SessionIdentifier ) any, false ) ;
+        // Sometimes the call above doesn't happen, this seems to depend on ping timing sequence.
+        minTimes = 0 ;
+      }} ;
+    }
     fixture.downend().stop() ;
     fixture.waitForDownendConnectorState( DownendConnector.State.STOPPED ) ;
   }

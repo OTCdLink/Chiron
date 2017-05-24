@@ -12,6 +12,7 @@ import io.github.otcdlink.chiron.middle.tier.CommandInterceptor;
 import io.github.otcdlink.chiron.middle.tier.ConnectionDescriptor;
 import io.github.otcdlink.chiron.middle.tier.TimeBoundary;
 import io.github.otcdlink.chiron.middle.tier.WebsocketFrameSizer;
+import io.github.otcdlink.chiron.toolbox.ToStringTools;
 import io.github.otcdlink.chiron.toolbox.clock.Clock;
 import io.github.otcdlink.chiron.toolbox.internet.InternetProxyAccess;
 import io.github.otcdlink.chiron.toolbox.security.SslEngineFactory;
@@ -96,6 +97,11 @@ public class CommandTransceiver< DOWNWARD_DUTY, UPWARD_DUTY >
 
     ( ( CommandConsumerInterceptor< DOWNWARD_DUTY > ) setup.commandReceiver ).hook =
         CommandTransceiver::dispatchCommand ;
+  }
+
+  @Override
+  public String toString() {
+    return ToStringTools.nameAndCompactHash( this ) + "{" + setup().uri + "}" ;
   }
 
   private static < DOWNWARD_DUTY > void dispatchCommand(

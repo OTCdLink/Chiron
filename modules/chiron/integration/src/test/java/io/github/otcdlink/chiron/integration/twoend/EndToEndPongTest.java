@@ -39,7 +39,7 @@ public class EndToEndPongTest {
     final BlockingMonolist<SessionSupervisor.ReuseCallback> reuseCallbackCapture =
         new BlockingMonolist<>() ;
     new StrictExpectations() {{
-      outboundSessionSupervisor.closed( ( Channel ) any, SESSION_IDENTIFIER, false );
+      outboundSessionSupervisor.closed( ( Channel ) any, SESSION_IDENTIFIER, false ) ;
       outboundSessionSupervisor.tryReuse(
           SESSION_IDENTIFIER,
           ( Channel ) any,
@@ -63,7 +63,17 @@ public class EndToEndPongTest {
       }
     }
     fixture.commandRoundtrip( SESSION_IDENTIFIER ) ;
-    EndToEndTestFragments.terminate( fixture ) ;
+
+/*
+    new StrictExpectations() {{
+      outboundSessionSupervisor.closed( ( Channel ) any, ( SessionIdentifier ) any, false ) ;
+      // Sometimes the call above doesn't happen, this seems to depend on ping timing sequence.
+      minTimes = 0 ;
+    }} ;
+    fixture.downend().stop() ;
+*/
+
+    EndToEndTestFragments.terminate( fixture, outboundSessionSupervisor ) ;
   }
 
 

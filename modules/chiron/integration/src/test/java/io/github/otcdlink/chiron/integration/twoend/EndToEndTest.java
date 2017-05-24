@@ -15,6 +15,7 @@ import io.github.otcdlink.chiron.middle.tier.CommandInterceptor;
 import io.github.otcdlink.chiron.middle.tier.TimeBoundary;
 import io.github.otcdlink.chiron.middle.tier.WebsocketFrameSizer;
 import io.github.otcdlink.chiron.toolbox.ObjectTools;
+import io.github.otcdlink.chiron.toolbox.netty.NettyTools;
 import io.github.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
 import io.netty.channel.Channel;
 import io.netty.util.ResourceLeakDetector;
@@ -70,6 +71,7 @@ public class EndToEndTest {
   ) throws Exception {
     EndToEndTestFragments.simpleAuthenticatedEcho(
         fixture, signonMaterializer, outboundSessionSupervisor ) ;
+
   }
 
 
@@ -180,7 +182,12 @@ public class EndToEndTest {
   private static final Logger LOGGER =
       LoggerFactory.getLogger( DownendConnectorTest.class ) ;
 
-  //    private static final long TIMEOUT_MS = 5_000 ;
+  static {
+    NettyTools.forceNettyClassesToLoad() ;
+    LOGGER.info( "**** Netty classes loaded, test begins here ****" ) ;
+  }
+
+//      private static final long TIMEOUT_MS = 5_000 ;
   private static final long TIMEOUT_MS = 1_000_000 ;
 
   private static final ResourceLeakDetector.Level INITIAL_RESOURCELEAKDETECTOR_LEVEL =

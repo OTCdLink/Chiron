@@ -96,7 +96,7 @@ public interface HttpResponder {
      *     Returning {@link #SILENT_RESPONSE} means the request was handled, even if there
      *     is {@link DUTY} was not called.
      */
-    HttpResponse call(
+    FullHttpResponse call(
         final EvaluationContext< DUTY > evaluationContext,
         final RichHttpRequest httpRequest
     ) ;
@@ -105,7 +105,7 @@ public interface HttpResponder {
      * Magic value that {@link #call(EvaluationContext, RichHttpRequest)} can return
      * to say it handled the request in a special way.
      */
-    HttpResponse SILENT_RESPONSE = ObjectTools.nullObject( HttpResponse.class ) ;
+    FullHttpResponse SILENT_RESPONSE = ObjectTools.nullObject( FullHttpResponse.class ) ;
   }
 
   /**

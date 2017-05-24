@@ -85,8 +85,6 @@ public abstract class StaticContentTest {
         null,
         null,
         null,
-        null,
-        null,
         null
     ) ) ;
 

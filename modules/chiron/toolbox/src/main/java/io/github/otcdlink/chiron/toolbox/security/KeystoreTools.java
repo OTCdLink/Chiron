@@ -20,6 +20,7 @@ import java.security.Permission;
 import java.security.PermissionCollection;
 import java.security.cert.CertificateException;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public enum KeystoreTools { ;
 
@@ -129,6 +130,9 @@ public enum KeystoreTools { ;
     return getIncludedCipherSuites()[ 0 ];
   }
 
+  private static final AtomicBoolean JAVA_CRYPTOGRAPHY_EXTENSIONS_INSTALLED =
+      new AtomicBoolean( false ) ;
+
   /**
    * Legal restrictions for cryptographic tools still applies. Ask your lawyer if you can call
    * this method that enables Java Cryptography Extensions.
@@ -136,35 +140,37 @@ public enum KeystoreTools { ;
    * <a href="http://stackoverflow.com/a/22492582/1923328" >hack</a>.
    */
   public static void activateJavaCryptographyExtensions() {
-    try {
-      final Class< ? > jceSecurity = Class.forName( "javax.crypto.JceSecurity" ) ;
-      final Class< ? > cryptoPermissions = Class.forName( "javax.crypto.CryptoPermissions" ) ;
-      final Class< ? > cryptoAllPermission = Class.forName( "javax.crypto.CryptoAllPermission" ) ;
+    if( JAVA_CRYPTOGRAPHY_EXTENSIONS_INSTALLED.compareAndSet( false, true ) ) {
+      try {
+        final Class< ? > jceSecurity = Class.forName( "javax.crypto.JceSecurity" ) ;
+        final Class< ? > cryptoPermissions = Class.forName( "javax.crypto.CryptoPermissions" ) ;
+        final Class< ? > cryptoAllPermission = Class.forName( "javax.crypto.CryptoAllPermission" ) ;
 
-      final Field isRestrictedField = jceSecurity.getDeclaredField( "isRestricted" ) ;
-      isRestrictedField.setAccessible( true ) ;
-      final Field modifiersField = Field.class.getDeclaredField( "modifiers" ) ;
-      modifiersField.setAccessible( true ) ;
-      modifiersField.setInt( isRestrictedField,
-          isRestrictedField.getModifiers() & ~Modifier.FINAL ) ;
-      isRestrictedField.set( null, false ) ;
+        final Field isRestrictedField = jceSecurity.getDeclaredField( "isRestricted" ) ;
+        isRestrictedField.setAccessible( true ) ;
+        final Field modifiersField = Field.class.getDeclaredField( "modifiers" ) ;
+        modifiersField.setAccessible( true ) ;
+        modifiersField.setInt( isRestrictedField,
+            isRestrictedField.getModifiers() & ~Modifier.FINAL ) ;
+        isRestrictedField.set( null, false ) ;
 
-      final Field defaultPolicyField = jceSecurity.getDeclaredField( "defaultPolicy" ) ;
-      defaultPolicyField.setAccessible( true ) ;
-      final PermissionCollection defaultPolicy =
-          ( PermissionCollection ) defaultPolicyField.get( null ) ;
+        final Field defaultPolicyField = jceSecurity.getDeclaredField( "defaultPolicy" ) ;
+        defaultPolicyField.setAccessible( true ) ;
+        final PermissionCollection defaultPolicy =
+            ( PermissionCollection ) defaultPolicyField.get( null ) ;
 
-      final Field perms = cryptoPermissions.getDeclaredField( "perms" ) ;
-      perms.setAccessible( true ) ;
-      ( ( Map< ?, ? > ) perms.get( defaultPolicy ) ).clear() ;
+        final Field perms = cryptoPermissions.getDeclaredField( "perms" ) ;
+        perms.setAccessible( true ) ;
+        ( ( Map< ?, ? > ) perms.get( defaultPolicy ) ).clear() ;
 
-      final Field instance = cryptoAllPermission.getDeclaredField( "INSTANCE" ) ;
-      instance.setAccessible( true ) ;
-      defaultPolicy.add( ( Permission ) instance.get( null ) ) ;
-      LOGGER.info( "Installed Java Cryptography Extension programmatically." ) ;
-    } catch( final Exception ex ) {
-      LOGGER.error( "Could not force Java Cryptography Extension", ex ) ;
-      throw new RuntimeException( ex ) ;
+        final Field instance = cryptoAllPermission.getDeclaredField( "INSTANCE" ) ;
+        instance.setAccessible( true ) ;
+        defaultPolicy.add( ( Permission ) instance.get( null ) ) ;
+        LOGGER.info( "Installed Java Cryptography Extension programmatically." ) ;
+      } catch( final Exception ex ) {
+        LOGGER.error( "Could not force Java Cryptography Extension", ex ) ;
+        throw new RuntimeException( ex ) ;
+      }
     }
   }
 }

@@ -1,5 +1,6 @@
 package io.github.otcdlink.chiron.toolbox.concurrent;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ForwardingExecutorService;
 import org.slf4j.Logger;
@@ -24,6 +25,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -66,6 +68,40 @@ public final class ExecutorTools {
         return ThreadFactory.class.getSimpleName() + "{" + threadPoolName + '}' ;
       }
     } ;
+  }
+
+  public static class ThemingThreadFactory {
+    private static final AtomicInteger THEME_COUNTER = new AtomicInteger() ;
+    private final String themePrefix ;
+
+    public ThemingThreadFactory( final String theme ) {
+      this( theme, null ) ;
+    }
+
+    public ThemingThreadFactory( final String theme, final String subTheme ) {
+      checkArgument( ! Strings.isNullOrEmpty( theme ) ) ;
+      final StringBuilder stringBuilder = new StringBuilder() ;
+      stringBuilder.append( theme ) ;
+      stringBuilder.append( "-" ) ;
+      stringBuilder.append( THEME_COUNTER.incrementAndGet() ) ;
+      stringBuilder.append( "-" ) ;
+      if( subTheme != null ) {
+        stringBuilder.append( subTheme ) ;
+        stringBuilder.append( "-" ) ;
+      }
+      this.themePrefix = stringBuilder.toString() ;
+    }
+
+    private final AtomicInteger roleCounter = new AtomicInteger() ;
+
+    public ThreadFactory threadFactory( final String role ) {
+      return runnable -> {
+        final Thread thread = new Thread( runnable ) ;
+        thread.setName( themePrefix + "-" + role + "-" + roleCounter.getAndIncrement() ) ;
+        thread.setDaemon( true ) ;
+        return thread ;
+      } ;
+    }
   }
 
   public static ExecutorServiceFactory singleThreadedExecutorServiceFactory(

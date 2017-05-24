@@ -42,14 +42,37 @@ public class CommandTransceiverTest
 
 
   @Test( timeout = TIMEOUT_MS )
+  public void simpleEchoWithImmediateReconnection(
+      @Injectable final SignonMaterializer signonMaterializer,
+      @Injectable final Tracker tracker
+  ) throws Exception {
+    setTestThreadName() ;
+     initializeAndSignon( fixture, signonMaterializer ) ;
+
+    new StrictExpectations() {{
+      tracker.afterResponseHandled() ;
+    }} ;
+
+    fixture.commandRoundtrip( tracker ) ;
+
+    ConnectorChangeAssert.assertThat( fixture.nextDownendChange() )
+        .isInFlightStatusStateChange().is( IN_FLIGHT ) ;
+    ConnectorChangeAssert.assertThat( fixture.nextDownendChange() )
+        .isInFlightStatusStateChange().is( QUIET ) ;
+
+    new FullVerificationsInOrder() {{ }} ;
+  }
+  @Test( timeout = TIMEOUT_MS )
   public void simpleEcho(
       @Injectable final SignonMaterializer signonMaterializer,
       @Injectable final Tracker tracker
   ) throws Exception {
     setTestThreadName() ;
-//      fixture.initializeNoSignonAndStartAll() ;
-     initializeAndSignon( fixture, signonMaterializer ) ;
-
+     initializeAndSignon(
+         fixture,
+         AbstractConnectorFixture.PingTimingPresets.QUIET,
+         signonMaterializer
+     ) ;
     new StrictExpectations() {{
       tracker.afterResponseHandled() ;
     }} ;

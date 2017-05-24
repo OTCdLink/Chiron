@@ -36,11 +36,11 @@ public final class DownendStateTools {
         case STOPPED :
           stopped() ;
           break ;
-        case PROBLEM :
-          final DownendConnector.Change.Problem problem =
-              ( DownendConnector.Change.Problem ) change;
-          problem( problem.cause ) ;
-          break ;
+//        case PROBLEM :
+//          final DownendConnector.Change.Problem problem =
+//              ( DownendConnector.Change.Problem ) change;
+//          problem( problem.cause ) ;
+//          break ;
         default :
           throw new IllegalArgumentException( "Unsupported: " + change ) ;
       }
@@ -245,7 +245,7 @@ public final class DownendStateTools {
               case STOPPED :
               case CONNECTED :
               case STOPPING :
-              case PROBLEM :
+//              case PROBLEM :
                 break ;
               default :
                 catcher.processThrowable(

@@ -5,12 +5,13 @@ import io.github.otcdlink.chiron.command.Command;
 import io.github.otcdlink.chiron.command.CommandConsumer;
 import io.github.otcdlink.chiron.designator.Designator;
 import io.github.otcdlink.chiron.designator.RenderingAwareDesignator;
+import io.github.otcdlink.chiron.toolbox.netty.NettyTools;
 import io.github.otcdlink.chiron.toolbox.netty.RichHttpRequest;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.ReferenceCounted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -187,10 +188,11 @@ public class BareHttpDispatcher<
         return false ;
       } catch( final Exception e ) {
         LOGGER.error( "Error while processing " + httpRequest, e ) ;
+        final boolean keepAlive = HttpUtil.isKeepAlive( httpRequest ) ;
         new UsualHttpCommands.ServerError(
             "<p>Error while processing request.</p><pre>" +
             httpRequest.toString() + "</pre>"
-        ).feed( channelHandlerContext ) ;
+        ).feed( channelHandlerContext, keepAlive ) ;
         return true ;
       }
     }
@@ -516,9 +518,10 @@ public class BareHttpDispatcher<
           final ChannelHandlerContext channelHandlerContext
       ) {
         if( condition.shouldAccept( currentContext, httpRequest ) ) {
+          final boolean keepAlive = HttpUtil.isKeepAlive( httpRequest ) ;
           final PipelineFeeder pipelineFeeder = responder.outbound( currentContext, httpRequest ) ;
           if( pipelineFeeder != null ) {
-            pipelineFeeder.feed( channelHandlerContext ) ;
+            pipelineFeeder.feed( channelHandlerContext, keepAlive ) ;
             return true ;
           }
         }
@@ -567,7 +570,7 @@ public class BareHttpDispatcher<
           evaluationContext = currentContext.capturePhasing( httpRequest, renderer ) ;
           httpRequest.retain() ; // We'll pass it again to the renderer.
         }
-        final HttpResponse immediateResponse = explicitDutyCaller.call(
+        final FullHttpResponse immediateResponse = explicitDutyCaller.call(
             evaluationContext, httpRequest ) ;
         final Command command = currentContext.currentActionContext().shallowConsumer.extract() ;
         if( command != null ) {
@@ -579,9 +582,11 @@ public class BareHttpDispatcher<
           if( immediateResponse instanceof ReferenceCounted ) {
             ( ( ReferenceCounted ) immediateResponse ).retain() ;
           }
+          final boolean keepAlive = NettyTools.addKeepAliveIfNeeded( httpRequest, immediateResponse ) ;
           final ChannelFuture channelFuture =
               channelHandlerContext.writeAndFlush( immediateResponse ) ;
-          if( immediateResponse instanceof FullHttpResponse ) {
+
+          if( ! keepAlive ) {
             channelFuture.addListener( CLOSE ) ;
           }
         }

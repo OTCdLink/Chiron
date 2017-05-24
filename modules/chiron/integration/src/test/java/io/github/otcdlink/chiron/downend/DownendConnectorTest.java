@@ -20,7 +20,6 @@ import io.github.otcdlink.chiron.middle.session.SessionLifecycle.SessionValid;
 import io.github.otcdlink.chiron.middle.tier.CommandInterceptor;
 import io.github.otcdlink.chiron.middle.tier.TimeBoundary;
 import io.github.otcdlink.chiron.toolbox.Credential;
-import io.github.otcdlink.chiron.toolbox.MultiplexingException;
 import io.github.otcdlink.chiron.toolbox.netty.NettyTools;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -49,6 +48,7 @@ import static io.github.otcdlink.chiron.downend.DownendFixture.CREDENTIAL_OK;
 import static io.github.otcdlink.chiron.fixture.TestNameTools.setTestThreadName;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 
 public class DownendConnectorTest
@@ -157,9 +157,8 @@ public class DownendConnectorTest
     fixture.initializeNoSignonAndStartAll( PingTimingPresets.QUICK_RECONNECT ) ;
 
     LOGGER.info( "Starting " + fixture.downend() + " again ..." ) ;
-    final BlockingMonolist< Throwable > throwableCapture = new BlockingMonolist<>() ;
-    fixture.downend().start().exceptionally( t -> { throwableCapture.add( t ) ; return null ; } ) ;
-    assertThat( throwableCapture.getOrWait() ).isInstanceOf( IllegalStateException.class ) ;
+    assertThatThrownBy( () -> fixture.downend().start() )
+        .isInstanceOf( IllegalStateException.class ) ;
   }
 
   @Test( timeout = TIMEOUT_MS )
@@ -178,17 +177,12 @@ public class DownendConnectorTest
   }
 
   @Test( timeout = TIMEOUT_MS )
-  public void fatalProblem() throws Exception {
+  public void brokenCommand() throws Exception {
     setTestThreadName() ;
     fixture.initializeNoSignonAndStartAll( PingTimingPresets.QUICK_RECONNECT ) ;
     fixture.downend().send( upwardBrokenEchoCommand( TAG_0 ) ) ;
-    fixture.waitForDownendConnectorState( DownendConnector.State.PROBLEM ) ;
-    assertThat( fixture.downend().state() ).isEqualTo( DownendConnector.State.PROBLEM ) ;
-    try {
-      fixture.stopAll() ;
-    } catch( final MultiplexingException e ) {
-      LOGGER.info( "Stopping failed but it's what we are expecting." ) ;
-    }
+    fixture.stopAll() ;
+    // TODO: assert that we logged something or whatever.
     runTearDown = false ;
   }
 
@@ -330,7 +324,7 @@ public class DownendConnectorTest
   }
 
   @Test( timeout = TIMEOUT_MS )
-  public void badCredentialThenCancel( @Mocked final SignonMaterializer signonMaterializer )
+  public void badCredentialThenCancel( @Injectable final SignonMaterializer signonMaterializer )
       throws Exception
   {
     setTestThreadName() ;

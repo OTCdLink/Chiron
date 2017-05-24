@@ -97,7 +97,7 @@ public final class UpendConnectorFixture {
             new UsualHttpCommands.Html(
                 "<h2>OK (200) response for " + httpRequest.uri() + "</h2>" +
                 "<p>" + httpRequest.content().toString( Charsets.UTF_8 ) + "</p>"
-            ).feed( channelHandlerContext ) ;
+            ).feed( channelHandlerContext, true ) ;
             return true ;
           }
         }
@@ -305,8 +305,7 @@ public final class UpendConnectorFixture {
         null,
         null,
         null,
-        null, //HttpRenderableCommand.AutomaticRenderer.INSTANCE,
-        null,
+        //HttpRenderableCommand.AutomaticRenderer.INSTANCE,
         null
     ) ;
   }
@@ -329,8 +328,7 @@ public final class UpendConnectorFixture {
         null,
         null,
         timeBoundary,
-        null, //HttpRenderableCommand.AutomaticRenderer.INSTANCE,
-        null,
+        //HttpRenderableCommand.AutomaticRenderer.INSTANCE,
         WebsocketFrameSizer.tightSizer( 8192 )
     ) ;
   }

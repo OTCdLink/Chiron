@@ -165,8 +165,8 @@ public class AbstractDownendTest<
   }
 
 
-//      protected static final long TIMEOUT_MS = 5_000 ;
-  protected static final long TIMEOUT_MS = 1_000_000 ;
+      protected static final long TIMEOUT_MS = 5_000 ;
+//  protected static final long TIMEOUT_MS = 1_000_000 ;
 
   protected static final SignonFailureNotice SIGNON_FAILURE_NOTICE_INVALID_CREDENTIAL =
       new SignonFailureNotice( SignonFailure.INVALID_CREDENTIAL ) ;
