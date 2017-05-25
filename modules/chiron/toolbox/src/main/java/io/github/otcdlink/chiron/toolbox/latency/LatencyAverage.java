@@ -37,7 +37,7 @@ public final class LatencyAverage< CATEGORY extends Enum< CATEGORY > > {
   }
   
   /**
-   * Returns associated counter.
+   * Returns how many times this {@link CATEGORY} occured.
    *
    * @return a value greater than or equal to 0.
    */
@@ -45,10 +45,20 @@ public final class LatencyAverage< CATEGORY extends Enum< CATEGORY > > {
     return counter( array, Counter.OCCURENCE, category ) ;
   }
 
+  /**
+   * Returns the sum of the durations recorded for this {@link CATEGORY}.
+   *
+   * @return a value greater than or equal to 0.
+   */
   public final long cumulatedDelay( final CATEGORY category ) {
     return counter( array, Counter.CUMULATED_DELAY, category ) ;
   }
 
+  /**
+   * Returns the highest duration recorded for this {@link CATEGORY}.
+   *
+   * @return a value greater than or equal to 0.
+   */
   public final long peakDelay( final CATEGORY category ) {
     return counter( array, Counter.PEAK_DELAY, category ) ;
   }
@@ -62,8 +72,8 @@ public final class LatencyAverage< CATEGORY extends Enum< CATEGORY > > {
    * <pre>
    *
    * |____|____|____|____|____|____|____|____|...
-   *                          |..............| -> {@link CATEGORY} (1)
-   *           |..............|                -> {@link CATEGORY} (0)
+   *                          |..............| -> {@link CATEGORY} [1]
+   *           |..............|                -> {@link CATEGORY} [0]
    * |.........|                               -> {@link Common}
    *  ^    ^    ^    ^    ^    ^
    *  |    |    |    |    |    |
