@@ -2,14 +2,20 @@ package io.github.otcdlink.chiron.toolbox.lifecycle;
 
 import com.google.common.base.Strings;
 import io.github.otcdlink.chiron.toolbox.ToStringTools;
-import io.github.otcdlink.chiron.toolbox.lifecycle.Lifecycled;
 import org.slf4j.Logger;
 
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -85,16 +91,16 @@ public abstract class AbstractLifecycled< SETUP, COMPLETION >
   private ExecutionContext< SETUP, COMPLETION > executionContext = null ;
 
   @Override
-  public final void setup( final SETUP setup ) {
+  public final void initialize( final SETUP setup ) {
     synchronized( lock ){
       checkState( state == State.NEW || state == State.STOPPED ) ;
       this.setup = checkNotNull( setup ) ;
-      doSetup( setup ) ;
+      doInitialize( setup ) ;
       state( State.STOPPED ) ;
     }
   }
 
-  protected void doSetup( SETUP setup ) { }
+  protected void doInitialize( SETUP setup ) { }
 
   protected final SETUP setup() {
     synchronized( lock ){
@@ -257,9 +263,9 @@ public abstract class AbstractLifecycled< SETUP, COMPLETION >
   }
 
 
-// ================
-// Thread factories
-// ================
+// =========
+// Threading
+// =========
 
   private static final AtomicInteger threadCounter = new AtomicInteger() ;
 
@@ -311,6 +317,87 @@ public abstract class AbstractLifecycled< SETUP, COMPLETION >
     } ;
   }
 
+
+  /**
+   * Convenience method for executing a single computation that sets {@link #state}
+   * to {@link State#BUSY}.
+   * This method has the drawback to create a {@code Thread} for each execution.
+   * For more intensive usage, subclasses should reuse their own {@code ExecutorService}
+   * and call {@link #execute(ExecutorService, Callable, Predicate, State)}.
+   */
+  protected final < RESULT > CompletableFuture< RESULT > executeSingleComputation(
+      final ThreadFactory threadFactory,
+      final Callable< RESULT > callable
+  ) {
+    final ExecutorService runExecutorService = Executors.newSingleThreadExecutor( threadFactory ) ;
+    return execute(
+        runExecutorService,
+        callable,
+        state -> state == State.STARTED,
+        State.BUSY
+    ) ;
+  }
+
+  /**
+   * Sets the {@link #state} to a custom value and runs given {@code Callable}.
+   * Because of the state lock, the {@link #stop()} method will fail until the {@code Callable}
+   * completes. The {@code Callable} should check {@code Thread#isInterrupted()} to complete
+   * prematurely (then it can return {@code null}).
+   *
+   * @return a {@code CompletableFuture} that supports cancellation. It may complete exceptionally
+   *     if an error occurs inside the {@code Callable}, or complete with a {@code null} in case
+   *     of cancellation. {@code null} may also be the value that given {@code Callable} is
+   *     expected to return.
+   */
+  protected final < RESULT > CompletableFuture< RESULT > execute(
+      final ExecutorService executorService,
+      final Callable< RESULT > callable,
+      final Predicate< State > validInitialStatePredicate,
+      final State computationState
+  ) {
+    checkArgument(
+        computationState == State.BUSY ||
+            ! State.MAP.values().contains( computationState ),
+        "Using " + computationState + " which is a reserved " + State.class.getSimpleName()
+    ) ;
+    final CompletableFuture< RESULT > completableFuture = new CompletableFuture<>() ;
+    final State preExecutionState ;
+    synchronized( lock ) {
+      preExecutionState = state ;
+      checkState( validInitialStatePredicate.test( preExecutionState ),
+          "Not one of the expected state: " + preExecutionState ) ;
+      state( computationState ) ;
+    }
+
+    // Can't reference the Future before its creation so we use a BlockingQueue for safety.
+    final BlockingQueue< Future< ? > > futureQueue = new ArrayBlockingQueue<>( 1 ) ;
+
+    completableFuture.whenComplete( ( result, throwable ) -> {
+        try {
+          if( throwable != null ) {
+            // Causing thread interruption.
+            futureQueue.take().cancel( true ) ;
+          }
+        } catch( InterruptedException ignore ) {
+        } finally {
+          synchronized( lock ) {
+            state( preExecutionState ) ;
+          }
+        }
+      }
+    ) ;
+
+    final Future< ? > executorFuture = executorService.submit( () -> {
+      try {
+        completableFuture.complete( callable.call() ) ;
+      } catch( final Throwable t ) {
+        completableFuture.completeExceptionally( t ) ;
+      }
+    } ) ;
+
+    futureQueue.offer( executorFuture ) ;
+    return completableFuture ;
+  }
 
 
 }

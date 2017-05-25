@@ -1,6 +1,11 @@
 package io.github.otcdlink.chiron.toolbox.lifecycle;
 
+import com.google.common.collect.ImmutableMap;
+import io.github.otcdlink.chiron.toolbox.collection.ConstantShelf;
+
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * Generic behavior of a service-like object.
@@ -37,7 +42,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface Lifecycled< SETUP, COMPLETION > {
 
-  void setup( SETUP setup ) ;
+  void initialize( SETUP setup ) ;
 
   /**
    * @throws IllegalStateException if already started. More formally, if {@link #start()}
@@ -72,23 +77,31 @@ public interface Lifecycled< SETUP, COMPLETION > {
    */
   CompletableFuture< COMPLETION > terminationFuture() ;
 
-  enum State {
+  /**
+   * Non-final class so subclasses can add their own states.
+   */
+  class State extends ConstantShelf {
+
+    protected static State newState() {
+      return new State() ;
+    }
+
     /**
-     * {@link Lifecycled} instance created but no {@link #setup} yet.
+     * {@link Lifecycled} instance created but no {@link #initialize} yet.
      */
-    NEW,
+    public static final State NEW = newState() ;
 
     /**
      * Ready to get {@link #start()}ed.
      */
-    STOPPED,
+    public static final State STOPPED = newState() ;
 
     /**
      * Initialization happening.
      * For running a remote Java process, this {@link State} represents the creation of SSH
      * connections and ancillary threads.
      */
-    INITIALIZING,
+    public static final State INITIALIZING = newState() ;
 
     /**
      * This is the state next to {@link #INITIALIZING} after calling {@link #start()}.
@@ -96,18 +109,24 @@ public interface Lifecycled< SETUP, COMPLETION > {
      * are connected, but some additional operations need to be completed before getting
      * {@link #STARTED}.
      */
-    STARTING,
+    public static final State STARTING = newState() ;
 
     /**
      * The {@link Lifecycled} object is fully usable.
      * For a remote Java process, it means that the process itself is past its own initialization.
      */
-    STARTED,
+    public static final State STARTED = newState() ;
 
     /**
      * {@link #stop()} got called, there is some cleanup in progress.
      */
-    STOPPING,
-    ;
+    public static final State STOPPING = newState() ;
+
+    /**
+     * Used by {@link AbstractLifecycled#executeSingleComputation(ThreadFactory, Callable)}.
+     */
+    public static final State BUSY = newState() ;
+
+    public static final ImmutableMap< String, State > MAP = valueMap( State.class ) ;
   }
 }
