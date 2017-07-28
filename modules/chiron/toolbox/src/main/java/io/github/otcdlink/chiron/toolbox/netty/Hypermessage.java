@@ -202,6 +202,10 @@ public final class Hypermessage {
         super( url ) ;
       }
 
+      public Get( final URL url, final ImmutableMultimap< String, String > headers ) {
+        super( url, headers ) ;
+      }
+
       public Get( final SchemeHostPort schemeHostPort, final URI uri ) {
         this( schemeHostPort, uri, null ) ;
       }

@@ -28,6 +28,7 @@ import io.github.otcdlink.chiron.middle.tier.ConnectionDescriptor;
 import io.github.otcdlink.chiron.middle.tier.TimeBoundary;
 import io.github.otcdlink.chiron.middle.tier.WebsocketFragmenterTier;
 import io.github.otcdlink.chiron.middle.tier.WebsocketFrameSizer;
+import io.github.otcdlink.chiron.middle.tier.WebsocketTools;
 import io.github.otcdlink.chiron.toolbox.Credential;
 import io.github.otcdlink.chiron.toolbox.ToStringTools;
 import io.github.otcdlink.chiron.toolbox.UrxTools;
@@ -315,6 +316,34 @@ public final class DownendConnector< ENDPOINT_SPECIFIC, DOWNWARD_DUTY, UPWARD_DU
   public void send( final Command< ENDPOINT_SPECIFIC, UPWARD_DUTY > command ) {
     LOGGER.debug( "Sending " + command + " on " + this + " ..." ) ;
     send( stateUpdater.current(), command ) ;
+  }
+
+  public final CompletableFuture< Void > sendDelayed(
+      final Command< ENDPOINT_SPECIFIC, UPWARD_DUTY > command,
+      final int delayMs
+  ) {
+    final CompletableFuture< Void > sendCompletion = new CompletableFuture<>() ;
+    stateUpdater.current().channel.eventLoop().schedule(
+        () -> {
+          final StateBody currentStateBody = stateUpdater.current() ;
+          final ChannelFuture send = send( currentStateBody, command ) ;
+          if( send == null ) {
+            sendCompletion.completeExceptionally(
+                new IllegalStateException( "Now in " + currentStateBody.state ) ) ;
+          } else {
+            send.addListener( future -> {
+              if( future.cause() == null ) {
+                sendCompletion.complete( null ) ;
+              } else {
+                sendCompletion.completeExceptionally( future.cause() ) ;
+              }
+            } ) ;
+          }
+        },
+        delayMs,
+        TimeUnit.MILLISECONDS
+    ) ;
+    return sendCompletion ;
   }
 
   private ChannelFuture send( final StateBody currentStateBody, final Object outbound ) {
@@ -734,9 +763,9 @@ public final class DownendConnector< ENDPOINT_SPECIFIC, DOWNWARD_DUTY, UPWARD_DU
    * disconnection happened meanwhile.
    */
   @Override
-  public CompletableFuture< ? > start() {
+  public CompletableFuture< Void > start() {
 
-    final CompletableFuture< ? > startFuture = new CompletableFuture<>() ;
+    final CompletableFuture< Void > startFuture = new CompletableFuture<>() ;
     final StateUpdater.Transition transition ;
     try {
       transition = stateUpdater.update(
@@ -762,7 +791,7 @@ public final class DownendConnector< ENDPOINT_SPECIFIC, DOWNWARD_DUTY, UPWARD_DU
       } ) ;
     }
 
-    final CompletableFuture< ? > completableFuture = MoreObjects.firstNonNull(
+    final CompletableFuture< Void > completableFuture = MoreObjects.firstNonNull(
         transition.update.startFuture, transition.previous.startFuture ) ;
     checkNotNull( completableFuture, "There should be a non-null startFuture at this point" ) ;
     return completableFuture ;
@@ -775,7 +804,7 @@ public final class DownendConnector< ENDPOINT_SPECIFIC, DOWNWARD_DUTY, UPWARD_DU
    * After calling this method, it is possible to {@link #start()} once again.
    */
   @Override
-  public CompletableFuture< ? > stop() {
+  public CompletableFuture< Void > stop() {
     LOGGER.info( "Got requested to stop " + this + "." ) ;
     final StateUpdater.Transition transition ;
     try {
@@ -909,8 +938,9 @@ public final class DownendConnector< ENDPOINT_SPECIFIC, DOWNWARD_DUTY, UPWARD_DU
             null,
             false,
             new DefaultHttpHeaders(),
-            setup.websocketFrameSizer.maximumPayloadSize
-            // Client must mask the frame it sends, specification says they are invalid otherwise.
+            setup.websocketFrameSizer.maximumPayloadSize,
+            WebsocketTools.MASK_WEBSOCKET_FRAMES_FROM_CLIENT,
+            ! WebsocketTools.MASK_WEBSOCKET_FRAMES_FROM_CLIENT
         ) ;
       }
 

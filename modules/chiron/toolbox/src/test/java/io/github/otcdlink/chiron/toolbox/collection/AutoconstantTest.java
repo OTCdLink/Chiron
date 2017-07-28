@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class ConstantShelfTest {
+public class AutoconstantTest {
 
   @Test
   public void names() throws Exception {
@@ -57,7 +57,7 @@ public class ConstantShelfTest {
   public void badReuse() throws Exception {
     assertThatThrownBy(  () ->
     BadReuse.valueMap( BadReuse.class, Enumeration.class ) )
-        .isInstanceOf( ConstantShelf.DeclarationException.class )
+        .isInstanceOf( Autoconstant.DeclarationException.class )
     ;
   }
 
@@ -72,9 +72,9 @@ public class ConstantShelfTest {
 // Fixture
 // =======
 
-  private static final Logger LOGGER = LoggerFactory.getLogger( ConstantShelfTest.class ) ;
+  private static final Logger LOGGER = LoggerFactory.getLogger( AutoconstantTest.class ) ;
 
-  public static class Enumeration extends ConstantShelf {
+  public static class Enumeration extends Autoconstant {
 
     private Enumeration() { }
 
@@ -92,12 +92,12 @@ public class ConstantShelfTest {
 
   }
 
-  public static class ReuseByReference extends ConstantShelf {
+  public static class ReuseByReference extends Autoconstant {
     public static final Enumeration A = Enumeration.A ;
     public static final Enumeration C = new Enumeration() ;
 
     public static final ImmutableMap< String, Enumeration > MAP =
-        ConstantShelf.valueMap( ReuseByReference.class, Enumeration.class ) ;
+        Autoconstant.valueMap( ReuseByReference.class, Enumeration.class ) ;
   }
 
 
@@ -114,12 +114,12 @@ public class ConstantShelfTest {
   }
 
 
-  public static class BadReuse extends ConstantShelf {
+  public static class BadReuse extends Autoconstant {
     @SuppressWarnings( "unused" )
     public static final Enumeration NAME_MISMATCH = Enumeration.A ;
   }
 
-  public static class NoMap extends ConstantShelf {
+  public static class NoMap extends Autoconstant {
     public static final NoMap A = new NoMap() ;
     public static final NoMap B = new NoMap() ;
   }
@@ -129,7 +129,7 @@ public class ConstantShelfTest {
    * Need a class apart, calling {@link Enumeration()} with no static member assignment
    * wrecks further calls.
    */
-  public static class LetItBreak extends ConstantShelf {
+  public static class LetItBreak extends Autoconstant {
 
     /**
      * A production implementation should use a more retrictive visibility.

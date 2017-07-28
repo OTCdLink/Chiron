@@ -21,8 +21,8 @@ import static io.github.otcdlink.chiron.downend.DownendConnector.State.STOPPING;
 public final class StateBody {
   public final DownendConnector.State state ;
   public final Channel channel ;
-  public final CompletableFuture< ? > startFuture ;
-  public final CompletableFuture< ? > stopFuture ;
+  public final CompletableFuture< Void > startFuture ;
+  public final CompletableFuture< Void > stopFuture ;
   public final ConnectionDescriptor connectionDescriptor ;
   public final ScheduledFuture< ? > reconnectFuture ;
   public final ScheduledFuture< ? > nextPingFuture ;
@@ -58,7 +58,7 @@ public final class StateBody {
    * Creates a fresh instance in initial state.
    * @param stopFuture
    */
-  public static StateBody stopped( final CompletableFuture< ? > stopFuture ) {
+  public static StateBody stopped( final CompletableFuture< Void > stopFuture ) {
     return new StateBody(
         STOPPED,
         null,
@@ -72,7 +72,7 @@ public final class StateBody {
     ) ;
   }
 
-  public StateBody startConnecting( final CompletableFuture< ? > startFuture ) {
+  public StateBody startConnecting( final CompletableFuture< Void > startFuture ) {
     return new StateBody(
         checkTransition( CONNECTING, STOPPED ),
         null,
@@ -207,7 +207,7 @@ public final class StateBody {
     ) ;
   }
 
-  public StateBody stopping( final CompletableFuture< ? > stopFuture ) {
+  public StateBody stopping( final CompletableFuture< Void > stopFuture ) {
     return new StateBody(
         checkTransition( STOPPING, CONNECTING, CONNECTED, SIGNED_IN ),
         channel,  /** Propagate, so we can call {@link Channel#close()} once in this state. */
@@ -256,8 +256,8 @@ public final class StateBody {
   private StateBody(
       final DownendConnector.State state,
       final Channel channel,
-      final CompletableFuture< ? > startFuture,
-      final CompletableFuture< ? > stopFuture,
+      final CompletableFuture< Void > startFuture,
+      final CompletableFuture< Void > stopFuture,
       final ConnectionDescriptor connectionDescriptor,
       final ScheduledFuture< ? > reconnectFuture,
       final ScheduledFuture< ? > nextPingFuture,

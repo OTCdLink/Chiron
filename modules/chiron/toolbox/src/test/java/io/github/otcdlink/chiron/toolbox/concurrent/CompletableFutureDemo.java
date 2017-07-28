@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -18,11 +19,11 @@ public final class CompletableFutureDemo {
   public static void main( final String... arguments ) throws Exception {
     print( "Running samples ..." ) ;
 
-    chainingWithThenRun() ;
-    chainingWithThenRunAsync() ;
-    chainingSameThread() ;
-    chainingWithThenRunAndNoGet() ;
-
+//    chainingWithThenRun() ;
+//    chainingWithThenRunAsync() ;
+//    chainingSameThread() ;
+//    chainingWithThenRunAndNoGet() ;
+    handleAndException() ;
   }
 
   private static void chainingSameThread() throws Exception {
@@ -105,6 +106,27 @@ public final class CompletableFutureDemo {
     Uninterruptibles.sleepUninterruptibly( 1, TimeUnit.SECONDS ) ;
     print( "Everything should have completed by now. Forcing completion to be sure." ) ;
     completableFuture.join() ;
+  }
+
+  private static void handleAndException() throws Exception {
+    printTitle( "=== handle, get an exception ===" ) ;
+
+    final CompletableFuture< Void > completableFuture1 = new CompletableFuture<>() ;
+    final CompletableFuture< Void > completableFuture2 = completableFuture1.handle(
+        ( Ø, failure ) -> Ø ) ;
+    completableFuture1.completeExceptionally( new Exception( "Boom" ) ) ;
+    print( "Did the chained future complete exceptionally?" ) ;
+    try {
+      completableFuture2.get( 1, TimeUnit.SECONDS ) ;
+      print( "No it didn't." ) ;
+    } catch( InterruptedException e ) {
+      print( "Something did not work." ) ;
+    } catch( ExecutionException e ) {
+      print( "OK it did." ) ;
+    }
+    print( "Chained future exceptional completion: " +
+        completableFuture2.isCompletedExceptionally() + "." ) ;
+
   }
 
 

@@ -87,5 +87,11 @@ public final class WebsocketTools {
     WebSocketFrame create( final boolean finalFragment, final int rsv, final ByteBuf byteBuf ) ;
   }
 
-
+  /**
+   * Specification says that client should mask them, but this messes up the ASCII representation
+   * of a TCP capture. Anyways we don't need masking in production thanks to HTTPS.
+   * Such a representation is useful for grep'ing on files too big for Wireshark.
+   * Something breaks Maven tests when the value is {@code false}.
+   */
+  public static final boolean MASK_WEBSOCKET_FRAMES_FROM_CLIENT = true ;
 }

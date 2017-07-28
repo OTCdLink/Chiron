@@ -120,12 +120,12 @@ public class CommandTransceiver< DOWNWARD_DUTY, UPWARD_DUTY >
 }
 
   @Override
-  public CompletableFuture< ? > start() {
+  public CompletableFuture< Void > start() {
     return downendConnector.start() ;
   }
 
   @Override
-  public CompletableFuture< ? > stop() {
+  public CompletableFuture< Void > stop() {
     return downendConnector.stop() ;
   }
 

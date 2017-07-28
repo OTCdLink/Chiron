@@ -34,7 +34,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *     {@link #asString()} method for useful payload.
  *   </li><li>
  *     {@link #EQUIVALENCE} for equality and hashing.
- *     (For a {@link Comparable} object we would define a {@code COMPARATOR} using the same
+ *     (For a {@link Comparable} object we would define a {@code COMPARATOR} using similar
  *     delegation mechanism.)
  *   </li><li>
  *     {@code final} as we don't need to derive it in any way.
@@ -76,25 +76,6 @@ public final class HostPort {
     return new HostPort( hostname, port ) ;
   }
 
-  public static HostPort parse( final String string ) throws ParseException {
-    final HostPort hostPort = parseOrNull( string ) ;
-    if( hostPort == null ) {
-      throw new ParseException( "Bad format: '" + string + "'" ) ;
-    }
-    return hostPort;
-  }
-
-  public static HostPort parseOrNull( final String string ) {
-    final Matcher matcher = InternetAddressValidator.hostPortMatcher( string ) ;
-    if( matcher.matches() ) {
-      final Hostname hostname = new Hostname( matcher.group( 1 ), false ) ;
-      final int port = Integer.parseInt( matcher.group( 2 ) ) ;
-      return new HostPort( hostname, port ) ;
-    } else {
-      return null ;
-    }
-  }
-
   public static HostPort create( final URL url ) throws CreationException
   {
     try {
@@ -115,18 +96,6 @@ public final class HostPort {
     } catch( final Hostname.ParseException e ) {
       throw new CreationException( "Cound not parse '" + inetSocketAddress.getHostName() + "'" ) ;
     }
-  }
-
-  public static String niceHumanReadableString( final InetSocketAddress address ) {
-    final StringBuilder builder = new StringBuilder() ;
-    builder.append( address.getHostName() ) ;
-    if( ! address.getHostString().equals( address.getHostName() ) ) {
-      builder.append( '/' ) ;
-      builder.append( address.getAddress() ) ;
-    }
-    builder.append( ':' ) ;
-    builder.append( address.getPort() ) ;
-    return builder.toString() ;
   }
 
 
@@ -154,14 +123,11 @@ public final class HostPort {
     }
   }
 
-  @Override
-  public String toString() {
-    return ToStringTools.getNiceClassName( this ) + "{" + asString() + "}" ;
-  }
 
-  public String asString() {
-    return hostname.asString() + ":" + port ;
-  }
+
+// ===========
+// Equivalence
+// ===========
 
   @Override
   public boolean equals( final Object other ) {
@@ -207,5 +173,52 @@ public final class HostPort {
       return result ;
     }
   } ;
+
+
+// ===============
+// Stringification
+// ===============
+
+  public String asString() {
+    return hostname.asString() + ":" + port ;
+  }
+
+
+  @Override
+  public String toString() {
+    return ToStringTools.getNiceClassName( this ) + "{" + asString() + "}" ;
+  }
+
+  public static HostPort parse( final String string ) throws ParseException {
+    final HostPort hostPort = parseOrNull( string ) ;
+    if( hostPort == null ) {
+      throw new ParseException( "Bad format: '" + string + "'" ) ;
+    }
+    return hostPort;
+  }
+
+  public static HostPort parseOrNull( final String string ) {
+    final Matcher matcher = InternetAddressValidator.hostPortMatcher( string ) ;
+    if( matcher.matches() ) {
+      final Hostname hostname = new Hostname( matcher.group( 1 ), false ) ;
+      final int port = Integer.parseInt( matcher.group( 2 ) ) ;
+      return new HostPort( hostname, port ) ;
+    } else {
+      return null ;
+    }
+  }
+
+  public static String niceHumanReadableString( final InetSocketAddress address ) {
+    final StringBuilder builder = new StringBuilder() ;
+    builder.append( address.getHostName() ) ;
+    if( ! address.getHostString().equals( address.getHostName() ) ) {
+      builder.append( '/' ) ;
+      builder.append( address.getAddress() ) ;
+    }
+    builder.append( ':' ) ;
+    builder.append( address.getPort() ) ;
+    return builder.toString() ;
+  }
+
 
 }

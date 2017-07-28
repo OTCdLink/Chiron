@@ -1,4 +1,4 @@
-package io.github.otcdlink.chiron.toolbox.lifecycle;
+package io.github.otcdlink.chiron.toolbox.service;
 
 import com.google.common.collect.ImmutableMap;
 import io.github.otcdlink.chiron.toolbox.StringWrapper;
@@ -11,107 +11,119 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
+import static io.github.otcdlink.chiron.toolbox.service.Service.State.STARTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class AbstractLifecycledTest {
+public class AbstractServiceTest {
 
   @Test
   public void startAndStop() throws Exception {
-    final SimpleLifecycled lifecycled = new SimpleLifecycled( LOGGER ) ;
-    lifecycled.initialize( SimpleSetup.simple() ) ;
-    lifecycled.start().join() ;
-    assertThat( lifecycled.stop().get() ).isEqualTo( SimpleCompletion.OK ) ;
+    final SimpleService service = new SimpleService( LOGGER ) ;
+    service.setup( SimpleSetup.simple() ) ;
+    service.start().join() ;
+    assertThat( service.stop().get() ).isEqualTo( SimpleCompletion.OK ) ;
   }
 
   @Test
   public void restart() throws Exception {
-    final SimpleLifecycled lifecycled = new SimpleLifecycled( LOGGER ) ;
-    lifecycled.initialize( SimpleSetup.simple() ) ;
-    lifecycled.initialize( SimpleSetup.simple() ) ; // Yes, twice.
-    lifecycled.start().join() ;
-    lifecycled.stop().join() ;
-    lifecycled.start().join() ;
-    assertThat( lifecycled.stop().get() ).isEqualTo( SimpleCompletion.OK ) ;
+    final SimpleService service = new SimpleService( LOGGER ) ;
+    service.setup( SimpleSetup.simple() ) ;
+    service.setup( SimpleSetup.simple() ) ; // Yes, twice.
+    service.start().join() ;
+    service.stop().join() ;
+    service.start().join() ;
+    assertThat( service.stop().get() ).isEqualTo( SimpleCompletion.OK ) ;
   }
 
   @Test
   public void run() throws Exception {
-    final SimpleLifecycled lifecycled = new SimpleLifecycled( LOGGER ) ;
-    lifecycled.initialize( SimpleSetup.automaticCompletion() ) ;
-    assertThat( lifecycled.run().get() ).isEqualTo( SimpleCompletion.OK ) ;
+    final SimpleService service = new SimpleService( LOGGER ) ;
+    service.setup( SimpleSetup.automaticCompletion() ) ;
+    assertThat( service.run().get() ).isEqualTo( SimpleCompletion.OK ) ;
   }
 
   @Test
   public void badStateTransition() throws Exception {
-    final SimpleLifecycled lifecycled = new SimpleLifecycled( LOGGER ) ;
-    assertThatThrownBy( lifecycled::start ).isInstanceOf( IllegalStateException.class ) ;
-    assertThatThrownBy( lifecycled::stop ).isInstanceOf( IllegalStateException.class ) ;
-    lifecycled.initialize( SimpleSetup.simple() ) ;
-    lifecycled.start().join() ;
-    assertThatThrownBy( lifecycled::start ).isInstanceOf( IllegalStateException.class ) ;
-    lifecycled.startFuture().join() ;
-    lifecycled.stop().join() ;
-    assertThatThrownBy( lifecycled::stop ).isInstanceOf( IllegalStateException.class ) ;
+    final SimpleService service = new SimpleService( LOGGER ) ;
+    assertThatThrownBy( service::start ).isInstanceOf( IllegalStateException.class ) ;
+    assertThatThrownBy( service::stop ).isInstanceOf( IllegalStateException.class ) ;
+    service.setup( SimpleSetup.simple() ) ;
+    service.start().join() ;
+    assertThatThrownBy( service::start ).isInstanceOf( IllegalStateException.class ) ;
+    service.startFuture().join() ;
+    service.stop().join() ;
+    service.stop().join() ;
+  }
+
+  @Test
+  public void runWithOwnFuture() throws Exception {
+    final ExtendedService service = new ExtendedService( LOGGER ) ;
+    service.start().join() ;
+    final Semaphore runHasStarted = new Semaphore( 0 ) ;
+    final CompletableFuture< SimpleCompletion > completionFuture = new CompletableFuture<>() ;
+    service.justRunWithItsOwnFuture( completionFuture, runHasStarted ) ;
+//    runHasStarted.acquire() ;
+    assertThat( completionFuture.get() ).isEqualTo( SimpleCompletion.OK ) ;
   }
 
   @Test
   public void runWithExtendedState() throws Exception {
     LOGGER.info( "Using " + ExtendedState.RUNNING + " as custom state." ) ;
-    ExtendedLifecycled extendedLifecycled = new ExtendedLifecycled( LOGGER ) ;
+    ExtendedService extendedService = new ExtendedService( LOGGER ) ;
     final Semaphore runHasStarted = new Semaphore( 0 ) ;
     final Semaphore runCanComplete = new Semaphore( 0 ) ;
 
-    extendedLifecycled.start().join() ;
+    extendedService.start().join() ;
     final CompletableFuture< SimpleCompletion > runCompletion =
-        extendedLifecycled.justRun( runHasStarted, runCanComplete ) ;
+        extendedService.justRun( runHasStarted, runCanComplete ) ;
 
     runHasStarted.acquire() ;
     assertThat( runCompletion.isDone() ).isFalse() ;
     runCanComplete.release() ;
     assertThat( runCompletion.get() ).isEqualTo( SimpleCompletion.OK ) ;
-    extendedLifecycled.stop().join() ;
+    extendedService.stop().join() ;
   }
 
   @Test
   public void exceptionalRun() throws Exception {
     LOGGER.info( "Using " + ExtendedState.RUNNING + " as custom state." ) ;
-    ExtendedLifecycled extendedLifecycled = new ExtendedLifecycled( LOGGER ) ;
+    ExtendedService extendedService = new ExtendedService( LOGGER ) ;
     final Semaphore runHasStarted = new Semaphore( 0 ) ;
     final Semaphore runCanComplete = new Semaphore( 0 ) ;
 
-    extendedLifecycled.start().join() ;
+    extendedService.start().join() ;
     final CompletableFuture< SimpleCompletion > runCompletion =
-        extendedLifecycled.runExceptionally( runHasStarted, runCanComplete ) ;
+        extendedService.runExceptionally( runHasStarted, runCanComplete ) ;
 
     runHasStarted.acquire() ;
     assertThat( runCompletion.isDone() ).isFalse() ;
     runCanComplete.release() ;
     assertThatThrownBy( runCompletion::get ).hasMessageContaining( "Boom" ) ;
-    extendedLifecycled.stop().join() ;
+    extendedService.stop().join() ;
   }
 
 
   @Test
   public void cancellableRun() throws Exception {
     LOGGER.info( "Using " + ExtendedState.RUNNING + " as custom state." ) ;
-    final ExtendedLifecycled extendedLifecycled = new ExtendedLifecycled( LOGGER ) ;
+    final ExtendedService extendedService = new ExtendedService( LOGGER ) ;
     final Semaphore runHasStarted = new Semaphore( 0 ) ;
 
-    extendedLifecycled.start().join() ;
+    extendedService.start().join() ;
     final CompletableFuture< SimpleCompletion > runCompletion =
-        extendedLifecycled.loopUntilInterrupted( runHasStarted ) ;
+        extendedService.loopUntilInterrupted( runHasStarted ) ;
 
     runHasStarted.acquire() ;
     runCompletion.cancel( false ) ;  // No need to require thread interruption.
-    extendedLifecycled.stop().join() ;
+    extendedService.stop().join() ;
   }
 
 // =======
 // Fixture
 // =======
 
-  private static final Logger LOGGER = LoggerFactory.getLogger( AbstractLifecycledTest.class ) ;
+  private static final Logger LOGGER = LoggerFactory.getLogger( AbstractServiceTest.class ) ;
 
 
 // ======
@@ -121,7 +133,7 @@ public class AbstractLifecycledTest {
   private static final class SimpleSetup {
     public final boolean automaticCompletion ;
 
-    private SimpleSetup( boolean automaticCompletion ) {
+    private SimpleSetup( final boolean automaticCompletion ) {
       this.automaticCompletion = automaticCompletion ;
     }
 
@@ -142,12 +154,12 @@ public class AbstractLifecycledTest {
     public static final SimpleCompletion OK = new SimpleCompletion( "OK" ) ;
   }
 
-  private static class SimpleLifecycled
-      extends AbstractLifecycled< SimpleSetup, SimpleCompletion >
+  private static class SimpleService
+      extends AbstractService< SimpleSetup, SimpleCompletion >
   {
 
-    public SimpleLifecycled( Logger logger ) {
-      super( logger ) ;
+    public SimpleService( Logger logger ) {
+      super( logger, "simple" ) ;
     }
 
     @Override
@@ -159,9 +171,9 @@ public class AbstractLifecycledTest {
     }
 
     @Override
-    protected void customStop() throws Exception {
+    protected void customEffectiveStop() throws Exception {
       completion( SimpleCompletion.OK ) ;
-      super.customStop() ;
+      super.customEffectiveStop() ;
     }
   }
 
@@ -175,29 +187,43 @@ public class AbstractLifecycledTest {
     private static final NoSetup INSTANCE = new NoSetup() ;
   }
 
-  private static class ExtendedLifecycled extends AbstractLifecycled< NoSetup, Void > {
+  private static class ExtendedService extends AbstractService< NoSetup, Void > {
 
-    public ExtendedLifecycled( Logger logger ) {
-      super( logger ) ;
-      initialize( NoSetup.INSTANCE ) ;
+    public ExtendedService( Logger logger ) {
+      super( logger, "extended" ) ;
+      setup( NoSetup.INSTANCE ) ;
     }
 
     private final ExecutorService runExecutorService = Executors.newSingleThreadExecutor(
-        threadFactory( getClass().getSimpleName(), "run", null ) ) ;
+        threadFactory( "run", null ) ) ;
 
     public CompletableFuture< SimpleCompletion > justRun(
         final Semaphore runHasStarted,
         final Semaphore runCanComplete
     ) {
-      return execute(
+      return compute(
           runExecutorService,
           () -> {
             runHasStarted.release() ;
             runCanComplete.acquire() ;
             return SimpleCompletion.OK ;
           },
-          state -> state == State.STARTED,
-          ExtendedState.RUNNING
+          state -> state == STARTED
+      ) ;
+    }
+
+    public void justRunWithItsOwnFuture(
+        final CompletableFuture< SimpleCompletion > completionFuture,
+        final Semaphore runHasStarted
+    ) {
+      compute(
+          runExecutorService,
+          IS_STARTED,
+          () -> {
+            completionFuture.complete( SimpleCompletion.OK ) ;
+            runHasStarted.release() ;
+          },
+          completionFuture
       ) ;
     }
 
@@ -205,15 +231,14 @@ public class AbstractLifecycledTest {
         final Semaphore runHasStarted,
         final Semaphore runCanComplete
     ) {
-      return execute(
+      return compute(
           runExecutorService,
           () -> {
             runHasStarted.release() ;
             runCanComplete.acquire() ;
             throw new Exception( "Boom" ) ;
           },
-          state -> state == State.STARTED,
-          ExtendedState.RUNNING
+          state -> state == STARTED
       ) ;
     }
 
@@ -221,7 +246,7 @@ public class AbstractLifecycledTest {
     public CompletableFuture< SimpleCompletion > loopUntilInterrupted(
         final Semaphore runHasStarted
     ) {
-      return execute(
+      return compute(
           runExecutorService,
           () -> {
             while( ! Thread.currentThread().isInterrupted() ) {
@@ -230,13 +255,12 @@ public class AbstractLifecycledTest {
             }
             return SimpleCompletion.OK ;
           },
-          state -> state == State.STARTED,
-          ExtendedState.RUNNING
+          state -> state == STARTED
       ) ;
     }
   }
 
-  public static class ExtendedState extends Lifecycled.State {
+  public static class ExtendedState extends Service.State {
 
     public static final ExtendedState RUNNING = new ExtendedState() ;
 

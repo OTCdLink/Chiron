@@ -45,12 +45,11 @@
       <artifactId>reactor-core</artifactId>
     </dependency>
 
-<!--
     <dependency>
-      <groupId>io.projectreactor</groupId>
+      <groupId>io.projectreactor.addons</groupId>
       <artifactId>reactor-test</artifactId>
+      <scope>test</scope>
     </dependency>
--->
 
     <dependency>
       <groupId>${project.parent.groupId}</groupId>

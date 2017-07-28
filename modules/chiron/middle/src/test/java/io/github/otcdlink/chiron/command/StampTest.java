@@ -147,8 +147,7 @@ public class StampTest {
     final int incrementPassCount = stress ? 1_000_000 : 5 ;
     final int totalIdentifierCount = threadCount * incrementPassCount ;
 
-    final Stamp.Generator generator =
-        new Stamp.Generator( Clock.SYSTEM_CLOCK ) ;
+    final Stamp.Generator generator = new Stamp.Generator( Clock.SYSTEM_CLOCK ) ;
 
     class Incrementer implements Runnable {
       Stamp[] commandIdentifiers = new Stamp[ incrementPassCount ] ;

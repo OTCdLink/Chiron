@@ -11,7 +11,7 @@ public class EmailAddressTest {
 
   @Test
   public void goodEmailAddress() throws EmailAddressFormatException {
-    assertThat( new EmailAddress( "me@me.me" ).getAsString() ).isEqualTo( "me@me.me" ) ;
+    assertThat( new EmailAddress( "me@me.me" ).asString() ).isEqualTo( "me@me.me" ) ;
   }
 
   @Test( expected = EmailAddressFormatException.class )

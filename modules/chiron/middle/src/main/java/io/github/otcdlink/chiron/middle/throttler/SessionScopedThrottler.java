@@ -84,7 +84,11 @@ public class SessionScopedThrottler<
    * {@link RESTRICTION} if needed to.
    */
   public final Throttling evaluateAndUpdate( final COMMAND command ) {
-    return evaluateAndUpdate( clock.getCurrentDateTime(), command ) ;
+//    if( Duration.ZERO.equals( throttlingDuration ) ) {
+//      return Throttling.PASSED ;
+//    } else {
+      return evaluateAndUpdate( clock.getCurrentDateTime(), command ) ;
+//    }
   }
 
   protected final Duration throttlingDuration() {
@@ -96,10 +100,12 @@ public class SessionScopedThrottler<
     Throttling throttling = Throttling.NOT_APPLICABLE ;
     if( restrictionFactory.supports( command ) ) {
       throttling = Throttling.PASSED ;
-      for( final Map.Entry< RESTRICTION, DateTime > entry : restrictions.entrySet() ) {
-        if( entry.getKey().appliesTo( command ) ) {
-          throttling = Throttling.THROTTLED ;
-          break ;
+      if( ! Duration.ZERO.equals( throttlingDuration ) ) {
+        for( final Map.Entry< RESTRICTION, DateTime > entry : restrictions.entrySet() ) {
+          if( entry.getKey().appliesTo( command ) ) {
+            throttling = Throttling.THROTTLED ;
+            break ;
+          }
         }
       }
       if( throttling == Throttling.PASSED ) {

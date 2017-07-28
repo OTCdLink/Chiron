@@ -1,5 +1,6 @@
 package io.github.otcdlink.chiron.toolbox.latency;
 
+import com.google.common.collect.ImmutableList;
 import io.github.otcdlink.chiron.toolbox.clock.Clock;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,12 +28,12 @@ public final class LatencyCombinator<
    * A reference to the underlying data structure of a {@link LatencyAverage}, to be
    * atomically updated.
    */
-  private final AtomicReference< long[] > latencyAverage ;
+  private final AtomicReference< long[] > latencyAverage = new AtomicReference<>() ;
 
   public LatencyCombinator( final Clock clock, final Class< CATEGORY > categoryClass ) {
     this.clock = checkNotNull( clock ) ;
     this.categoryClass = checkNotNull( categoryClass ) ;
-    latencyAverage = new AtomicReference<>( LatencyAverage.newArray( categoryClass ) ) ;
+    reset() ;
   }
 
   public void begin( final TOPIC topic ) {
@@ -66,4 +67,27 @@ public final class LatencyCombinator<
     return new LatencyAverage<>( categoryClass, latencyAverage.get() ) ;
   }
 
+  public void reset() {
+    topicsInProgress.clear() ;
+    latencyAverage.set( LatencyAverage.newArray( categoryClass ) ) ;
+  }
+
+  public static < CATEGORY extends Enum< CATEGORY > > LatencyAverage< CATEGORY > combine(
+      final Class< CATEGORY > categoryClass,
+      final LatencyAverage< CATEGORY >... latencies
+  ) {
+    final long[] recipient = LatencyAverage.newArray( categoryClass ) ;
+    for( final LatencyAverage< CATEGORY > latencyAverage : latencies ) {
+      LatencyAverage.merge( categoryClass, recipient, latencyAverage );
+    }
+    return new LatencyAverage<>( categoryClass, recipient ) ;
+  }
+
+  public static < CATEGORY extends Enum< CATEGORY > > LatencyAverage< CATEGORY > combine(
+      final Class< CATEGORY > categoryClass,
+      ImmutableList< LatencyAverage< CATEGORY > > latencyAverages
+  ) {
+    final LatencyAverage[] array = new LatencyAverage[ latencyAverages.size() ] ;
+    return combine( categoryClass, latencyAverages.toArray( array ) ) ;
+  }
 }

@@ -4,7 +4,7 @@ import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
 import io.github.otcdlink.chiron.toolbox.ImmutableCollectionTools;
 import io.github.otcdlink.chiron.toolbox.ObjectTools;
-import io.github.otcdlink.chiron.toolbox.collection.ConstantShelf;
+import io.github.otcdlink.chiron.toolbox.collection.Autoconstant;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -50,7 +50,7 @@ public class WebsocketHandshakeFix implements HttpProxy.PipelineConfigurator {
    */
   private static final int MAX_CONTENT_LENGTH = 1024 * 1024 ;
 
-  public static final class ChannelHandlerFixName extends ConstantShelf {
+  public static final class ChannelHandlerFixName extends Autoconstant {
 
     private static ChannelHandlerFixName createNew() {
       return new ChannelHandlerFixName() ;

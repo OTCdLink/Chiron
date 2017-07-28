@@ -4,6 +4,14 @@ public final class Plural {
 
   private Plural() { }
 
+  public static String s( final String single, final int cardinality ) {
+    if( cardinality > 1 ) {
+      return single + "s" ;
+    } else {
+      return single ;
+    }
+  }
+
   public static String s( final int cardinality, final String single ) {
     return suffixPlural( cardinality, single, "s" ) ;
   }

@@ -46,10 +46,10 @@ import static com.google.common.base.Preconditions.checkState;
  * <p>
  * {@link #valueMap(Class) The} {@link #valueMap(Class, Class) methods}
  * for extracting declared values take great care of enforcing consistency.
- * The same {@link ConstantShelf} instance can be referenced by different subclasses (possibly
+ * The same {@link Autoconstant} instance can be referenced by different subclasses (possibly
  * using a supertype), but only under the same name. This makes {@link #name()} consistent.
  * <p>
- * Instantiating a concrete {@link ConstantShelf} without referencing it will cause the next call
+ * Instantiating a concrete {@link Autoconstant} without referencing it will cause the next call
  * to {@link #valueMap(Class, Class)} or {@link #name()} to fail.
  * <p>
  * Calling {@link #name()} before class initialisation got complete will throw an exception.
@@ -58,10 +58,11 @@ import static com.google.common.base.Preconditions.checkState;
  * <p>
  * Instances of this class are thread-safe (given that subclasses respect immutability patterns).
  * Static methods for extracting constants are thread-safe.
+ *
  */
-public abstract class ConstantShelf {
+public abstract class Autoconstant {
 
-  private static final ConcurrentMap< ConstantShelf, ObjectTools.Holder< Declaration > >
+  private static final ConcurrentMap< Autoconstant, ObjectTools.Holder< Declaration > >
       INSTANCES = new ConcurrentHashMap<>() ;
   
   private static final class Declaration {
@@ -85,7 +86,7 @@ public abstract class ConstantShelf {
     }
   }
 
-  protected ConstantShelf() {
+  protected Autoconstant() {
     final ObjectTools.Holder< Declaration > previous =
         INSTANCES.put( this, ObjectTools.newHolder() ) ;
     if( previous != null ) {
@@ -97,7 +98,7 @@ public abstract class ConstantShelf {
     }
   }
 
-  public static <THIS extends ConstantShelf> ImmutableMap< String, THIS > valueMap(
+  public static < THIS extends Autoconstant> ImmutableMap< String, THIS > valueMap(
       final Class< THIS > ownerClass
   ) {
     return valueMap( ownerClass, ownerClass ) ;
@@ -109,23 +110,23 @@ public abstract class ConstantShelf {
    * {@code ownerClass} and its superclasses.
    * <p>
    * Do not call this method before concrete class has declared all its constants of
-   * {@link ConstantShelf} type.
+   * {@link Autoconstant} type.
    * <p>
    * This method scans every instance so it is better to set its result to a {@code static}
-   * member of a {@link ConstantShelf} subclass. This also enforces a fail-fast approach, with
+   * member of a {@link Autoconstant} subclass. This also enforces a fail-fast approach, with
    * declaration problems detected during class initialization.
    * <p>
    * This method performs various checks to enforce definition consistency.
    *
    * @param ownerClass the {@code Class} declaring the constants.
-   * @param constantType the type of the constants to gathern (references of non-compatible type
+   * @param constantType the type of the constants to gather (references of non-compatible type
    *     will be ignored).
    *
    * @return a {@code Map} sorted by natural key order.
    */
   protected static <
-      OWNER extends ConstantShelf,
-      THIS  extends ConstantShelf
+      OWNER extends Autoconstant,
+      THIS  extends Autoconstant
   > ImmutableMap< String, THIS > valueMap(
       final Class< OWNER > ownerClass,
       final Class< THIS > constantType
@@ -204,7 +205,7 @@ public abstract class ConstantShelf {
     return super.equals( other ) ;
   }
 
-  private static String toStringSafe( final ConstantShelf instance ) {
+  private static String toStringSafe( final Autoconstant instance ) {
     return ToStringTools.nameAndCompactHash( instance ) ;
   }
 

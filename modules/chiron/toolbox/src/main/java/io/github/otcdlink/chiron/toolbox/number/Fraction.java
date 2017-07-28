@@ -31,6 +31,14 @@ public final class Fraction {
     return Float.toString( value ) ;
   }
 
+  public String asPercentString() {
+    return Float.toString( ( 1000 * value ) / 10 ) + " %" ;
+  }
+
+  public float asFloat() {
+    return value ;
+  }
+
   public static final Fraction ZERO = new Fraction( 0f ) ;
 
   public static final Fraction ONE = new Fraction( 1f ) ;

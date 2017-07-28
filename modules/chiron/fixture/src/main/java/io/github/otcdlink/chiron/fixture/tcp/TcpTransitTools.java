@@ -2,7 +2,7 @@ package io.github.otcdlink.chiron.fixture.tcp;
 
 import com.google.common.base.CaseFormat;
 import io.github.otcdlink.chiron.toolbox.ObjectTools;
-import io.github.otcdlink.chiron.toolbox.collection.ConstantShelf;
+import io.github.otcdlink.chiron.toolbox.collection.Autoconstant;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -199,7 +199,7 @@ public final class TcpTransitTools {
     }
   }
 
-  public static final class ChannelHandlerName extends ConstantShelf {
+  public static final class ChannelHandlerName extends Autoconstant {
 
     private static ChannelHandlerName createNew() {
       return new ChannelHandlerName() ;

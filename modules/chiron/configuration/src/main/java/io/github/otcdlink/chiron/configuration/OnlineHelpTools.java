@@ -1,15 +1,13 @@
 package io.github.otcdlink.chiron.configuration;
 
-import com.google.common.base.CharMatcher;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import io.github.otcdlink.chiron.toolbox.text.TextWrapTools;
 
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 public final class OnlineHelpTools {
@@ -65,7 +63,7 @@ public final class OnlineHelpTools {
       final int indent,
       final int lineLength
   ) throws IOException {
-    writeWrapped(
+    TextWrapTools.writeWrapped(
         writer,
         "Could not create a " + Configuration.class.getSimpleName() + " from "
             + ConfigurationTools.getNiceName( declarationException.factory.configurationClass() ),
@@ -73,7 +71,7 @@ public final class OnlineHelpTools {
         lineLength
     ) ;
     writeExceptionOnly( writer, declarationException, indent, lineLength ) ;
-    writeWrapped( writer, "\nUsage:", 0, lineLength ) ;
+    TextWrapTools.writeWrapped( writer, "\nUsage:", 0, lineLength ) ;
     writeHelp( writer, declarationException.factory, indent, lineLength ) ;
   }
 
@@ -106,7 +104,7 @@ public final class OnlineHelpTools {
       final int lineLength
   ) throws IOException {
     if( declarationException.causes.isEmpty() ) {
-      writeWrapped( writer, declarationException.getMessage(), indent, lineLength ) ;
+      TextWrapTools.writeWrapped( writer, declarationException.getMessage(), indent, lineLength ) ;
     } else {
       final ImmutableList< Validation.Bad > causes = declarationException.causes ;
       writeWrapped( writer, causes, indent, lineLength ) ;
@@ -137,11 +135,11 @@ public final class OnlineHelpTools {
         lineBuilder.append( " ] " ) ;
       }
       lineBuilder.append( bad.message ) ;
-      writeWrapped( writer, lineBuilder.toString(), indent, lineLength ) ;
+      TextWrapTools.writeWrapped( writer, lineBuilder.toString(), indent, lineLength ) ;
 
     }
     if( ! valuedPropertiesWithSource.isEmpty() ) {
-      writeWrapped(
+      TextWrapTools.writeWrapped(
           writer,
           "\nSource" + ( valuedPropertiesWithSource.entrySet().size() > 1 ? "s:" : ":" ),
           indent,
@@ -150,7 +148,7 @@ public final class OnlineHelpTools {
       for( final Map.Entry< Configuration.Property, Configuration.Source > entries
           : valuedPropertiesWithSource.entrySet()
           ) {
-        writeWrapped(
+        TextWrapTools.writeWrapped(
             writer,
             entries.getKey().name() + " <- " + entries.getValue().sourceName(),
             indent * 2,
@@ -197,7 +195,7 @@ public final class OnlineHelpTools {
         }
         final String documentation = property.documentation() ;
         if( ! Strings.isNullOrEmpty( documentation ) ) {
-          writeWrapped( writer, documentation, indent * 2, lineLength ) ;
+          TextWrapTools.writeWrapped( writer, documentation, indent * 2, lineLength ) ;
         }
       }
       writer.flush() ;
@@ -205,76 +203,6 @@ public final class OnlineHelpTools {
       throw new RuntimeException( e ) ;
     }
   }
-
-  public static void writeWrapped(
-      final StringBuilder stringBuilder,
-      final String text,
-      final int indent,
-      final int width
-  ) {
-    final StringWriter writer = new StringWriter() ;
-    try {
-      writeWrapped( writer, text, indent, width ) ;
-    } catch( final IOException e ) {
-      throw new RuntimeException( "Can't happen", e ) ;
-    }
-    stringBuilder.append( writer.toString() ) ;
-  }
-
-  public static void writeWrapped(
-      final Writer writer,
-      final String text,
-      final int indent,
-      final int width
-  ) throws IOException {
-    final Iterable< String > lines = Splitter.on( LINEBREAK_MATCHER ).split( text ) ;
-    for( final String line : lines ) {
-      writeWrapped( writer, Splitter.on( WHITESPACE_MATCHER ).split( line ), indent, width ) ;
-      writer.append( "\n" ) ;
-    }
-  }
-
-  /**
-   * Inspired by <a href="http://stackoverflow.com/a/5689524" >StackOverflow</a>.
-   */
-  private static void writeWrapped(
-      final Writer writer,
-      final Iterable< String > words,
-      final int indent,
-      final int width
-  ) throws IOException {
-    int lineLength = 0 ;
-    final String leftPadding = Strings.repeat( " ", indent ) ;
-    writer.append( leftPadding ) ;
-    final Iterator< String > iterator = words.iterator() ;
-    if( iterator.hasNext() ) {
-      final String next = iterator.next() ;
-      writer.append( next ) ;
-      lineLength += next.length() ;
-      while( iterator.hasNext() ) {
-        final String word = iterator.next() ;
-        if( word.length() + 1 + lineLength > width ) {
-          writer.append( '\n' ) ;
-          writer.append( leftPadding ) ;
-          lineLength = 0 ;
-        } else {
-          lineLength++ ;
-          writer.append( ' ' ) ;
-        }
-        writer.append( word ) ;
-        lineLength += word.length() ;
-      }
-    }
-  }
-
-  private static final CharMatcher WHITESPACE_MATCHER = CharMatcher.WHITESPACE ;
-
-  private static final CharMatcher LINEBREAK_MATCHER = new CharMatcher() {
-    @Override
-    public boolean matches( final char c ) {
-      return ( c == '\n' || c == '\r' ) ;
-    }
-  } ;
 
 
 }

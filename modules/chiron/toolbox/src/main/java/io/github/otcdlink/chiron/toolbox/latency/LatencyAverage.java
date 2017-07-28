@@ -4,11 +4,15 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.Converter;
 import org.joda.time.Duration;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * Simple statistics from a serie of occurences.
+ * Simple time-based statistics from a serie of occurences.
  * This class stores all its values into a {@code long[]} so {@link LatencyCombinator} can
  * quickly update them using {@code AtomicReference#updateAndGet}
  *
@@ -61,6 +65,27 @@ public final class LatencyAverage< CATEGORY extends Enum< CATEGORY > > {
    */
   public final long peakDelay( final CATEGORY category ) {
     return counter( array, Counter.PEAK_DELAY, category ) ;
+  }
+
+  private static final MathContext MATH_CONTEXT = new MathContext( 2, RoundingMode.HALF_DOWN ) ;
+
+  public final float averageDelay( final CATEGORY category ) {
+    return
+        new BigDecimal( cumulatedDelay( category ), MATH_CONTEXT )
+        .divide( new BigDecimal( occurenceCount( category ) ), MATH_CONTEXT )
+        .floatValue()
+    ;
+  }
+
+  public final float occurencePerSecond( final CATEGORY category ) {
+    final BigDecimal occurenceCount1000 = new BigDecimal( occurenceCount( category ) )
+        .multiply( new BigDecimal( 1000 ) ) ;
+    final BigDecimal timeSpan = new BigDecimal( duration().getMillis() ) ;
+    return
+        occurenceCount1000
+        .divide( timeSpan, MATH_CONTEXT )
+        .floatValue()
+    ;
   }
 
   private final Class< CATEGORY > categoryEnumClass ;
@@ -167,7 +192,7 @@ public final class LatencyAverage< CATEGORY extends Enum< CATEGORY > > {
     array[ common.ordinal() ] = newValue ;
   }
 
-  private enum Counter {
+  enum Counter {
     OCCURENCE,
     CUMULATED_DELAY,
     PEAK_DELAY,
@@ -183,7 +208,7 @@ public final class LatencyAverage< CATEGORY extends Enum< CATEGORY > > {
     return array[ counterIndex( counter, category ) ] ;
   }
 
-  private static < CATEGORY extends Enum< CATEGORY > > void counter(
+  static < CATEGORY extends Enum< CATEGORY > > void counter(
       final long[] array,
       final Counter counter,
       final CATEGORY category,
@@ -221,8 +246,10 @@ public final class LatencyAverage< CATEGORY extends Enum< CATEGORY > > {
     }
 
     final long oldEnd = common( array, Common.END_TIME ) ;
-    checkArgument( timeAtEnd >= oldEnd, "Old end: " + oldEnd + ", new end: " + timeAtEnd ) ;
-    common( array, Common.END_TIME, timeAtEnd ) ;
+    final long oldestEnd = Math.max( oldEnd, timeAtEnd ) ;
+    // Disabling the check below to quickly-and-dirtily solve a concurrency issue:
+    // checkArgument( timeAtEnd >= oldEnd, "Old end: " + oldEnd + ", new end: " + timeAtEnd ) ;
+    common( array, Common.END_TIME, oldestEnd ) ;
 
     final long oldOccurence = counter( array, Counter.OCCURENCE, category ) ;
     counter( array, Counter.OCCURENCE, category, oldOccurence + 1 ) ;
@@ -234,6 +261,53 @@ public final class LatencyAverage< CATEGORY extends Enum< CATEGORY > > {
 
     final long oldCumulatdDelay = counter( array, Counter.CUMULATED_DELAY, category ) ;
     counter( array, Counter.CUMULATED_DELAY, category, oldCumulatdDelay + duration ) ;
+
+  }
+
+  static < CATEGORY extends Enum< CATEGORY > > void merge(
+      final Class< CATEGORY > categoryClass,
+      final long[] receiver,
+      final LatencyAverage< CATEGORY > additional
+  ) {
+    merge( categoryClass, receiver,additional.array ) ;
+  }
+
+  private static < CATEGORY extends Enum< CATEGORY > > void merge(
+      final Class< CATEGORY > categoryClass,
+      final long[] receiver,
+      final long[] additional
+  ) {
+
+    final long receiverStart = common( receiver, Common.BEGIN_TIME ) ;
+    final long additionalStart = common( additional, Common.BEGIN_TIME ) ;
+    if( receiverStart == 0 ) {
+      common( receiver, Common.BEGIN_TIME, additionalStart ) ;
+    } else {
+      final long earliestStart = Math.min( receiverStart, additionalStart ) ;
+      common( receiver, Common.BEGIN_TIME, earliestStart ) ;
+    }
+
+    final long receiverEnd = common( receiver, Common.END_TIME ) ;
+    final long additionalEnd = common( additional, Common.END_TIME ) ;
+    final long latestEnd = Math.max( receiverEnd, additionalEnd ) ;
+    common( receiver, Common.END_TIME, latestEnd ) ;
+
+    for( final CATEGORY category : categoryClass.getEnumConstants() ) {
+
+      final long receiverOccurence = counter( receiver, Counter.OCCURENCE, category ) ;
+      final long additionalOccurence = counter( additional, Counter.OCCURENCE, category ) ;
+      counter( receiver, Counter.OCCURENCE, category, receiverOccurence + additionalOccurence ) ;
+
+      final long receiverPeakDelay = counter( receiver, Counter.PEAK_DELAY, category ) ;
+      final long additionalPeakDelay = counter( additional, Counter.PEAK_DELAY, category ) ;
+      final long highestPeakDelay = Math.max( receiverPeakDelay, additionalPeakDelay ) ;
+      counter( receiver, Counter.PEAK_DELAY, category, highestPeakDelay ) ;
+
+      final long receiverCumulatedDelay = counter( receiver, Counter.CUMULATED_DELAY, category ) ;
+      final long additionalCumulatedDelay = counter( additional, Counter.CUMULATED_DELAY, category ) ;
+      final long cumulatedDelaySum = receiverCumulatedDelay + additionalCumulatedDelay ;
+      counter( receiver, Counter.CUMULATED_DELAY, category, cumulatedDelaySum ) ;
+    }
 
   }
 

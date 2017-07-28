@@ -51,7 +51,7 @@ public final class PositiveIntegerRange {
   }
 
   public String asString() {
-    return ( "[ " + lowerBound + ", " + upperBound + " ]" ) ;
+    return ( "[" + lowerBound + "," + upperBound + "]" ) ;
   }
 
   public static final Comparator<PositiveIntegerRange> COMPARATOR

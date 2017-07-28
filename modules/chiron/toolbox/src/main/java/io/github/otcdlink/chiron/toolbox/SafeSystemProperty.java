@@ -509,6 +509,8 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
 
     FileType USER_DIR = forFile( "user.dir" ) ;
 
+    StringType USER_NAME = forString( "user.name" ) ;
+
     FileType JAVA_HOME = forFile( "java.home" ) ;
 
     StringType LINE_SEPARATOR = forString( "line.separator" ) ;

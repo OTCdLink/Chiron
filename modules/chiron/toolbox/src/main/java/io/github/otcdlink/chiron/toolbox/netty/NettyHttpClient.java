@@ -531,7 +531,7 @@ public class NettyHttpClient extends NettySocketClient {
   /**
    * Maximum length of a single HTTP request/response, because we're tiny and don't need chunks.
    */
-  private static final int MAX_CONTENT_LENGTH = 100_000 ;
+  private static final int MAX_CONTENT_LENGTH = Integer.MAX_VALUE ; // 100_000 ;
 
 //  private static final long DEFAULT_TIMEOUT_MS = 5_000 ;
   private static final int DEFAULT_TIMEOUT_MS = 5_000_000 ;

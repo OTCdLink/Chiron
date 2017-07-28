@@ -28,6 +28,8 @@
     <library.google-guava.version>21.0</library.google-guava.version>
     <library.netty.version>4.1.10.Final</library.netty.version>
     <library.bouncycastle.version>1.56</library.bouncycastle.version>
+    <library.jsch-agentproxy.version>0.0.9</library.jsch-agentproxy.version>
+    <!--<library.jsch-agentproxy.version>0.9.0-OTCdLink-fix-SNAPSHOT</library.jsch-agentproxy.version>-->
     <library.jmh.version>1.18</library.jmh.version>
 
     <plugin.maven-surefire-plugin.version>2.19.1</plugin.maven-surefire-plugin.version>
@@ -227,9 +229,39 @@
         <version>${library.bouncycastle.version}</version>
       </dependency>
 
+      <dependency>
+        <groupId>com.hierynomus</groupId>
+        <artifactId>sshj</artifactId>
+        <version>0.21.1</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.jcraft</groupId>
+        <artifactId>jsch.agentproxy.sshj</artifactId>
+        <version>${library.jsch-agentproxy.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>net.schmizz</groupId>
+            <artifactId>sshj</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+
+      <dependency>
+        <groupId>com.jcraft</groupId>
+        <artifactId>jsch.agentproxy.connector-factory</artifactId>
+        <version>${library.jsch-agentproxy.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>net.schmizz</groupId>
+            <artifactId>sshj</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
 
 
-      
+
+
 
 
       <!--Must appear before JUnit dependency.-->

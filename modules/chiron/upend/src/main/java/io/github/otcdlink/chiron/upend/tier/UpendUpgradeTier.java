@@ -1,6 +1,7 @@
 package io.github.otcdlink.chiron.upend.tier;
 
 import io.github.otcdlink.chiron.middle.tier.ConnectionDescriptor;
+import io.github.otcdlink.chiron.middle.tier.WebsocketTools;
 import io.github.otcdlink.chiron.toolbox.UrxTools;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
@@ -65,7 +66,12 @@ public class UpendUpgradeTier extends SimpleChannelInboundHandler< Object > {
       final FullHttpRequest fullHttpRequest
   ) {
     final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-        websocketUrl.toExternalForm(), null, false, maximumFramePayloadLength ) ;
+        websocketUrl.toExternalForm(),
+        null,
+        false,
+        maximumFramePayloadLength,
+        ! WebsocketTools.MASK_WEBSOCKET_FRAMES_FROM_CLIENT
+    ) ;
     final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker( fullHttpRequest ) ;
     if( handshaker == null ) {
       WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(

@@ -1,7 +1,7 @@
-package io.github.otcdlink.chiron.toolbox.lifecycle;
+package io.github.otcdlink.chiron.toolbox.service;
 
 import com.google.common.collect.ImmutableMap;
-import io.github.otcdlink.chiron.toolbox.collection.ConstantShelf;
+import io.github.otcdlink.chiron.toolbox.collection.Autoconstant;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -16,7 +16,7 @@ import java.util.concurrent.ThreadFactory;
  *    Well-defined {@link State}s.
  *   </li> <li>
  *     Thread-safety through blocking primitives. Non-blocking is good for IOs, implementors
- *     of {@link Lifecycled} are supposed to be not too frequently instantiated.
+ *     of {@link Service} are supposed to be not too frequently instantiated.
  *   </li> <li>
  *     Restartable.
  *   </li> <li>
@@ -28,28 +28,59 @@ import java.util.concurrent.ThreadFactory;
  *     Get a result of {@link COMPLETION} type from {@link #run()}.
  *   </li>
  * </ul>
- *
- * <h1>Why not Guava {@link com.google.common.util.concurrent.AbstractService}?</h1>
  * <p>
- * Its services are not restartable, and its thread naming is a mess.
- * There are so many cases supported that it's easy to get lost; implementing wished feature
- * looks sometimes "unnatural".
- * Passing back a result is not supported at all.
- * The need for an "ERROR" state is arguable.
+ * The main use case is to run processes through SSH.
+ *
+ * <h1>Why not Guava {@link com.google.common.util.concurrent.Service}?</h1>
+ * <ul>
+ *   <li>
+ *     Its services are not restartable. (OK, most of time we don't need that.)
+ *   </li><li>
+ *     Thread naming is a mess.
+ *   </li><li>
+ *     There are so many cases supported that it's easy to get lost; implementing wished feature
+ *     looks sometimes "unnatural".
+ *   </li><li>
+ *     Passing back a result is not supported at all.
+ *   </li><li>
+ *     The 'await' primitives are ugly, {@code CompletableFuture} rulez.
+ *   </li><li>
+ *     The need for an "ERROR" state is arguable.
+ *   </li>
+ * </ul>
  *
  * @param <SETUP>
  * @param <COMPLETION>
  */
-public interface Lifecycled< SETUP, COMPLETION > {
-
-  void initialize( SETUP setup ) ;
+public interface Service< SETUP, COMPLETION > extends Lifecycled< COMPLETION > {
 
   /**
-   * @throws IllegalStateException if already started. More formally, if {@link #start()}
-   *     was called since instance creation, and {@link #terminationFuture()} did not complete
-   *     after that.
+   * Pass a {@link SETUP} object for additional parameters that were not available when
+   * instantiating.
    */
-  CompletableFuture< ? > start() ;
+  void setup( SETUP setup ) ;
+
+  /**
+   * Try to become {@link Service.State#STARTED}.
+   *
+   * @throws IllegalStateException if not in {@link Service.State#STOPPED}.
+   *     More formally, if {@link #start()} was called since instance creation,
+   *     and {@link #terminationFuture()} did not complete after that.
+   */
+  CompletableFuture< Void > start() ;
+
+  /**
+   * Try to become {@link Service.State#STOPPED}.
+   * This method does <em>not</em> throw an {@code IllegalStateException} if state is already
+   * {@link Service.State#STOPPING} or {@link Service.State#STOPPED} because it may already have "naturally"
+   * completed (because of {@link #run()}.
+   *
+   * @return a {@code CompletableFuture} that may return {@code null}.
+   * @throws IllegalStateException if not {@link Service.State#STARTED}, {@link Service.State#STOPPING}
+   *     or {@link Service.State#STOPPED}.
+   */
+  CompletableFuture<COMPLETION> stop() ;
+
 
 
   /**
@@ -57,20 +88,12 @@ public interface Lifecycled< SETUP, COMPLETION > {
    * The {@code CompletableFuture} is the one returned by {@link #stop()}, but the latter
    * may cause premature termination.
    */
-  CompletableFuture< COMPLETION > run() throws Exception;
-
-  /**
-   * Try to terminate execution as soon as possible.
-   *
-   * @return a {@code CompletableFuture} that may return {@code null}.
-   * @throws IllegalStateException if {@link #startFuture()} did not complete.
-   */
-  CompletableFuture< COMPLETION > stop() ;
+  CompletableFuture< COMPLETION > run() throws Exception ;
 
   /**
    * Returns the same {@code CompletableFuture} as {@link #start()}.
    */
-  CompletableFuture< ? > startFuture() ;
+  CompletableFuture< Void > startFuture() ;
 
   /**
    * Returns the same {@code CompletableFuture} as {@link #stop()} or {@link #run()} would.
@@ -80,14 +103,14 @@ public interface Lifecycled< SETUP, COMPLETION > {
   /**
    * Non-final class so subclasses can add their own states.
    */
-  class State extends ConstantShelf {
+  class State extends Autoconstant {
 
     protected static State newState() {
       return new State() ;
     }
 
     /**
-     * {@link Lifecycled} instance created but no {@link #initialize} yet.
+     * {@link Service} instance created but no call to {@link #setup(Object)} occured yet.
      */
     public static final State NEW = newState() ;
 
@@ -112,7 +135,7 @@ public interface Lifecycled< SETUP, COMPLETION > {
     public static final State STARTING = newState() ;
 
     /**
-     * The {@link Lifecycled} object is fully usable.
+     * The {@link Service} object is fully usable.
      * For a remote Java process, it means that the process itself is past its own initialization.
      */
     public static final State STARTED = newState() ;
@@ -123,7 +146,7 @@ public interface Lifecycled< SETUP, COMPLETION > {
     public static final State STOPPING = newState() ;
 
     /**
-     * Used by {@link AbstractLifecycled#executeSingleComputation(ThreadFactory, Callable)}.
+     * Used by {@link AbstractService#executeSingleComputation(ThreadFactory, Callable)}.
      */
     public static final State BUSY = newState() ;
 

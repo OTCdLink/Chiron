@@ -35,6 +35,7 @@
     <module>twilio</module>
     <module>integration-fixture</module>
     <module>integration</module>
+    <module>ssh</module>
     <module>lab-middle</module>
     <module>lab-upend</module>
     <module>lab-downend</module>

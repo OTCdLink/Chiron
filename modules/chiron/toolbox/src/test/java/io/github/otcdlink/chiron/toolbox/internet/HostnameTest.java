@@ -13,6 +13,7 @@ public class HostnameTest {
 
   @Test
   public void goodHostname() throws Hostname.ParseException {
+    assertThat( Hostname.parse( "winXpSp2.local" ).asString() ).isEqualTo( "winXpSp2.local" ) ;
     assertThat( Hostname.parse( "somehost" ).asString() ).isEqualTo( "somehost" ) ;
     assertThat( Hostname.parse( "somehost.doma.in" ).asString() ).isEqualTo( "somehost.doma.in" ) ;
     assertThat( Hostname.parse( "10.0.2.2" ).asString() ).isEqualTo( "10.0.2.2" ) ;

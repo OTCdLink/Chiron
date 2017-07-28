@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Comparator;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -257,14 +256,6 @@ public class Stamp implements Comparable< Stamp > {
     private final Clock clock ;
     private final AtomicReference< Stamp > lastGenerated = new AtomicReference<>() ;
 
-    /**
-     * Guarantees that {@link Stamp#timestamp} always goes increasing.
-     * High concurrency requires this: the delay between a call to {@code System#currentTimeMillis}
-     * and using its result is enough to make some inconsistencies appear.
-     * Updating this field doesn't seem to affect performance, however.
-     */
-    private final AtomicLong lastTimestamp = new AtomicLong( Long.MIN_VALUE ) ;
-
     public Generator( final Clock clock ) {
       this.clock = checkNotNull( clock ) ;
       checkArgument( clock.currentTimeMillis() >= 0 ) ;
@@ -277,12 +268,16 @@ public class Stamp implements Comparable< Stamp > {
      */
     public Stamp generate() {
       final long now = clock.currentTimeMillis() ;
-      final long newTimestamp = lastTimestamp.updateAndGet( t -> Math.max( t, now ) ) ;
-      final long newTimestampInSeconds = newTimestamp / 1000 ;
       final Stamp stamp = lastGenerated.updateAndGet(
-          last -> last != null && last.timestamp / 1000 == newTimestampInSeconds ?
-              raw( newTimestamp, last.counter + 1 ) :
-              raw( newTimestamp, 0 )
+          last -> {
+            final long newTimestamp = last == null ?
+                now : Math.max( last.timestamp, now ) ;
+            final long newTimestampInSeconds = newTimestamp / 1000 ;
+            return last != null && last.timestamp / 1000 == newTimestampInSeconds ?
+                raw( newTimestamp, last.counter + 1 ) :
+                raw( newTimestamp, 0 )
+            ;
+          }
       ) ;
       return stamp ;
     }

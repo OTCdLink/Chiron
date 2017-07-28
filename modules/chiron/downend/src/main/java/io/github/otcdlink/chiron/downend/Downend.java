@@ -16,7 +16,7 @@ public interface Downend< ENDPOINT_SPECIFIC, UPWARD_DUTY > {
    * @throws IllegalStateException if this method was already called since object creation,
    *     or completion of {@code CompletableFuture} returned by {@link #stop()}.
    */
-  CompletableFuture< ? > start() ;
+  CompletableFuture< Void > start() ;
 
   /**
    * @return a non-null {@code CompletableFuture} that completes once {@link Downend} has
@@ -26,5 +26,5 @@ public interface Downend< ENDPOINT_SPECIFIC, UPWARD_DUTY > {
    *     returned by {@link #start()} completed, or if another call to this method happened
    *     before the aforementioned completion.
    */
-  CompletableFuture< ? > stop() ;
+  CompletableFuture< Void > stop() ;
 }

@@ -10,6 +10,9 @@ import io.github.otcdlink.chiron.toolbox.ComparatorTools;
 import javax.annotation.Nullable;
 import java.util.Comparator;
 
+/**
+ * TODO: apply patterns for parsing, etc.
+ */
 public class EmailAddress {
 
   private final String string ;
@@ -21,13 +24,13 @@ public class EmailAddress {
     this.string = string ;
   }
 
-  public String getAsString() {
+  public String asString() {
     return string ;
   }
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + "{" + getAsString() + "}" ;
+    return getClass().getSimpleName() + "{" + asString() + "}" ;
   }
 
   @Override
@@ -61,8 +64,8 @@ public class EmailAddress {
         final EmailAddress first,
         final EmailAddress emailAddress2
     ) {
-      return first.getAsString()
-          .compareTo( emailAddress2.getAsString() ) ;
+      return first.asString()
+          .compareTo( emailAddress2.asString() ) ;
     }
   } ;
 
@@ -83,7 +86,7 @@ public class EmailAddress {
           @Nullable
           @Override
           public String apply( final EmailAddress input ) {
-            return input.getAsString() ;
+            return input.asString() ;
           }
         }
     ) ) ;
