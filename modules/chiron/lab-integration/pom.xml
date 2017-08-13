@@ -4,7 +4,7 @@
 
   <parent>
     <relativePath>../pom.xml</relativePath>
-    <groupId>io.github.otcdlink.chiron</groupId>
+    <groupId>com.otcdlink.chiron</groupId>
     <artifactId>Chiron</artifactId>
     <version>dev-SNAPSHOT</version>
   </parent>

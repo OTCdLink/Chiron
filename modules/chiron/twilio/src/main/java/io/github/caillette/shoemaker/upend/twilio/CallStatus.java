@@ -1,10 +1,10 @@
 package io.github.caillette.shoemaker.upend.twilio;
 
 import com.google.common.collect.ImmutableSet;
-import io.github.otcdlink.chiron.toolbox.ToStringTools;
-import io.github.otcdlink.chiron.upend.session.twilio.TwilioAuthenticationFailure;
-import io.github.otcdlink.chiron.upend.twilio.TokenPack;
-import io.github.otcdlink.chiron.upend.twilio.TwilioStatus;
+import com.otcdlink.chiron.toolbox.ToStringTools;
+import com.otcdlink.chiron.upend.session.twilio.TwilioAuthenticationFailure;
+import com.otcdlink.chiron.upend.twilio.TokenPack;
+import com.otcdlink.chiron.upend.twilio.TwilioStatus;
 import org.joda.time.DateTime;
 
 import static com.google.common.base.Preconditions.checkNotNull;

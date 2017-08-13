@@ -1,7 +1,7 @@
 package io.github.caillette.shoemaker.upend.twilio;
 
-import io.github.otcdlink.chiron.upend.session.twilio.TwilioAuthenticationFailure;
-import io.github.otcdlink.chiron.upend.twilio.TwilioStatus;
+import com.otcdlink.chiron.upend.session.twilio.TwilioAuthenticationFailure;
+import com.otcdlink.chiron.upend.twilio.TwilioStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

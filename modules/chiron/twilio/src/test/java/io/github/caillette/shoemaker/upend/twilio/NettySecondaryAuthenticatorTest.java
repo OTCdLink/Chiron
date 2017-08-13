@@ -1,9 +1,9 @@
 package io.github.caillette.shoemaker.upend.twilio;
 
-import io.github.otcdlink.chiron.fixture.http.TinyHttpServer;
-import io.github.otcdlink.chiron.upend.session.SecondaryAuthenticator;
-import io.github.otcdlink.chiron.upend.session.twilio.AuthenticationFailure;
-import io.github.otcdlink.chiron.upend.session.twilio.AuthenticationFailureNotice;
+import com.otcdlink.chiron.fixture.http.TinyHttpServer;
+import com.otcdlink.chiron.upend.session.SecondaryAuthenticator;
+import com.otcdlink.chiron.upend.session.twilio.AuthenticationFailure;
+import com.otcdlink.chiron.upend.session.twilio.AuthenticationFailureNotice;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;

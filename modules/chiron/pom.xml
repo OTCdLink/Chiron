@@ -10,13 +10,13 @@
 
   <parent>
     <relativePath>bill-of-materials/pom.xml</relativePath>
-    <groupId>io.github.otcdlink.chiron</groupId>
+    <groupId>com.otcdlink.chiron</groupId>
     <artifactId>Chiron-bill-of-materials</artifactId>
     <version>dev-SNAPSHOT</version>
   </parent>
 
 
-  <groupId>io.github.otcdlink.chiron</groupId>
+  <groupId>com.otcdlink.chiron</groupId>
   <artifactId>Chiron</artifactId>
   <packaging>pom</packaging>
   <name>Chiron</name>

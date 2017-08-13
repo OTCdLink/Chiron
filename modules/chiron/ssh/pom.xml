@@ -4,7 +4,7 @@
 
   <parent>
     <relativePath>../pom.xml</relativePath>
-    <groupId>io.github.otcdlink.chiron</groupId>
+    <groupId>com.otcdlink.chiron</groupId>
     <artifactId>Chiron</artifactId>
     <version>dev-SNAPSHOT</version>
   </parent>
@@ -17,13 +17,13 @@
   <dependencies>
 
     <dependency>
-      <groupId>io.github.otcdlink.chiron</groupId>
+      <groupId>com.otcdlink.chiron</groupId>
       <artifactId>Chiron-toolbox</artifactId>
       <version>${project.version}</version>
     </dependency>
 
     <dependency>
-      <groupId>io.github.otcdlink.chiron</groupId>
+      <groupId>com.otcdlink.chiron</groupId>
       <artifactId>Chiron-testing</artifactId>
       <version>${project.version}</version>
     </dependency>

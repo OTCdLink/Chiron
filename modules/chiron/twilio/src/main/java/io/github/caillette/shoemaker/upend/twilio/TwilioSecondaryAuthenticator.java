@@ -1,8 +1,8 @@
 package io.github.caillette.shoemaker.upend.twilio;
 
-import io.github.otcdlink.chiron.toolbox.UrxTools;
-import io.github.otcdlink.chiron.upend.session.SecondaryAuthenticator;
-import io.github.otcdlink.chiron.upend.twilio.TwilioHttpCallback;
+import com.otcdlink.chiron.toolbox.UrxTools;
+import com.otcdlink.chiron.upend.session.SecondaryAuthenticator;
+import com.otcdlink.chiron.upend.twilio.TwilioHttpCallback;
 import org.joda.time.Duration;
 
 import java.net.URL;

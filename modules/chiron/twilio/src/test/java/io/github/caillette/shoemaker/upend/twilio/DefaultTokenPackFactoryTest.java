@@ -1,8 +1,8 @@
 package io.github.caillette.shoemaker.upend.twilio;
 
-import io.github.otcdlink.chiron.middle.PhoneNumber;
-import io.github.otcdlink.chiron.upend.twilio.DefaultTokenPackFactory;
-import io.github.otcdlink.chiron.upend.twilio.TokenPack;
+import com.otcdlink.chiron.middle.PhoneNumber;
+import com.otcdlink.chiron.upend.twilio.DefaultTokenPackFactory;
+import com.otcdlink.chiron.upend.twilio.TokenPack;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
