@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <relativePath>../pom.xml</relativePath>
+    <groupId>com.otcdlink.chiron</groupId>
+    <artifactId>Chiron</artifactId>
+    <version>dev-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>Chiron-flow-test</artifactId>
+  <name>${project.artifactId}</name>
+  <packaging>jar</packaging>
+  <description>Some tests that require Chiron-flow-fixture</description>
+
+  <dependencies>
+
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-middle</artifactId>
+			<version>${project.version}</version>				
+		</dependency>
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-flow</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-middle-fixture</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-flow-fixture</artifactId>
+			<version>${project.version}</version>				
+		</dependency>
+
+		<dependency>
+			<groupId>io.projectreactor</groupId>
+			<artifactId>reactor-test</artifactId>
+			<version>${library.reactor3.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+  </dependencies>
+
+
+</project>
+

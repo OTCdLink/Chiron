@@ -28,6 +28,11 @@
 		</dependency>
 		<dependency>
 			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-flow</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
 			<artifactId>Chiron-downend</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -50,6 +55,12 @@
 		<dependency>
 			<groupId>${project.parent.groupId}</groupId>
 			<artifactId>Chiron-middle-fixture</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-flow-fixture</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>

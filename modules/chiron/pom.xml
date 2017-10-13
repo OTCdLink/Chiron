@@ -4,7 +4,6 @@
 
   <properties>
 
-
   </properties>
 
 
@@ -26,21 +25,23 @@
     <module>toolbox</module>
     <module>configuration</module>
     <module>middle</module>
+    <module>middle-fixture</module>
     <module>downend</module>
     <module>testing</module>
     <module>fixture</module>
-    <module>middle-fixture</module>
     <module>upend</module>
+    <module>ssh</module>
+    <module>flow</module>
+    <module>flow-fixture</module>
+    <module>flow-test</module>
     <module>keystore-fixture</module>
     <module>twilio</module>
-    <module>integration-fixture</module>
     <module>integration</module>
-    <module>ssh</module>
+    <module>integration-fixture</module>
     <module>lab-middle</module>
     <module>lab-upend</module>
     <module>lab-downend</module>
     <module>lab-integration</module>
-    <module>reactor</module>
   </modules>
 
 

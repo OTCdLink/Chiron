@@ -1,5 +1,6 @@
 package io.github.caillette.shoemaker.upend.twilio;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.otcdlink.chiron.command.Stamp;
 import com.otcdlink.chiron.fixture.http.TinyHttpServer;
@@ -225,7 +226,8 @@ public abstract class AbstractTwilioSecondaryAuthenticatorTest {
             "StatusCallback", statusCallbackUrl,
             "Timeout",
             Long.toString( PHONE_CALL_TIMEOUT_S.getStandardSeconds() )
-        )
+        ),
+        ImmutableList.of()
     ) ;
   }
 

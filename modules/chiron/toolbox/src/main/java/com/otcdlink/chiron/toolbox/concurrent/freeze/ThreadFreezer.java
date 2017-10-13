@@ -1,106 +1,155 @@
 package com.otcdlink.chiron.toolbox.concurrent.freeze;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Monitor;
 import com.otcdlink.chiron.toolbox.ToStringTools;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
+import java.util.Map;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-public final class ThreadFreezer< FREEZABLE >  {
+/**
+ * Threading utility to ask several threads (identified by an arbitrary {@link KEY})
+ * to block themselves and pass a value, then wait until all those threads are blocked
+ * and gather the passed values, then unblock them.
+ */
+public final class ThreadFreezer< KEY > {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger( ThreadFreezer.class ) ;
-
-  private final AtomicReference< SignalKit > signalKit = new AtomicReference<>( null ) ;
-
-  @Override
-  public String toString() {
-    return ToStringTools.nameAndCompactHash( this ) + "{}" ;
-  }
+  private final ImmutableMap< KEY, InternalFreezeControl > freezeControls ;
 
   /**
-   * Blocks until a call to {@link Freezable#freeze(Consumer)} happens.
+   * Usage of {@link InternalFreezeControl#unitMonitor} is subordinate to this {@link Monitor}
+   * so we can make freeze/unfreeze changes "bubble up" to {@link ThreadFreezer}.
    */
-  public ThreadFreeze< FREEZABLE > freeze() {
-    final SignalKit signalKit = this.signalKit.getAndSet( null ) ;
-    checkState( signalKit != null, "Not ready to lock" ) ;
-    final FREEZABLE lockable ;
-    try {
-      lockable = signalKit.lockComplete.take() ;
-    } catch( final InterruptedException e ) {
-      throw new RuntimeException( "Should not happen", e ) ;
+  private final Monitor allMonitor = new Monitor() ;
+
+  /**
+   * No need for additional locking when evaluating {@link Monitor.Guard#isSatisfied()} because
+   * {@link InternalFreezeControl} already entered {@link #allMonitor} at this point.
+   */
+  private final Monitor.Guard allFrozen = new Monitor.Guard( allMonitor ) {
+    @Override
+    public boolean isSatisfied() {
+      return freezeControls.values().stream().allMatch( fc -> fc.frozen != null ) ;
     }
-    signalKit.locked = lockable ;
-    LOGGER.info( "Locked " + lockable + " in " + this + "." ) ;
-    return signalKit.threadFreeze ;
+  } ;
+
+  public ThreadFreezer( final ImmutableSet< KEY > keys ) {
+    final ImmutableMap.Builder< KEY, InternalFreezeControl > builder = ImmutableMap.builder() ;
+    for( final KEY key : keys ) {
+      builder.put( key, new InternalFreezeControl( key ) ) ;
+    }
+    this.freezeControls = builder.build() ;
   }
 
-  /**
-   * Returns a {@code Consumer} of the object to be locked; the caller of {@code Consumer#apply()}
-   * <em>must</em> pass an object of the {@link FREEZABLE} type.
-   * This object will be retrieved by {@link ThreadFreeze#frozen()}.
-   */
-  public Consumer< FREEZABLE > asConsumer() {
-    final SignalKit signalKit = new SignalKit() ;
-    checkState( this.signalKit.compareAndSet( null, signalKit ), "Already locked by " +
-        ThreadFreezer.this.toString() ) ;
-
-    return new Consumer< FREEZABLE >() {
-      @Override
-      public void accept( FREEZABLE freezable ) {
-        signalKit.lockComplete.offer( freezable ) ;
-        try {
-          signalKit.unlockComplete.acquire() ;
-        } catch( InterruptedException e ) {
-          throw new RuntimeException( e ) ;
-        }
+  public ImmutableMap< KEY, Object > waitForAllFrozen() {
+    final ImmutableMap.Builder< KEY, Object > builder = ImmutableMap.builder() ;
+    allMonitor.enterWhenUninterruptibly( allFrozen ) ;
+    try {
+      for( final Map.Entry< KEY, InternalFreezeControl > entry : freezeControls.entrySet() ) {
+        builder.put( entry.getKey(), entry.getValue().frozen ) ;
       }
-
-      @Override
-      public String toString() {
-        return ToStringTools.nameAndCompactHash( this ) + "{" +
-            ThreadFreezer.this.toString() + "}" ;
-      }
-    } ;
-
+      return builder.build() ;
+    } finally {
+      allMonitor.leave() ;
+    }
   }
 
-  private class SignalKit {
+  public < FROZEN > FreezeControl< FROZEN > internalControl( final KEY key ) {
+    return freezeControls.get( key ) ;
+  }
 
-    final BlockingQueue< FREEZABLE > lockComplete = new ArrayBlockingQueue<>( 1 ) ;
+  public void unfreezeAll() {
+    allMonitor.enterWhenUninterruptibly( allFrozen ) ;
+    try {
+      for( final InternalFreezeControl freezeControl : freezeControls.values() ) {
+        freezeControl.unfreeze() ;
+      }
+    } finally {
+      allMonitor.leave() ;
+    }
+  }
+
+
+
+  private class InternalFreezeControl implements FreezeControl {
+
+    private final KEY key ;
 
     /**
-     * {@code Object#wait()/#notify()} are not suitable because we could start waiting after
-     * the notification happened. A {@code Semaphore} keeps track of that.
+     * {@code volatile} avoids lock acquisition when we just want to know if warm,
+     * in a context in which no concurrent change may happen.
      */
-    final Semaphore unlockComplete = new Semaphore( 0 ) ;
-    FREEZABLE locked = null ;
+    private volatile Object frozen = null ;
 
-    final ThreadFreeze threadFreeze = new ThreadFreeze() {
-      @Override
-      public void unfreeze() {
-        unlockComplete.release() ;
-        LOGGER.debug( "Unlocked " + locked + " in " + ThreadFreezer.this + "." ) ;
-      }
+    private boolean warm() {
+      return frozen == null ;
+    }
 
-      @Override
-      public FREEZABLE frozen() {
-        checkState( unlockComplete.availablePermits() == 0,
-            "Already released " + unlockComplete + " for " + ThreadFreezer.this ) ;
-        return locked ;
-      }
+    private final Monitor unitMonitor = new Monitor() ;
 
-      @Override
-      public String toString() {
-        return ThreadFreeze.class.getSimpleName() + "{" + unlockComplete + "}" ;
+    private final Monitor.Guard isWarm = new Monitor.Guard( unitMonitor ) {
+      public boolean isSatisfied() {
+        return warm() ;
       }
     } ;
 
-  }
+    private InternalFreezeControl( final KEY key ) {
+      this.key = checkNotNull( key ) ;
+    }
 
+    /**
+     * Blocks calling thread, if {@link #freeze(Object)} was called since
+     * {@link InternalFreezeControl} creation, or since last call to {@link #unfreeze()}.
+     * Must be called only in a context in which no concurrent change may happen, since it
+     * relies on a {@code volatile} variable to continue quickly if there is no reason to block.
+     */
+    @Override
+    public void continueWhenWarm() {
+      if( ! warm() ) {
+        unitMonitor.enter() ;
+        try {
+          unitMonitor.waitForUninterruptibly( isWarm ) ;
+        } finally {
+          unitMonitor.leave() ;
+        }
+      }
+    }
+
+    @Override
+    public void freeze( final Object frozen ) {
+      checkNotNull( frozen ) ;
+      allMonitor.enter() ;
+      unitMonitor.enter() ;
+      try {
+        checkState( this.frozen == null ) ;
+        this.frozen = frozen ;
+      } finally {
+        unitMonitor.leave() ;
+        allMonitor.leave() ;
+      }
+    }
+
+    public void unfreeze() {
+      allMonitor.enter() ;
+      unitMonitor.enter() ;
+      try {
+        checkState( frozen != null ) ;
+        frozen = null ;
+      } finally {
+        unitMonitor.leave() ;
+        allMonitor.leave() ;
+      }
+    }
+
+    @Override
+    public String toString() {
+      return ToStringTools.getNiceClassName( this ) + "{" +
+          key +
+          "}"
+      ;
+    }
+  }
 }

@@ -1,126 +1,193 @@
 package com.otcdlink.chiron.toolbox.concurrent.freeze;
 
-import com.otcdlink.chiron.toolbox.ToStringTools;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class ThreadFreezerTest {
 
   @Test
-  public void justExecuteCommand() throws Exception {
-    final PrivateService service = new PrivateService() ;
-    final PrivateCommand command1 = new PrivateCommand() ;
-    assertThat( command1.executionCounter() ).isEqualTo( 0 ) ;
-    service.consume( command1 ) ;
-    service.executePendingCommandsAndShutdown() ;
-    assertThat( command1.executionCounter() ).isEqualTo( 1 ) ;
+  public void empty() throws Exception {
+    final ThreadFreezer< MyKey > threadFreezer = new ThreadFreezer<>( ImmutableSet.of() ) ;
+    assertThat( threadFreezer.waitForAllFrozen() ).isEmpty() ;
+    threadFreezer.unfreezeAll() ;
   }
 
   @Test
-  public void freeze() throws Exception {
-    final ThreadFreezer< PrivateService > threadFreezer = new ThreadFreezer<>() ;
-    freeze( threadFreezer ) ;
+  public void justFreezeAndUnfreeze() throws Exception {
+    final ThreadFreezer< MyKey > threadFreezer =
+        new ThreadFreezer<>( ImmutableSet.of( MyKey.FIRST ) ) ;
+    justFreezeAndUnfreeze( threadFreezer );
+  }
+
+  @Test
+  public void continueWhenWarm() throws Exception {
+    final ThreadFreezer< MyKey > threadFreezer =
+        new ThreadFreezer<>( ImmutableSet.of( MyKey.FIRST ) ) ;
+    final Semaphore done = new Semaphore( 0 ) ;
+    new Thread( () -> {
+      threadFreezer.internalControl( MyKey.FIRST ).continueWhenWarm() ;
+      done.release() ;
+    } ).start() ;
+    done.acquireUninterruptibly( 1 ) ;
   }
 
   @Test
   public void reuse() throws Exception {
-    final ThreadFreezer< PrivateService > threadFreezer = new ThreadFreezer<>() ;
-    freeze( threadFreezer ) ;
-    freeze( threadFreezer ) ;
-  }
-
-  private static void freeze( final ThreadFreezer< PrivateService > threadFreezer )
-      throws InterruptedException
-  {
-    final PrivateService service = new PrivateService() ;
-    final PrivateCommand lockCommand = new LockCommand( threadFreezer.asConsumer() ) ;
-    final PrivateCommand command2 = new PrivateCommand() ;
-    service.consume( lockCommand ) ;
-    service.consume( command2 ) ;
-    assertThat( lockCommand.executionCounter() ).isEqualTo( 0 ) ;
-    assertThat( command2.executionCounter() ).isEqualTo( 0 ) ;
-    final ThreadFreeze< PrivateService > threadFreeze = threadFreezer.freeze() ;
-    assertThat( command2.executionCounter() ).describedAs( "Thread is blocked." ).isEqualTo( 0 ) ;
-    assertThat( threadFreeze.frozen() ).isSameAs( service ) ;
-    threadFreeze.unfreeze() ;
-    service.executePendingCommandsAndShutdown() ;
-    assertThat( lockCommand.executionCounter() ).isEqualTo( 1 ) ;
-    assertThat( command2.executionCounter() ).isEqualTo( 1 ) ;
+    final ThreadFreezer< MyKey > threadFreezer =
+        new ThreadFreezer<>( ImmutableSet.of( MyKey.FIRST ) ) ;
+    justFreezeAndUnfreeze( threadFreezer ) ;
+    justFreezeAndUnfreeze( threadFreezer ) ;
   }
 
   @Test
-  public void badStateForLocking() throws Exception {
-    assertThatThrownBy( () -> new ThreadFreezer().freeze() )
-        .describedAs( "Should request a Consumer first." )
-        .isInstanceOf( IllegalStateException.class )
-    ;
+  public void checkReallyFrozen() throws Exception {
+    final ThreadFreezer< MyKey > threadFreezer =
+        new ThreadFreezer<>( ImmutableSet.of( MyKey.FIRST ) ) ;
+    final FreezeControl freezeControl = threadFreezer.internalControl( MyKey.FIRST ) ;
+    final FreezerOperator freezerOperator = new FreezerOperator( freezeControl, "first" ) ;
+    freezerOperator.start() ;
+    freezerOperator.allowFreeze() ;
+    freezerOperator.waitForFreezeDone() ;
+    freezerOperator.allowContinueWhenWarm() ;
+    for( int i = 0 ; i < 10 ; i ++ ) {
+      // Any better idea to verify that freezing truly happened?
+      assertThat( freezerOperator.waitingToBeWarm() ).isTrue() ;
+      Uninterruptibles.sleepUninterruptibly( 10, TimeUnit.NANOSECONDS ) ;
+    }
+    threadFreezer.unfreezeAll() ;
+    freezerOperator.waitForContinued() ;
   }
+  
+  @Test
+  public void concurrency() throws Exception {
+    final ThreadFreezer< MyKey > threadFreezer = new ThreadFreezer<>( MyKey.ALL ) ;
+    final FreezeControl freezeControl1 = threadFreezer.internalControl( MyKey.FIRST ) ;
+    final FreezeControl freezeControl2 = threadFreezer.internalControl( MyKey.SECOND ) ;
+    final FreezerOperator freezerOperator1 = new FreezerOperator( freezeControl1, "first" ) ;
+    final FreezerOperator freezerOperator2 = new FreezerOperator( freezeControl2, "second" ) ;
+
+    freezerOperator1.start() ;
+    freezerOperator2.start() ;
+    freezerOperator1.allowFreeze() ;
+
+    LOGGER.info( "Waiting for all frozen ..." ) ;
+    freezerOperator2.allowFreeze() ;
+    LOGGER.info( "All frozen for " + threadFreezer + ": " + threadFreezer.waitForAllFrozen() ) ;
+
+    freezerOperator1.waitForFreezeDone() ;
+    freezerOperator2.waitForFreezeDone() ;
+    freezerOperator1.allowContinueWhenWarm() ;
+    freezerOperator2.allowContinueWhenWarm() ;
+
+    threadFreezer.unfreezeAll() ;
+    LOGGER.info( "All unfrozen for " + threadFreezer + "." ) ;
+    freezerOperator1.waitForContinued() ;
+    freezerOperator2.waitForContinued() ;
+  }
+
 
 // =======
 // Fixture
 // =======
 
-  private static class PrivateService implements Freezable<PrivateService> {
 
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor() ;
+  private static final Logger LOGGER = LoggerFactory.getLogger( ThreadFreezerTest.class ) ;
+
+  private enum MyKey {
+    FIRST,
+    SECOND,
+    ;
+
+    public static final ImmutableSet< MyKey > ALL = ImmutableSet.copyOf( values() ) ;
+  }
+
+  private static void justFreezeAndUnfreeze( final ThreadFreezer< MyKey > threadFreezer ) {
+    final FreezeControl freezeControl = threadFreezer.internalControl( MyKey.FIRST ) ;
+    final String frozen = "first" ;
+    final FreezerOperator freezerOperator = new FreezerOperator( freezeControl, frozen ) ;
+    freezerOperator.start() ;
+    freezerOperator.allowFreeze() ;
+    freezerOperator.waitForFreezeDone() ;
+    assertThat( threadFreezer.waitForAllFrozen().get( MyKey.FIRST ) ).isEqualTo( frozen ) ;
+    threadFreezer.unfreezeAll() ;
+    freezerOperator.allowContinueWhenWarm() ;
+    freezerOperator.waitForContinued() ;
+  }
+
+  private static class FreezerOperator {
+    final FreezeControl freezeControl;
+    private final String frozen ;
+
+    private FreezerOperator(
+        final FreezeControl freezeControl,
+        final String frozen
+    ) {
+      this.freezeControl = checkNotNull( freezeControl ) ;
+      Preconditions.checkArgument( ! Strings.isNullOrEmpty( frozen ) ) ;
+      this.frozen = frozen ;
+    }
+
+    private final Semaphore allowFreeze = new Semaphore( 0 ) ;
+    private final Semaphore notifyFreezeDone = new Semaphore( 0 ) ;
+
+    private final Semaphore allowContinueWhenWarm = new Semaphore( 0 ) ;
+    private final Semaphore notifyContinued = new Semaphore( 0 ) ;
+
+    public void start() {
+      final Semaphore notifyThreadStarted = new Semaphore( 0 ) ;
+      new Thread( () -> {
+        notifyThreadStarted.release() ;
+        LOGGER.info( "Started " + freezeControl + "." ) ;
+        allowFreeze.acquireUninterruptibly( 1 ) ;
+        freezeControl.freeze( frozen ) ;
+        LOGGER.info( "Frozen " + freezeControl + "." ) ;
+        notifyFreezeDone.release() ;
+
+        allowContinueWhenWarm.acquireUninterruptibly( 1 ) ;
+        LOGGER.info( "Continuing " + freezeControl + " when warm ..." ) ;
+        freezeControl.continueWhenWarm() ;
+        LOGGER.info( "Continued " + freezeControl + " because it was warm." ) ;
+
+        notifyContinued.release() ;
+      }, frozen ).start() ;
+      notifyThreadStarted.acquireUninterruptibly( 1 ) ;
+    }
+
+    public void allowFreeze() {
+      allowFreeze.release() ;
+    }
+
+    public void waitForFreezeDone() {
+      notifyFreezeDone.acquireUninterruptibly( 1 ) ;
+    }
+
+    public void allowContinueWhenWarm() {
+      allowContinueWhenWarm.release() ;
+    }
+
+    public void waitForContinued() {
+      notifyContinued.acquireUninterruptibly( 1 ) ;
+    }
+
+    public boolean waitingToBeWarm() {
+      return notifyContinued.availablePermits() == 0 ;
+    }
 
     @Override
     public String toString() {
-      return ToStringTools.nameAndCompactHash( this ) + "{}" ;
-    }
-
-    public void consume( final PrivateCommand command ) {
-      executorService.submit( () -> command.execute( this ) ) ;
-    }
-
-    public void executePendingCommandsAndShutdown() throws InterruptedException {
-      executorService.shutdown() ;
-      executorService.awaitTermination( 1, TimeUnit.MINUTES ) ;
-    }
-
-    @Override
-    public void freeze( final Consumer<PrivateService> freezer ) {
-      freezer.accept( this ) ;
+      return getClass().getSimpleName() + "{" + freezeControl.toString() + "}" ;
     }
   }
 
-  private static class PrivateCommand {
-
-    private final AtomicInteger executionCounter = new AtomicInteger() ;
-
-    public void execute( final PrivateService service ) {
-      doExecute( service ) ;
-      executionCounter.getAndIncrement() ;
-    }
-
-    protected void doExecute( final PrivateService service ) { }
-
-    public int executionCounter() {
-      return executionCounter.get() ;
-    }
-
-  }
-
-  private static class LockCommand extends PrivateCommand {
-
-    private final Consumer<PrivateService> serviceConsumer ;
-
-    private LockCommand( final Consumer<PrivateService> serviceConsumer ) {
-      this.serviceConsumer = checkNotNull( serviceConsumer ) ;
-    }
-
-    @Override
-    protected void doExecute( final PrivateService service ) {
-      service.freeze( serviceConsumer ) ;
-    }
-  }
 }

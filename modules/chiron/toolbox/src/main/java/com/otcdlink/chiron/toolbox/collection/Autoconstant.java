@@ -27,16 +27,14 @@ import static com.google.common.base.Preconditions.checkState;
  * <p>
  * Declare constants as instances created with no-arg constructor.
  * <pre>
- public static final class Enumeration extends ConstantShelf {
-   private Enumeration() { }
-   private static Enumeration createNew() { return new Enumeration() ; }
-
-   public static final Enumeration A = createNew() ;
-   public static final Enumeration B = createNew() ;
-
-   // Mandatory.
-   public static final ImmutableMap< String, Enumeration > MAP = valueMap( Enumeration.class ) ;
- }
+public static final class Enumeration extends Autoconstant {
+  private Enumeration() { }
+  private static Enumeration createNew() { return new Enumeration() ; }
+  public static final Enumeration A = createNew() ;
+  public static final Enumeration B = createNew() ;
+  // Mandatory.
+  public static final ImmutableMap< String, Enumeration > MAP = valueMap( Enumeration.class ) ;
+}
  * </pre>
  *
  * <h1>Consistency</h1>
@@ -59,12 +57,37 @@ import static com.google.common.base.Preconditions.checkState;
  * Instances of this class are thread-safe (given that subclasses respect immutability patterns).
  * Static methods for extracting constants are thread-safe.
  *
+ * <h1>Generic type</h1>
+ * <p>
+ * Subclasses may declare a generic type, which will be reflexively extracted using
+ * {@link #typeParameter()}. This is useful to propagate a type from the {@link Autoconstant}
+ * instance (Java enums really can't do that). Generic type only propagates if constant
+ * is defined with a subclass that captures the type (see
+ * {@link com.google.common.reflect.TypeToken} for a discussion about this).
+ * <pre>
+public static final class Enumeration< T > extends Autoconstant< T > {
+  public static final Enumeration< Integer > A = new Enumeration< Integer >( 1 ) { } ;
+  public static final Enumeration< String > B = new Enumerator< String >( "a" ) { } ;
+  public final T value ;
+  private Enumeration( final T value ) {
+    this.value = value ;
+  }
+  // Mandatory.
+  public static final ImmutableMap< String, Enumeration > MAP = valueMap( Enumeration.class ) ;
+}
+assert Enumeration.A.typeParameter().equals( Integer.class ) ;
+ * </pre>
+ *
+ * @param <INSTANCE_SPECIFIC> a type parameter for subclasses which want a per-instance type.
  */
-public abstract class Autoconstant {
+public abstract class Autoconstant< INSTANCE_SPECIFIC > {
 
   private static final ConcurrentMap< Autoconstant, ObjectTools.Holder< Declaration >>
       INSTANCES = new ConcurrentHashMap<>() ;
-  
+
+  @SuppressWarnings( "unused" )
+  private final INSTANCE_SPECIFIC muteIdeaWarningAboutUnusedTypeParameter = null ;
+
   private static final class Declaration {
 
     /**
@@ -96,6 +119,16 @@ public abstract class Autoconstant {
               previous.get()
       ) ;
     }
+  }
+
+  /**
+   * Returns the type parameter of a subclass, if declared with any.
+   *
+   * @throws DeclarationException if there is no type parameter.
+   */
+  public final Class< INSTANCE_SPECIFIC > typeParameter() {
+    return ( Class< INSTANCE_SPECIFIC > )
+        AutoconstantTools.find0( this, Autoconstant.class, "INSTANCE_SPECIFIC" ) ;
   }
 
   public static < THIS extends Autoconstant> ImmutableMap< String, THIS > valueMap(

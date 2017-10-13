@@ -15,6 +15,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -57,6 +58,17 @@ public abstract class AbstractService< SETUP, COMPLETION >
    */
   protected final State state() {
     return state ;
+  }
+
+  /**
+   * @param stateFunction some code that should execute quickly.
+   */
+  protected final < RESULT > RESULT executeSynchronously(
+      final Function< State, RESULT > stateFunction
+  ) {
+    synchronized( lock ) {
+      return stateFunction.apply( state ) ;
+    }
   }
 
 

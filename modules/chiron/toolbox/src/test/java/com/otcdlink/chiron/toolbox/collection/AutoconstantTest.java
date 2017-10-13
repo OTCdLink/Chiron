@@ -5,6 +5,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -66,6 +68,17 @@ public class AutoconstantTest {
     assertThatThrownBy( NoMap.A::name )
         .isInstanceOf( IllegalStateException.class )
     ;
+  }
+
+  @Test
+  public void descendantOfEmptyParent() throws Exception {
+    assertThat( DescendantOfEmptyParent.ITEM ).isNotNull() ;
+    assertThat( DescendantOfEmptyParent.MAP ).hasSize( 1 ) ;
+  }
+
+  @Test
+  public void parameterizedType() throws Exception {
+    assertThat( SelfTypedConstant.INTEGER.typeParameter() ).isEqualTo( Integer.class ) ;
   }
 
   // =======
@@ -139,6 +152,21 @@ public class AutoconstantTest {
   }
 
 
+  /**
+   * There has been a doubt one time about the validity of this construct.
+   */
+  public static class EmptyParent extends Autoconstant { }
+
+  public static class DescendantOfEmptyParent extends EmptyParent {
+    public static final DescendantOfEmptyParent ITEM = new DescendantOfEmptyParent() ;
+    public static final Map< String, DescendantOfEmptyParent > MAP =
+        valueMap( DescendantOfEmptyParent.class ) ;
+  }
+
+  public static class SelfTypedConstant< T > extends Autoconstant< T > {
+    public static final SelfTypedConstant< Integer > INTEGER = new SelfTypedConstant< Integer >() {};
+    public static final Map< String, SelfTypedConstant > MAP = valueMap( SelfTypedConstant.class ) ;
+  }
 
 
 }

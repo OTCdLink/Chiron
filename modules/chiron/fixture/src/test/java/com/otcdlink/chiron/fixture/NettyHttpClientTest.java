@@ -186,50 +186,23 @@ public class NettyHttpClientTest {
 
   @Test( timeout = TIMEOUT )
   public void justPost( @Injectable final NettyHttpClient.Watcher watcher ) throws Exception {
-    Thread.currentThread().setName( "JUnit" ) ;
+    final ImmutableMultimap< String, String > formParameters =
+        ImmutableMultimap.of( "foo", "bar", "boo", "baz" ) ;
+    final int expectedContentLength = 127 ;
 
-    final BlockingMonolist< String > responseDumpQueue = new BlockingMonolist<>() ;
+    verifyPost( watcher, formParameters, expectedContentLength ) ;
 
-    final BlockingMonolist< Hypermessage.Request > requestCapture = new BlockingMonolist<>() ;
-    final BlockingMonolist< Hypermessage.Response > responseCapture = new BlockingMonolist<>() ;
-
-    final HttpServer httpServer = httpServer(
-        port,
-        "/",
-        HttpHandlers.dump( responseDumpQueue::add )
-    ) ;
-
-    try( final NettyHttpClient httpClient = NettyHttpClient.createStarted() ) {
-      final URL url = new URL( "http://localhost:" + port + "/" ) ;
-      new Expectations() { {
-        watcher.complete(
-            withCapture( requestCapture ),
-            withCapture( responseCapture )
-        ) ;
-      } } ;
-
-      httpClient.httpPost(
-          url,
-          ImmutableMultimap.of( "foo", "bar", "boo", "baz" ),
-          watcher
-      ) ;
-
-      final Hypermessage.Request request = requestCapture.getOrWait() ;
-      final Hypermessage.Response response = responseCapture.getOrWait() ;
-      final String content = response.contentAsString ;
-
-      Assertions.assertThat( request.uri.toASCIIString() )
-          .isEqualTo( url.toExternalForm() ) ;
-
-      assertThat( response.headers.get( "Content-length" ) )
-          .isEqualTo( ImmutableList.of( "127" ) ) ;
-
-      assertThat( content ).isEqualTo( responseDumpQueue.getOrWait() ) ;
-
-    } finally {
-      httpServer.stop( 0 ) ;
-    }
   }
+
+  @Test( timeout = TIMEOUT )
+  public void postEmpty( @Injectable final NettyHttpClient.Watcher watcher ) throws Exception {
+
+    final int expectedContentLength = 41 ;
+    final ImmutableMultimap< String, String > formParameters = ImmutableMultimap.of() ;
+
+    verifyPost( watcher, formParameters, expectedContentLength ) ;
+  }
+
 
 
   @Test( timeout = TIMEOUT )
@@ -424,6 +397,54 @@ public class NettyHttpClientTest {
   static {
     NettyTools.forceNettyClassesToLoad() ;
     LOGGER.info( "=== Test begins here ===" ) ;
+  }
+
+
+  private void verifyPost(
+      final NettyHttpClient.Watcher watcher,
+      final ImmutableMultimap< String, String > formParameters,
+      final int expectedContentLength
+  ) throws IOException, InterruptedException {
+    Thread.currentThread().setName( "JUnit" ) ;
+
+    final BlockingMonolist< String > responseDumpQueue = new BlockingMonolist<>() ;
+
+    final BlockingMonolist< Hypermessage.Request > requestCapture = new BlockingMonolist<>() ;
+    final BlockingMonolist< Hypermessage.Response > responseCapture = new BlockingMonolist<>() ;
+
+    final HttpServer httpServer = httpServer(
+        port,
+        "/",
+        HttpHandlers.dump( responseDumpQueue::add )
+    ) ;
+
+    try( final NettyHttpClient httpClient = NettyHttpClient.createStarted() ) {
+      final URL url = new URL( "http://localhost:" + port + "/" ) ;
+      new Expectations() { {
+        watcher.complete(
+            withCapture( requestCapture ),
+            withCapture( responseCapture )
+        ) ;
+      } } ;
+
+      final Hypermessage.Request.Post post = new Hypermessage.Request.Post( url, formParameters ) ;
+      httpClient.httpRequest( post, watcher ) ;
+
+      final Hypermessage.Request request = requestCapture.getOrWait() ;
+      final Hypermessage.Response response = responseCapture.getOrWait() ;
+      final String content = response.contentAsString ;
+
+      assertThat( request.uri.toASCIIString() )
+          .isEqualTo( url.toExternalForm() ) ;
+
+      assertThat( response.headers.get( "Content-length" ) )
+          .isEqualTo( ImmutableList.of( "" + expectedContentLength ) ) ;
+
+      assertThat( content ).isEqualTo( responseDumpQueue.getOrWait() ) ;
+
+    } finally {
+      httpServer.stop( 0 ) ;
+    }
   }
 
 }

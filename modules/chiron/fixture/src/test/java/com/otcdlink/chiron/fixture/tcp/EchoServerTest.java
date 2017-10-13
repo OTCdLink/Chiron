@@ -5,11 +5,12 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.fail;
 
 public class EchoServerTest {
 
@@ -26,8 +27,16 @@ public class EchoServerTest {
 
   @Test
   public void noServer() throws Exception {
-    assertThatThrownBy( () -> EchoClient.newStarted( listenAddress, 1 ) )
-        .isInstanceOf( SocketTimeoutException.class )
+    try {
+      EchoClient.newStarted( listenAddress, 1 ) ;
+      fail( "No exception thrown" ) ;
+    } catch( final SocketTimeoutException e1 ) {
+      LOGGER.info( "Caught " + e1 + " as expected." );
+    } catch( final RuntimeException e2 ) {
+      // This happens when disabling Wi-Fi on Mavericks.
+      LOGGER.info( "Caught " + e2 + " as expected." ) ;
+      assertThat( e2.getCause() ).isInstanceOf( ConnectException.class ) ;
+    }
     ;
   }
 

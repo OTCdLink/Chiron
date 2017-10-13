@@ -1,5 +1,6 @@
 package com.otcdlink.chiron.toolbox.netty;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 import com.otcdlink.chiron.toolbox.UrxTools;
@@ -17,13 +18,13 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestEncoder;
 import io.netty.handler.codec.http.HttpResponseDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.concurrent.ScheduledFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -140,7 +141,9 @@ public class NettyHttpClient extends NettySocketClient {
         channel.pipeline().addLast( new HttpResponseDecoder() ) ;
         channel.pipeline().addLast( new HttpRequestEncoder() ) ;
         channel.pipeline().addLast( new HttpObjectAggregator( MAX_CONTENT_LENGTH ) ) ;
+        channel.pipeline().addLast( new ChunkedWriteHandler() ) ;
         channel.pipeline().addLast( new HttpResponseTier() ) ;
+
       }
     } ;
   } ;
@@ -204,6 +207,19 @@ public class NettyHttpClient extends NettySocketClient {
       final Watcher watcher
   ) {
     httpRequest( new Hypermessage.Request.Post( url, formParameters ), watcher ) ;
+  }
+
+  public void httpPost(
+      final SchemeHostPort schemeHostPort,
+      final URI uri,
+      final ImmutableMultimap< String, String > headers,
+      final ImmutableMultimap< String, String > formParameters,
+      final ImmutableList< Hypermessage.FileUploadDefinition > fileUploads,
+      final Watcher watcher
+  ) {
+    httpRequest( new Hypermessage.Request.Post(
+        schemeHostPort, uri, headers, formParameters, fileUploads ), watcher ) ;
+
   }
 
 
@@ -464,8 +480,6 @@ public class NettyHttpClient extends NettySocketClient {
     }
     checkStarted() ;
 
-    final HttpRequest nettyHttpRequest = request.fullHttpRequest( ) ;
-
     connect(
         request.schemeHostPort.hostPort.asInetSocketAddressQuiet(),
         channelInitializer( request.schemeHostPort.scheme.secure ? sslEngineFactory : null )
@@ -483,7 +497,7 @@ public class NettyHttpClient extends NettySocketClient {
                   TimeUnit.MILLISECONDS
               ) ;
               extractHandler( channel ).configure( request, watcher, timeoutFuture ) ;
-              channel.writeAndFlush( nettyHttpRequest ) ;
+              request.sendTo( channel ) ;
               LOGGER.debug( "Sent " + request + "." ) ;
             } catch( final RejectedExecutionException e ) {
               watcher.cancelled( request ) ;

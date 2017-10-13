@@ -722,14 +722,20 @@ public class DefaultSessionSupervisor< CHANNEL, ADDRESS >
       final SessionIdentifier sessionIdentifier,
       final String login
   ) {
-    final SessionCreationDesignator< CHANNEL, ADDRESS > designator =
-        ( SessionCreationDesignator<CHANNEL, ADDRESS> ) designatorInternal ;
-    sessionCreated(
-        designator.channel,
-        sessionIdentifier,
-        designator.signonAttemptCallback,
-        designator.sessionReuse
-    ) ;
+    /** Checking we have a {@link SessionCreationDesignator} because during a Replay
+     * we have plain {@link Designator}s. This is very crappy.
+     * TODO: fix this, use {@link OutwardSessionSupervisor} as a normal Reactor {@link Stage}.
+     */
+    if( designatorInternal instanceof SessionCreationDesignator ) {
+      final SessionCreationDesignator< CHANNEL, ADDRESS > designator =
+          ( SessionCreationDesignator<CHANNEL, ADDRESS> ) designatorInternal ;
+      sessionCreated(
+          designator.channel,
+          sessionIdentifier,
+          designator.signonAttemptCallback,
+          designator.sessionReuse
+      ) ;
+    }
   }
 
   private void sessionCreated(

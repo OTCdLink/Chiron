@@ -208,6 +208,9 @@ public final class ComparatorTools {
 
     @Override
     public final int compare( final OBJECT first, final OBJECT second ) {
+      if( first == second ) {
+        return 0 ;
+      }
       if( first == null ) {
         if( second == null ) {
           return 0 ;

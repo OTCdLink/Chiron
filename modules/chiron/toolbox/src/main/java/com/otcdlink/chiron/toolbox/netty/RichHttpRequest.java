@@ -39,15 +39,22 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * {@code HttpServlet}'s context path.
  *
  * <h1>Discussion about possible enhancements</h1>
+ *
  * <h2>Renaming</h2>
  * <p>
  * We could rename into something better. Candidates (favorites first):
+ * - FullerHttpRequest
+ * - AllOutHttpRequest
+ * - BigHttpRequest
+ * - LargeHttpRequest
+ * - SealedHttpRequest // Would mean immutability.
  * - IntegralHttpRequest
  * - RichHttpRequest
  * - JumboHttpRequest
  * - TallyHttpRequest
  * - RefinedHttpRequest
  * - ThickHttpRequest
+ * - WeightyHttpRequest
  * - BulkyHttpRequest
  * - ExtensiveHttpRequest
  * - TotalHttpRequest
@@ -60,8 +67,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * - ChunkyHttpRequest
  * <p>
  * <h2>Immutability</h2>
- * The {@link #channel} is a mutable things and prevents from making this class
- * fully immutable. We encapsulate the access to the {@link Channel} with some methods
+ * The {@link #channel} is a mutable thing and prevents from making this class
+ * truly immutable. We encapsulate the access to the {@link Channel} with some methods
  * but it sounds bad because we probably need plain {@link Channel}s elsewehere.
  * For making this class immutable we can keep the delegation approach (to a
  * {@link FullHttpRequest}) or rewrite the {@link HttpObjectAggregator}.
@@ -90,7 +97,7 @@ public final class RichHttpRequest extends DefaultFullHttpRequest {
 
   /**
    * A pure URI path with no scheme/host/port/query/fragment part.
-   * {@link #uri()} offers so such guarantee.
+   * {@link #uri()} offers no such guarantee.
    */
   public final String uriPath ;
 
