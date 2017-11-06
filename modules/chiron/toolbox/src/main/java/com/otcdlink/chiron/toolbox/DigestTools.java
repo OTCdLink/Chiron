@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -129,6 +130,14 @@ public final class DigestTools {
   public static Sha256 sha256( final File file ) throws IOException {
     final MessageDigest sha256Digest = newSha256MessageDigest() ;
     return new Sha256( hash( file, sha256Digest ) ) ;
+  }
+
+  public static Sha256 sha256( final String string, final Charset charset ) {
+    checkNotNull( string ) ;
+    checkNotNull( charset ) ;
+    final MessageDigest sha256Digest = newSha256MessageDigest() ;
+    sha256Digest.update( string.getBytes( charset ) ) ;
+    return new Sha256( sha256Digest.digest() ) ;
   }
 
   public static MessageDigest newSha256MessageDigest() {

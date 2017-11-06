@@ -19,20 +19,20 @@ public class RemoteFileEnumeratorTest {
   @Test
   public void parseCompiled() throws Exception {
     final RemoteFileEnumerator remoteFileEnumerator = new RemoteFileEnumerator(
-        "piston/",
+        "rider/",
         ImmutableBiMap.of( FileKind.COMPILED, "compiled" )
     ) ;
     final ImmutableKeyHolderMap<FileKey, FileDetail> enumerate =
         remoteFileEnumerator.enumerate( inputStream(
-            "2014-11-20 19:51:05.6125617090 UTC 4096 piston/compiled",
-            "2014-11-20 19:51:05.6125617090 UTC 32252861 piston/compiled/com/otcdlink/Some.class"
+            "2014-11-20 19:51:05.6125617090 UTC 4096 rider/compiled",
+            "2014-11-20 19:51:05.6125617090 UTC 32252861 rider/compiled/com/otcdlink/Some.class"
         )
     ) ;
     Assertions.assertThat( enumerate ).hasSize( 1 ) ;
     final FileDetail fileDetail = enumerate.values().iterator().next() ;
     assertThat( fileDetail.key.relativePath ).isEqualTo( "com/otcdlink/Some.class" ) ;
     assertThat( fileDetail.key.kind ).isEqualTo( FileKind.COMPILED ) ;
-    assertThat( fileDetail.parentPath ).isEqualTo( "piston/compiled" ) ;
+    assertThat( fileDetail.parentPath ).isEqualTo( "rider/compiled" ) ;
     assertThat( fileDetail.size ).isEqualTo( 32252861 ) ;
     assertThat( fileDetail.lastChange ).isEqualTo(
         new DateTime( 2014, 11, 20, 19, 51, 5, DateTimeZone.UTC ) ) ;
@@ -42,19 +42,19 @@ public class RemoteFileEnumeratorTest {
   @Test
   public void parsePackaged() throws Exception {
     final RemoteFileEnumerator remoteFileEnumerator = new RemoteFileEnumerator(
-        "piston",
+        "rider",
         ImmutableBiMap.of( FileKind.PACKAGED, "packaged" )
     ) ;
     final ImmutableKeyHolderMap< FileKey, FileDetail > enumerate =
         remoteFileEnumerator.enumerate( inputStream(
-            "2014-11-28 08:02:44.7956934880 UTC 100 piston/packaged/nothing.jar"
+            "2014-11-28 08:02:44.7956934880 UTC 100 rider/packaged/nothing.jar"
         )
     ) ;
     Assertions.assertThat( enumerate ).hasSize( 1 ) ;
     final FileDetail fileDetail = enumerate.values().iterator().next() ;
     assertThat( fileDetail.key.relativePath ).isEqualTo( "nothing.jar" ) ;
     assertThat( fileDetail.key.kind ).isEqualTo( FileKind.PACKAGED ) ;
-    assertThat( fileDetail.parentPath ).isEqualTo( "piston/packaged" ) ;
+    assertThat( fileDetail.parentPath ).isEqualTo( "rider/packaged" ) ;
     assertThat( fileDetail.size ).isEqualTo( 100 ) ;
     assertThat( fileDetail.lastChange ).isEqualTo(
         new DateTime( 2014, 11, 28, 8, 2, 44, DateTimeZone.UTC ) ) ;

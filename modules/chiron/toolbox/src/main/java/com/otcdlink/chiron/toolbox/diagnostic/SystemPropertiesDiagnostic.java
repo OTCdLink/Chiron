@@ -1,16 +1,15 @@
 package com.otcdlink.chiron.toolbox.diagnostic;
 
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 
-import java.io.IOException;
-import java.io.Writer;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 
-public class SystemPropertiesDiagnostic extends AbstractDiagnostic {
+public class SystemPropertiesDiagnostic extends BaseDiagnostic {
 
   public static final ImmutableSet< String > PATH_PROPERTY_NAMES = ImmutableSet.of(
       "java.class.path",
@@ -21,15 +20,12 @@ public class SystemPropertiesDiagnostic extends AbstractDiagnostic {
       "java.ext.dirs"
   ) ;
 
-  public SystemPropertiesDiagnostic(
-      final int depth,
-      final String indent
-  ) {
-    super( depth, indent ) ;
+  public SystemPropertiesDiagnostic() {
+    super( properties() ) ;
   }
 
-  @Override
-  public void printSelf( final Writer writer ) throws IOException {
+  protected static ImmutableMultimap< String, String > properties() {
+    final ImmutableMultimap.Builder< String, String > builder = ImmutableMultimap.builder() ;
     final Properties systemProperties = System.getProperties() ;
     final Enumeration propertyNames = systemProperties.propertyNames() ;
     final List< String > propertyNameList = Lists.newArrayList() ;
@@ -39,14 +35,14 @@ public class SystemPropertiesDiagnostic extends AbstractDiagnostic {
     for( final String name : Ordering.natural().sortedCopy( propertyNameList ) ) {
       final String propertyValue = systemProperties.getProperty( name ) ;
       if( ! PATH_PROPERTY_NAMES.contains( name ) ) {
-        printBodyLine( writer, name + " = "
-            + ( LINE_SEPARATOR_PROPERTY_NAME.equals( name )
+        builder.put( name, ( LINE_SEPARATOR_PROPERTY_NAME.equals( name )
                 ? to8byteHex( propertyValue.toCharArray() )
                 : sanitize( name, propertyValue )
             )
         ) ;
       }
     }
+    return builder.build() ;
   }
 
   private static String sanitize( final String name, final String value ) {

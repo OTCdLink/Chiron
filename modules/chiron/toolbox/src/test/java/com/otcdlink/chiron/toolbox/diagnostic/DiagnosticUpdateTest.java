@@ -1,5 +1,7 @@
 package com.otcdlink.chiron.toolbox.diagnostic;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
 import mockit.FullVerifications;
 import mockit.Injectable;
 import mockit.StrictExpectations;
@@ -42,10 +44,9 @@ public class DiagnosticUpdateTest {
 // Fixture
 // =======
 
-  private final Diagnostic DIAGNOSTIC = new AbstractDiagnostic( 0, "  " ) {
-    @Override
-    public String name() {
-      return "Just for test" ;
-    }
-  } ;
+  private final Diagnostic DIAGNOSTIC = new BaseDiagnostic(
+      "Just for test",
+      ImmutableMultimap.of(),
+      ImmutableList.of()
+  ) ;
 }

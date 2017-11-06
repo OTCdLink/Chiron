@@ -1,6 +1,7 @@
 package com.otcdlink.chiron.toolbox.text;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 public final class TextTools {
 
@@ -61,6 +62,22 @@ public final class TextTools {
     } else {
       return text ;
     }
+  }
+
+  /**
+   * Splits a {@code String} into lines, using any sequence of CR and LF as delimiter.
+   * Blank lines are preserved.
+   * Not using {@link LineBreak}'s definitions because they contain redundancies and do not
+   * cover some cases.
+   * Inspired by
+   * <a href="https://stackoverflow.com/questions/454908/split-java-string-by-new-line">regex-based approaches</a>.
+   */
+  public static ImmutableList< String > splitByLineBreaks( final String string ) {
+    final String lf = new String( new char[] { 10 } ) ;
+    final String cr = new String( new char[] { 13 } ) ;
+
+    final String lines[] = string.split( "(" + lf + "|" + cr + ")+", -1 ) ;
+    return ImmutableList.copyOf( lines ) ;
   }
 
 // ===============================

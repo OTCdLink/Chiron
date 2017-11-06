@@ -1,39 +1,35 @@
 package com.otcdlink.chiron.middle.tier;
 
-import com.otcdlink.chiron.toolbox.diagnostic.AbstractDiagnostic;
+import com.google.common.collect.ImmutableMultimap;
+import com.otcdlink.chiron.toolbox.diagnostic.BaseDiagnostic;
 
-import java.io.IOException;
-import java.io.Writer;
-
-public class TimeBoundaryDiagnostic extends AbstractDiagnostic {
-
-  private final TimeBoundary.ForAll timeBoundary ;
+public class TimeBoundaryDiagnostic extends BaseDiagnostic {
 
   public TimeBoundaryDiagnostic(
-      final int depth,
-      final String indent,
       final TimeBoundary.ForAll timeBoundary
   ) {
-    super( depth, indent ) ;
-    this.timeBoundary = timeBoundary ;
+    super( properties( timeBoundary ) ) ;
   }
 
-  @Override
-  protected void printSelf( final Writer writer ) throws IOException {
+  private static ImmutableMultimap< String, String > properties(
+      final TimeBoundary.ForAll timeBoundary
+  ) {
+    final ImmutableMultimap.Builder< String, String > builder = ImmutableMultimap.builder() ;
     if( timeBoundary == null ) {
-      printBodyLine( writer, "[No " + TimeBoundary.ForAll.class.getSimpleName() + " defined yet]" ) ;
+      builder.put( NO_KEY, "[No " + TimeBoundary.ForAll.class.getSimpleName() + " defined yet]" ) ;
     } else {
-      printBodyLine( writer, "Ping interval = " + timeBoundary.pingIntervalMs + " ms" ) ;
-      printBodyLine( writer, "Ping timeout = " + timeBoundary.pingTimeoutMs + " ms" ) ;
-      printBodyLine( writer, "Pong timeout = " + timeBoundary.pongTimeoutMs + " ms" ) ;
-      printBodyLine( writer, "Maximum session inactivity = " +
+      builder.put( "Ping interval", timeBoundary.pingIntervalMs + " ms" ) ;
+      builder.put( "Ping timeout", timeBoundary.pingTimeoutMs + " ms" ) ;
+      builder.put( "Pong timeout", timeBoundary.pongTimeoutMs + " ms" ) ;
+      builder.put( "Maximum session inactivity",
           timeBoundary.sessionInactivityMaximumMs + " ms" ) ;
-      printBodyLine(
-          writer,
-          "Reconnect delay range = [ " +
-          timeBoundary.reconnectDelayRangeMs.lowerBound + ".." +
-          timeBoundary.reconnectDelayRangeMs.upperBound + " ] ms"
+      builder.put(
+          "Reconnect delay range",
+          "[ " +
+              timeBoundary.reconnectDelayRangeMs.lowerBound + ".." +
+              timeBoundary.reconnectDelayRangeMs.upperBound + " ] ms"
       ) ;
     }
+    return builder.build() ;
   }
 }

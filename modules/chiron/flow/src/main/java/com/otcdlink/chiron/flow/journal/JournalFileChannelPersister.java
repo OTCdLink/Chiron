@@ -76,7 +76,8 @@ public final class JournalFileChannelPersister< DESIGNATOR, DUTY >
 
   @Override
   protected void flush( final FileChannel sink ) throws IOException {
-    sink.force( false ) ;
+    // Don't do anything, it's a memory-mapped file, let the OS decide when to flush.
+    // sink.force( false ) ;
   }
 
   @Override

@@ -1,17 +1,14 @@
 package com.otcdlink.chiron.toolbox.diagnostic;
 
-import java.io.IOException;
-import java.io.Writer;
+import com.google.common.collect.ImmutableMultimap;
 
-public class ProcessIdentifierDiagnostic extends AbstractDiagnostic {
+public class ProcessIdentifierDiagnostic extends BaseDiagnostic {
 
-  private final Long processIdentifier ; ;
-
-  public ProcessIdentifierDiagnostic(
-      final int depth,
-      final String indent) {
-    super( depth, indent ) ;
-    this.processIdentifier = currentProcessIdentifier() ;
+  public ProcessIdentifierDiagnostic() {
+    super( ImmutableMultimap.of(
+        NO_KEY,
+        processIdentifierAsString()
+    ) ) ;
   }
 
   public static Long currentProcessIdentifier() {
@@ -24,12 +21,12 @@ public class ProcessIdentifierDiagnostic extends AbstractDiagnostic {
     }
   }
 
-  @Override
-  protected void printSelf( final Writer writer ) throws IOException {
+  private static String processIdentifierAsString() {
+    final Long processIdentifier = currentProcessIdentifier() ;
     if( processIdentifier == null ) {
-      printBodyLine( writer, "[No process identifier]" ) ;
+      return  "[No process identifier]" ;
     } else {
-      printBodyLine( writer, Long.toString( processIdentifier ) ) ;
+      return Long.toString( processIdentifier ) ;
     }
   }
 }

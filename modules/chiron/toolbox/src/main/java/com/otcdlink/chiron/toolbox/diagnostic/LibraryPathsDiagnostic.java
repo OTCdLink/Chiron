@@ -1,23 +1,18 @@
 package com.otcdlink.chiron.toolbox.diagnostic;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
 
-public class LibraryPathsDiagnostic extends AbstractDiagnostic {
+public class LibraryPathsDiagnostic extends BaseDiagnostic {
 
-  public LibraryPathsDiagnostic(
-      final int depth,
-      final String indent
-  ) {
-    super( depth, indent ) ;
+  public LibraryPathsDiagnostic() {
+    super( ImmutableMultimap.of(), subdiagnostics(), null ) ;
   }
 
-  @Override
-  public ImmutableList< Diagnostic > subDiagnostics() {
+  private static ImmutableList< Diagnostic > subdiagnostics() {
     final ImmutableList.Builder< Diagnostic > diagnosticBuilder = ImmutableList.builder() ;
     for( final String propertyName : SystemPropertiesDiagnostic.PATH_PROPERTY_NAMES ) {
       diagnosticBuilder.add( new SystemPropertyPathDiagnostic(
-          increasedDepth + 1,
-          indent,
           propertyName
       ) ) ;
     }

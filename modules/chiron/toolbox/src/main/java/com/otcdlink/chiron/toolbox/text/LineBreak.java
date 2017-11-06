@@ -1,13 +1,13 @@
 package com.otcdlink.chiron.toolbox.text;
 
 import com.google.common.base.Charsets;
+import com.otcdlink.chiron.toolbox.SafeSystemProperty;
+
+import java.util.Arrays;
 
 public enum LineBreak {
 
-  /**
-   * FIXME: should be 13,10.
-   */
-  CRLF_WINDOWS( 10, 13 ),
+  CRLF_WINDOWS( 13, 10 ),
 
   /**
    * As said in
@@ -17,7 +17,27 @@ public enum LineBreak {
 
   CR_UNIX( 10 ),
   ;
+
   public static final LineBreak DEFAULT = CR_UNIX ;
+
+  public static final LineBreak SYSTEM ;
+
+
+  static {
+    final String lineSeparator = SafeSystemProperty.Standard.LINE_SEPARATOR.value ;
+    LineBreak match = null ;
+    for( LineBreak lineBreak : values() ) {
+      if( Arrays.equals( lineSeparator.getBytes( Charsets.UTF_8 ), lineBreak.asByteArray() ) ) {
+        match = lineBreak ;
+        break ;
+      }
+    }
+    if( match == null ) {
+      throw new IllegalStateException( "Unknown line separator" ) ;
+    } else {
+      SYSTEM = match ;
+    }
+  }
 
   public final String asString ;
 

@@ -1,17 +1,23 @@
-<configuration scan="true" scanPeriod="1 seconds" debug="false" >
+<configuration scan="false" scanPeriod="1 seconds" INFO="true" >
 
   <!-- This is default configuration for classes not using LoggingConfigurationTools. -->
 
   <appender
-      name="STDOUT"
+      name="CONSOLE"
       class="ch.qos.logback.core.ConsoleAppender"
-      >
+  >
 
     <encoder>
       <pattern>%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
     </encoder>
 
   </appender>
+
+
+  <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="CONSOLE" />
+  </appender>
+
 
 <!--
   <appender
@@ -27,16 +33,15 @@
 -->
 
 
-  <logger name="io.github.otcdlink" level="DEBUG" />
-  <logger name="io.github.caillette" level="DEBUG" />
-  <logger name="PortForwarder" level="DEBUG" />
+  <logger name="io.github.otcdlink" level="INFO" />
+  <logger name="io.github.caillette" level="INFO" />
+  <logger name="PortForwarder" level="INFO" />
   <logger name="net.schmizz" level="WARN" />
   <logger name="io.netty.util.internal.PlatformDependent0" level="WARN" />
 
   <root>
-    <appender-ref ref="STDOUT" />
-    <!--<appender-ref ref="FILE" />-->
-    <level value="DEBUG" />
+    <appender-ref ref="ASYNC" />
+    <level value="INFO" />
   </root>
 
 

@@ -1,29 +1,16 @@
 package com.otcdlink.chiron.toolbox.diagnostic;
 
+import com.google.common.collect.ImmutableMultimap;
 import com.otcdlink.chiron.toolbox.internet.InternetProxyAccess;
 
-import java.io.IOException;
-import java.io.Writer;
+public class InternetProxyDiagnostic extends BaseDiagnostic {
 
-public class InternetProxyDiagnostic extends AbstractDiagnostic {
-
-  private final InternetProxyAccess internetProxyAccess ;
-
-  public InternetProxyDiagnostic(
-      final int depth,
-      final String indent,
-      final InternetProxyAccess internetProxyAccess
-      ) {
-    super( depth, indent ) ;
-    this.internetProxyAccess = internetProxyAccess ;
-  }
-
-  @Override
-  protected void printSelf( final Writer writer ) throws IOException {
-    if( internetProxyAccess == null ) {
-      printBodyLine( writer, "[No Internet proxy]" ) ;
-    } else {
-      printBodyLine( writer, internetProxyAccess.asString() ) ;
-    }
+  public InternetProxyDiagnostic( final InternetProxyAccess internetProxyAccess ) {
+    super(
+        ImmutableMultimap.of(
+            NO_KEY,
+            internetProxyAccess == null ? "[No Internet proxy]" : internetProxyAccess.asString()
+        )
+    ) ;
   }
 }

@@ -1,134 +1,89 @@
 package com.otcdlink.chiron.configuration;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.otcdlink.chiron.toolbox.diagnostic.AbstractDiagnostic;
+import com.otcdlink.chiron.toolbox.diagnostic.BaseDiagnostic;
 import com.otcdlink.chiron.toolbox.diagnostic.Diagnostic;
-
-import java.io.IOException;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.List;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * A {@link Diagnostic} that takes a {@link Configuration}.
  */
-public class ConfigurationDiagnostic extends AbstractDiagnostic {
-
-  private final String diagnosticName ;
-  private final Configuration configuration ;
+public class ConfigurationDiagnostic extends BaseDiagnostic {
 
   public ConfigurationDiagnostic(
-      final int depth,
-      final String indent,
       final Configuration configuration,
       final String diagnosticName
   ) {
-    super( depth, indent ) ;
-    this.diagnosticName = checkNotNull( diagnosticName ) ;
-    this.configuration = checkNotNull( configuration ) ;
-  }
-
-  @Override
-  public String name() {
-    return diagnosticName ;
-  }
-
-
-  @Override
-  public ImmutableList< Diagnostic > subDiagnostics() {
-    return ImmutableList.< Diagnostic >of(
-        new PropertyDiagnostic( increasedDepth, indent, configuration ),
-        new SourcesDiagnostic( increasedDepth, indent, configuration )
+    super(
+        diagnosticName,
+        ImmutableMultimap.of(),
+        ImmutableList.of(
+            new SourcesDiagnostic( configuration ),
+            new PropertyDiagnostic( configuration )
+        )
     ) ;
   }
 
 
-  private static class SourcesDiagnostic extends AbstractDiagnostic {
-
-    private final ImmutableList< String > diagnosticLines ;
+  private static class SourcesDiagnostic extends BaseDiagnostic {
 
     public SourcesDiagnostic(
-        final int depth,
-        final String indent,
         final Configuration configuration
     ) {
-      super( depth, indent ) ;
+      super( extractProperties( configuration ), ImmutableList.of(), "Sources" ) ;
+    }
+
+    private static ImmutableMultimap< String, String > extractProperties(
+        final Configuration configuration
+    ) {
       final Configuration.Inspector inspector = ConfigurationTools.newInspector( configuration ) ;
       final ImmutableSet< Configuration.Source > sources = inspector.sources() ;
-      final List< String > linesBuilder = new ArrayList<>( sources.size() ) ;
+      final ImmutableMultimap.Builder< String, String > builder = ImmutableMultimap.builder() ;
       for( final Configuration.Source source : sources ) {
-        linesBuilder.add( source.sourceName() ) ;
+        builder.put( NO_KEY, source.sourceName() ) ;
       }
-      diagnosticLines = ImmutableList.copyOf( linesBuilder ) ;
-    }
-
-    @Override
-    public String name() {
-      return "Sources" ;
-    }
-
-    @Override
-    protected void printSelf( final Writer writer ) throws IOException {
-      for( final String line : diagnosticLines ) {
-        printBodyLine( writer, line ) ;
-      }
+      return builder.build() ;
     }
 
   }
 
-  private static class PropertyDiagnostic extends AbstractDiagnostic {
+  private static class PropertyDiagnostic extends BaseDiagnostic {
 
-    private final ImmutableList< String > diagnosticLines ;
+    public PropertyDiagnostic( final Configuration configuration ) {
+      super( properties( configuration ), ImmutableList.of(), "Properties" ) ;
+    }
 
-    public PropertyDiagnostic(
-        final int depth,
-        final String indent,
+    private static ImmutableMultimap< String, String > properties(
         final Configuration configuration
     ) {
-      super( depth, indent ) ;
-      final List< String > linesBuilder = new ArrayList<>() ;
+      final ImmutableMultimap.Builder< String, String > builder = ImmutableMultimap.builder() ;
 
       final Configuration.Inspector< ? > inspector = ConfigurationTools.newInspector( configuration ) ;
 
       try {
         for( final Configuration.Property property : inspector.properties().values() ) {
-          final StringBuilder lineBuilder = new StringBuilder( property.name() ) ;
+          final StringBuilder keyBuilder = new StringBuilder( property.name() ) ;
           //noinspection unchecked
           final Configuration.Property.Origin origin = inspector.origin( property ) ;
           if( origin != Configuration.Property.Origin.EXPLICIT ) {
-            lineBuilder.append( " (" + origin.name().toLowerCase() + ")" ) ;
+            keyBuilder.append( " (" ).append( origin.name().toLowerCase() ).append( ")" ) ;
           }
           //noinspection unchecked
           final String safeValue = inspector.safeValueOf( property, "******" ) ;
+          final String key = keyBuilder.toString() ;
           if( safeValue == null ) {
-            lineBuilder.append( " null" ) ;
+            builder.put( key, NO_VALUE ) ;
           } else {
-            lineBuilder.append( " = " ) ;
-            lineBuilder.append( safeValue ) ;
+            builder.put( key, safeValue ) ;
           }
-          linesBuilder.add( lineBuilder.toString() ) ;
         }
       } catch( final Exception e ) {
-        linesBuilder.clear() ;
-        linesBuilder.add( "Could not parse arguments: "
+        builder.put( NO_KEY, "Could not parse arguments: "
             + e.getClass().getSimpleName() + ", " + e.getMessage() ) ;
       }
-      diagnosticLines = ImmutableList.copyOf( linesBuilder ) ;
+      return builder.build() ;
     }
 
-    @Override
-    public String name() {
-      return "Properties" ;
-    }
-
-    @Override
-    protected void printSelf( final Writer writer ) throws IOException {
-      for( final String line : diagnosticLines ) {
-        printBodyLine( writer, line ) ;
-      }
-    }
   }
 }

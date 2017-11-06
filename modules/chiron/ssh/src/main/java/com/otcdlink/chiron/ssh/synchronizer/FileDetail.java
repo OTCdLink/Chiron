@@ -19,7 +19,7 @@ public class FileDetail implements KeyHolder<FileKey > {
 
   /**
    * Relative to a well-known directory, typically: {@code /} for local files,
-   * {@code ~/piston} for remote ones.
+   * {@code ~/rider} for remote ones.
    */
   public final String parentPath ;
 

@@ -368,7 +368,7 @@ public final class UrxTools {
     private Parsing() { }
 
     public static final Pattern PATH_PATTERN = Pattern.compile(
-        "((?:/[a-zA-Z0-9\\-]+(?:\\.[a-zA-Z0-9\\-]+)*)*/?)" ) ;
+        "((?:/[a-zA-Z0-9_-]+(?:\\.[a-zA-Z0-9_-]+)*)*/?)" ) ;
     /**
      * Quick and dirty implementation that omits lots of features.
      * This should be a valid URI: 'foo.bar' but it is not because path expects a leading '/'.

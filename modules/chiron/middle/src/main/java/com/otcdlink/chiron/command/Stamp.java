@@ -1,6 +1,7 @@
 package com.otcdlink.chiron.command;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.otcdlink.chiron.toolbox.ComparatorTools;
 import com.otcdlink.chiron.toolbox.clock.Clock;
 import org.joda.time.DateTime;
@@ -85,14 +86,20 @@ public class Stamp implements Comparable< Stamp > {
    *     This avoids breaking tests.
    */
   private Stamp( final long timestamp, final long counter ) {
-    checkArgument(
-        timestamp >= FLOOR_MILLISECONDS,
-        "Unfloored timestamp: " + timestamp +
-            " (" + DATE_TIME_FORMATTER.print( timestamp ) + "), " +
-            "floor is " + FLOOR_MILLISECONDS +
-            " (" + DATE_TIME_FORMATTER.print( FLOOR_MILLISECONDS ) + ")"
-    ) ;
-    checkArgument( counter >= 0, "Bad counter: " + counter + " (timestamp: " + timestamp + ")" ) ;
+    /** Don't use {@link Preconditions#checkArgument(boolean, String, int, int)} which creates
+     * the error message everytime, with significant performance impact. */
+    if( timestamp < FLOOR_MILLISECONDS ) {
+      throw new IllegalArgumentException(
+          "Unfloored timestamp: " + timestamp +
+              " (" + DATE_TIME_FORMATTER.print( timestamp ) + "), " +
+              "floor is " + FLOOR_MILLISECONDS +
+              " (" + DATE_TIME_FORMATTER.print( FLOOR_MILLISECONDS ) + ")"
+      ) ;
+    }
+    if( counter < 0 ) {
+      throw new IllegalArgumentException(
+          "Bad counter: " + counter + " (timestamp: " + timestamp + ")" ) ;
+    }
     this.timestamp = timestamp ;
     this.counter = counter ;
   }

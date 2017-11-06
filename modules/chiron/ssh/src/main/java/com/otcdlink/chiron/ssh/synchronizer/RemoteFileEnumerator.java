@@ -150,7 +150,7 @@ public class RemoteFileEnumerator {
   public static void main( final String... arguments ) throws Exception {
     try( SSHClient sshClient = SshTools.createDemoSshClient( "otcdlink", "trader.otcdlink.com" ) ) {
       final ImmutableKeyHolderMap< FileKey, FileDetail > enumerate = new RemoteFileEnumerator(
-          "piston",
+          "rider",
           FileKind.shortDirectoryNameMap()
       ).enumerate( sshClient.startSession() ) ;
       LOGGER.info( "Got:\n  " + Joiner.on( "\n  " ).join( enumerate.values() ) ) ;

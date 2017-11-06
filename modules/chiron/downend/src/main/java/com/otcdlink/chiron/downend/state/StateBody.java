@@ -1,6 +1,7 @@
 package com.otcdlink.chiron.downend.state;
 
 import com.otcdlink.chiron.downend.DownendConnector;
+import com.otcdlink.chiron.downend.Http11ProxyHandler;
 import com.otcdlink.chiron.middle.tier.ConnectionDescriptor;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 import io.netty.channel.Channel;
@@ -190,7 +191,16 @@ public final class StateBody {
 
   public StateBody noChannel( final ScheduledFuture< ? > reconnectFuture ) {
     return new StateBody(
-        checkTransition( DownendConnector.State.CONNECTING, DownendConnector.State.CONNECTED, DownendConnector.State.SIGNED_IN ),
+        checkTransition(
+            DownendConnector.State.CONNECTING,
+
+            /** {@link Http11ProxyHandler} may cause duplicate notification.
+             * TODO: find something better than relaxing state enforcement. */
+            DownendConnector.State.CONNECTING,
+
+            DownendConnector.State.CONNECTED,
+            DownendConnector.State.SIGNED_IN
+        ),
         null,
         startFuture,
         stopFuture,

@@ -94,8 +94,8 @@ public class Designator {
     if( stamp.equals( cause ) ) {
       throw new IllegalArgumentException( "Stamp " + stamp + " same as cause" ) ;
     }
-    if( tag != null ) {
-      checkNotNull( sessionIdentifier, SessionIdentifier.class.getSimpleName() +
+    if( tag != null && sessionIdentifier == null ) {
+      throw new NullPointerException( SessionIdentifier.class.getSimpleName() +
           " can't be null if there is a " + Command.Tag.class.getSimpleName() ) ;
     }
     this.kind = checkNotNull( kind ) ;

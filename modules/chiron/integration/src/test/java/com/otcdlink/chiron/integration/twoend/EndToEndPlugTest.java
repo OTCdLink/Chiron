@@ -1,5 +1,6 @@
 package com.otcdlink.chiron.integration.twoend;
 
+import com.otcdlink.chiron.AbstractConnectorFixture;
 import com.otcdlink.chiron.downend.DownendConnector;
 import com.otcdlink.chiron.downend.DownendConnectorTest;
 import com.otcdlink.chiron.downend.SignonMaterializer;
@@ -21,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import java.net.InetAddress;
 
 import static com.otcdlink.chiron.AbstractConnectorFixture.SESSION_IDENTIFIER;
+import static com.otcdlink.chiron.fixture.TestNameTools.setTestThreadName;
 
 /**
  * More tests, using {@link ConnectProxy}.
@@ -112,6 +114,65 @@ public class EndToEndPlugTest {
     fixture.commandRoundtrip( SESSION_IDENTIFIER ) ;
   }
 
+  @Test( timeout = TIMEOUT_MS )
+  public void reconnectThroughProxyAfterUpendLongRestart(
+      @Injectable final SignonMaterializer signonMaterializer,
+      @Injectable final OutwardSessionSupervisor< Channel, InetAddress >
+          outboundSessionSupervisor
+  ) throws Exception {
+    setTestThreadName() ;
+    final TimeBoundary.ForAll timeBoundary =
+        AbstractConnectorFixture.PingTimingPresets.QUICK_RECONNECT ;
+    final long sleepDelay = timeBoundary.reconnectDelayRangeMs.upperBound * 2L ;
+
+    EndToEndTestFragments.authenticate(
+        fixture,
+        fixture.downendSetup(
+            false,
+            true,
+            timeBoundary,
+            signonMaterializer,
+            null
+        ),
+        fixture.websocketAuthenticatedUpendSetup( outboundSessionSupervisor ),
+        signonMaterializer,
+        outboundSessionSupervisor
+    ) ;
+
+
+    final BlockingMonolist< SessionSupervisor.ReuseCallback > reuseCallbackCapture =
+        new BlockingMonolist<>() ;
+    new StrictExpectations() {{
+      outboundSessionSupervisor.closed( ( Channel ) any, SESSION_IDENTIFIER, false ) ;
+      outboundSessionSupervisor.tryReuse(
+          SESSION_IDENTIFIER,
+          ( Channel ) any,
+          withCapture( reuseCallbackCapture )
+      ) ;
+    }} ;
+
+    fixture.upendConnector().stop().get() ;
+    LOGGER.info( "Now sleeping for " + sleepDelay + " ms, this used to break reconnection ..."  ) ;
+    Thread.sleep( sleepDelay ) ;
+    fixture.upendConnector().start().get() ;
+
+    final SessionSupervisor.ReuseCallback reuseCallback = reuseCallbackCapture.getOrWait() ;
+    LOGGER.info( "Got " + reuseCallback ) ;
+    new FullVerifications() {{ }} ;
+
+    reuseCallback.reuseOutcome( null ) ;
+
+    while( true ) {
+      final DownendConnector.Change change = fixture.nextDownendChange() ;
+      LOGGER.debug( "Obtained " + change + " while actively waiting for " +
+          DownendConnector.State.SIGNED_IN + " ..." ) ;
+      if( change.kind == DownendConnector.State.SIGNED_IN ) {
+        break ;
+      }
+    }
+    fixture.commandRoundtrip( SESSION_IDENTIFIER ) ;
+    EndToEndTestFragments.terminate( fixture, outboundSessionSupervisor ) ;
+  }
 
 // =======
 // Fixture
@@ -127,8 +188,8 @@ public class EndToEndPlugTest {
   }
 
 
-      private static final long TIMEOUT_MS = 5_000 ;
-//  private static final long TIMEOUT_MS = 1_000_000 ;
+//      private static final long TIMEOUT_MS = 5_000 ;
+  private static final long TIMEOUT_MS = 1_000_000 ;
 
   private final EndToEndFixture fixture = new EndToEndFixture() ;
 

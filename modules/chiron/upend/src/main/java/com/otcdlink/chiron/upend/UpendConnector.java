@@ -709,7 +709,7 @@ public class UpendConnector<
       outbound = command ;
       keepAlive = true ;
       if( channel == null ) {
-        // Piston causes this a lot when stopping Injectors while there are unsent Downward Commands.
+        // Rider causes this a lot when stopping Injectors while there are unsent Downward Commands.
         LOGGER.info(
             "No " + Channel.class.getSimpleName() + " found for " + sessionIdentifier + ". " +
                 "This might have been caused by " + SessionIdentifier.class.getSimpleName() +

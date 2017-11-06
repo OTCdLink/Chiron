@@ -38,7 +38,7 @@ public interface KeyHolder< KEY extends KeyHolder.Key< KEY > > {
    */
   interface Key< KEY extends Key > extends Comparable< KEY > { }
 
-  abstract static class LongKey<  KEY extends LongKey > implements Key< KEY > {
+  abstract class LongKey<  KEY extends LongKey > implements Key< KEY > {
     private final long index ;
 
     protected LongKey( final long index ) {
@@ -46,7 +46,7 @@ public interface KeyHolder< KEY extends KeyHolder.Key< KEY > > {
       this.index = index ;
     }
 
-    public final long getIndex() {
+    public final long index() {
       return index ;
     }
 
@@ -55,7 +55,7 @@ public interface KeyHolder< KEY extends KeyHolder.Key< KEY > > {
       if( other == null ) {
         return -1 ;
       } else {
-        return getIndex() > other.getIndex() ? 1 : ( getIndex() == other.getIndex() ? 0 : -1 ) ;
+        return index() > other.index() ? 1 : ( index() == other.index() ? 0 : -1 ) ;
       }
     }
 

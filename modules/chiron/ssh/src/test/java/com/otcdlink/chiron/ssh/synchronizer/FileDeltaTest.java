@@ -32,8 +32,8 @@ public class FileDeltaTest {
     assertThat( fileDelta.localFilesToUpload ).containsOnly( LOCAL_A_1_1.key ) ;
     assertThat( fileDelta.remoteFilesToDelete ).isEmpty() ;
     assertThat( fileDelta.remoteDirectoriesToCreate ).containsOnly(
-        "piston/packaged",
-        "piston/compiled/my"
+        "rider/packaged",
+        "rider/compiled/my"
     ) ;
   }
 
@@ -66,13 +66,13 @@ public class FileDeltaTest {
       ImmutableKeyHolderMap.of() ;
 
   public static final FileDetail REMOTE_A_1_1 = new FileDetail(
-      "piston/compiled", "my/ClassA", FileKind.COMPILED, DATETIME_1, 111 ) ;
+      "rider/compiled", "my/ClassA", FileKind.COMPILED, DATETIME_1, 111 ) ;
 
   public static final FileDetail REMOTE_A_2_1 = new FileDetail(
-      "piston/compiled", "my/ClassA", FileKind.COMPILED, DATETIME_2, 111 ) ;
+      "rider/compiled", "my/ClassA", FileKind.COMPILED, DATETIME_2, 111 ) ;
 
   public static final FileDetail REMOTE_B_1_1 = new FileDetail(
-      "piston/compiled", "my/ClassB", FileKind.COMPILED, DATETIME_1, 111 ) ;
+      "rider/compiled", "my/ClassB", FileKind.COMPILED, DATETIME_1, 111 ) ;
 
   public static final FileDetail LOCAL_A_1_1 = new FileDetail(
       "/user/project/module/m1", "my/ClassA", FileKind.COMPILED, DATETIME_1, 111 ) ;
@@ -107,7 +107,7 @@ public class FileDeltaTest {
       final ImmutableKeyHolderMap< FileKey, FileDetail > remoteFiles
   ) {
     return new FileDelta(
-        "piston",
+        "rider",
         FileKind.shortDirectoryNameMap(),
         localFiles,
         remoteFiles

@@ -2,6 +2,7 @@ package com.otcdlink.chiron.toolbox.service;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.MapMaker;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 import org.slf4j.Logger;
 
@@ -13,7 +14,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -36,13 +39,24 @@ public abstract class AbstractService< SETUP, COMPLETION >
 
   protected final String serviceName ;
 
+  private final boolean runSurvivorThread ;
+
   private State state = State.NEW ;
 
   public AbstractService( final Logger logger, final String serviceName ) {
+    this( logger, false, serviceName ) ;
+  }
+
+  public AbstractService(
+      final Logger logger,
+      final boolean runSurvivorThread,
+      final String serviceName
+  ) {
     this.logger = checkNotNull( logger ) ;
+    this.runSurvivorThread = runSurvivorThread;
     checkArgument( ! Strings.isNullOrEmpty( serviceName ) ) ;
     this.serviceName = serviceName ;
-    this.lock = ToStringTools.createLockWithNiceToString( getClass() );
+    this.lock = ToStringTools.createLockWithNiceToString( getClass() ) ;
   }
 
   /**
@@ -95,6 +109,33 @@ public abstract class AbstractService< SETUP, COMPLETION >
     public final boolean firstStart ;
 
     /**
+     * A reference to the last {@code CompletableFuture} passed to
+     * {@link #compute(ExecutorService, Predicate, Runnable, CompletableFuture)}
+     */
+    public CompletableFuture computationFuture = null ;
+
+
+    protected ExecutionContext( final SETUP setup, boolean firstStart ) {
+      this.setup = checkNotNull( setup ) ;
+      this.firstStart = firstStart ;
+    }
+
+  }
+
+  /**
+   * Enriches an {@link ExecutionContext} with stuff that we don't want to expose to subclasses.
+   */
+  private class ExecutionContextDecorator {
+    private final ExecutionContext< SETUP, COMPLETION > executionContext ;
+
+    /**
+     * If {@link AbstractService#runSurvivorThread} is {@code true}, this references a
+     * thread that remains sleeping until {@link #customEffectiveStopComplete()} interrupts it.
+     * This is useful when all other threads are daemon threads.
+     */
+    private final Thread survivorThread ;
+
+    /**
      * Completes when entering {@link State#STARTED} state.
      */
     private final CompletableFuture< Void > startFuture = new CompletableFuture<>() ;
@@ -105,39 +146,43 @@ public abstract class AbstractService< SETUP, COMPLETION >
     private final CompletableFuture< COMPLETION > terminationFuture = new CompletableFuture<>() ;
 
     /**
-     * A reference to the last {@code CompletableFuture} passed to
-     * {@link #compute(ExecutorService, Predicate, Runnable, CompletableFuture)}
-     */
-    public CompletableFuture computationFuture = null ;
-
-    /**
      * The value to be returned by {@link #terminationFuture()}, but subclasses should not use
      * {@link #terminationFuture()} directly because there is associated lifecycle operations
      * performed in this class.
      */
     private COMPLETION completion ;
 
-    protected ExecutionContext( final SETUP setup, boolean firstStart ) {
-      this.setup = checkNotNull( setup ) ;
-      this.firstStart = firstStart ;
-    }
 
-    /**
-     * Called when {@link #stop()}ing.
-     */
-    protected void clear() { }
+    public ExecutionContextDecorator(
+        final ExecutionContext< SETUP, COMPLETION > executionContext
+    ) {
+      this.executionContext = executionContext ;
+      if( AbstractService.this.runSurvivorThread ) {
+        final Semaphore doneStarting = new Semaphore( 0 ) ;
+        survivorThread = threadFactory( "survivor", null, false ).newThread( () -> {
+          doneStarting.release() ;
+          while( ! Thread.interrupted() ) {
+            Uninterruptibles.sleepUninterruptibly( Long.MAX_VALUE, TimeUnit.MILLISECONDS ) ;
+          }
+        } ) ;
+        survivorThread.start() ;
+        doneStarting.acquireUninterruptibly( 1 ) ;
+      } else {
+        survivorThread = null ;
+      }
+    }
   }
 
   private SETUP setup = null ;
-  private ExecutionContext< SETUP, COMPLETION > executionContext = null ;
+  private ExecutionContextDecorator executionContextDecorator = null ;
 
   /**
-   * Return current {@link ExecutionContext}, caller should synchronize on {@link #lock}.
+   * Return current {@link ExecutionContext}.
    * Subclasses will do some transtyping, but it's better than adding a type parameter for that.
    */
   protected final ExecutionContext< SETUP, COMPLETION > bareExecutionContext() {
     synchronized( lock ) {
-      return executionContext ;
+      return executionContextDecorator.executionContext ;
     }
   }
 
@@ -167,16 +212,16 @@ public abstract class AbstractService< SETUP, COMPLETION >
   @Override
   public final CompletableFuture< Void > startFuture() {
     synchronized( lock ) {
-      checkState( executionContext != null, "Not started" ) ;
-      return executionContext.startFuture ;
+      checkState( executionContextDecorator != null, "Not started" ) ;
+      return executionContextDecorator.startFuture ;
     }
   }
 
   @Override
   public final CompletableFuture< COMPLETION > terminationFuture() {
     synchronized( lock ) {
-      checkState( executionContext != null, "Not started" ) ;
-      return executionContext.terminationFuture ;
+      checkState( executionContextDecorator != null, "Not started" ) ;
+      return executionContextDecorator.terminationFuture ;
     }
   }
 
@@ -187,16 +232,16 @@ public abstract class AbstractService< SETUP, COMPLETION >
 
   @Override
   public final CompletableFuture< Void > start() {
-    final ExecutionContext< SETUP, COMPLETION > newExecutionContext ;
+    final ExecutionContextDecorator newDecorator ;
     synchronized( lock ){
       checkState( state == State.STOPPED ) ;
       state( State.INITIALIZING ) ;
-      final boolean firstStart = executionContext == null ;
-      newExecutionContext = newExecutionContext( setup, firstStart ) ;
-      checkState( newExecutionContext.firstStart == firstStart ) ;
-      executionContext = newExecutionContext ;
+      final boolean firstStart = executionContextDecorator == null ;
+      newDecorator = new ExecutionContextDecorator( newExecutionContext( setup, firstStart ) ) ;
+      checkState( newDecorator.executionContext.firstStart == firstStart ) ;
+      executionContextDecorator = newDecorator ;
     }
-    threadFactory( "start", null ).newThread( () -> {
+    threadFactory( "start", null, false ).newThread( () -> {
       try {
         synchronized( lock ) {
           customInitialize() ;
@@ -205,10 +250,10 @@ public abstract class AbstractService< SETUP, COMPLETION >
         customStart() ;
       } catch( Exception e ) {
         logger.error( "Custom initialization/start failed", e ) ;
-        newExecutionContext.startFuture.completeExceptionally( e ) ;
+        newDecorator.startFuture.completeExceptionally( e ) ;
       }
     } ).start() ;
-    return newExecutionContext.startFuture ;
+    return newDecorator.startFuture ;
   }
 
   protected ExecutionContext< SETUP, COMPLETION > newExecutionContext(
@@ -239,9 +284,9 @@ public abstract class AbstractService< SETUP, COMPLETION >
     synchronized( lock ) {
       if( state == State.STARTING ) {
         state( State.STARTED ) ;
-        executionContext.startFuture.complete( null ) ;
+        executionContextDecorator.startFuture.complete( null ) ;
       } else {
-        executionContext.startFuture.completeExceptionally( new IllegalStateException( "" ) ) ;
+        executionContextDecorator.startFuture.completeExceptionally( new IllegalStateException( "" ) ) ;
       }
     }
   }
@@ -251,7 +296,7 @@ public abstract class AbstractService< SETUP, COMPLETION >
     final CompletableFuture< COMPLETION > terminationFuture ;
     synchronized( lock ){
       start() ;
-      terminationFuture = executionContext.terminationFuture ;
+      terminationFuture = executionContextDecorator.terminationFuture ;
     }
     return terminationFuture ;
   }
@@ -263,7 +308,7 @@ public abstract class AbstractService< SETUP, COMPLETION >
 
   protected final void completion( final COMPLETION completion ) {
     synchronized( lock ) {
-      executionContext.completion = completion ;
+      executionContextDecorator.completion = completion ;
     }
   }
 
@@ -273,7 +318,7 @@ public abstract class AbstractService< SETUP, COMPLETION >
     final boolean doStop ;
     logger.info( "Requested to stop " + this + " ..." ) ;
     synchronized( lock ) {
-      stopFuture = executionContext == null ? null : executionContext.terminationFuture ;
+      stopFuture = executionContextDecorator == null ? null : executionContextDecorator.terminationFuture ;
       if( state == State.STARTED || state == BUSY ) {
         state( State.STOPPING ) ;
         doStop = true ;
@@ -284,9 +329,10 @@ public abstract class AbstractService< SETUP, COMPLETION >
         throw new IllegalStateException(
             "Current state is " + state + ", can't stop " + this + "." ) ;
       }
-      if( executionContext.computationFuture != null ) {
-        executionContext.computationFuture.cancel( true ) ;
-        logger.info( "Canceled running computation " + executionContext.computationFuture + "." ) ;
+      if( executionContextDecorator.executionContext.computationFuture != null ) {
+        executionContextDecorator.executionContext.computationFuture.cancel( true ) ;
+        logger.info( "Canceled running computation " +
+            executionContextDecorator.executionContext.computationFuture + "." ) ;
       }
     }
     if( doStop ) {
@@ -318,19 +364,22 @@ public abstract class AbstractService< SETUP, COMPLETION >
     final CompletableFuture< COMPLETION > terminationFuture ;
     final COMPLETION completion ;
     final State currentState ;
+    final Thread survivorThread ;
     synchronized( lock ) {
       currentState = state ;
       if( currentState == State.STOPPING ) {
-        terminationFuture = executionContext.terminationFuture ;
-        completion = executionContext.completion ;
+        terminationFuture = executionContextDecorator.terminationFuture ;
+        completion = executionContextDecorator.completion ;
+        survivorThread = executionContextDecorator.survivorThread ;
         state( State.STOPPED ) ;
-        /** Don't set {@link #executionContext} to null, some code may still call
+        /** Don't set {@link #executionContextDecorator} to null, some code may still call
          * {@link #startFuture()} or {@link #terminationFuture()}, it may happen if the remote
          * process ended very quickly.*/
       } else {
         terminationFuture = null ;
         completion = null ;
-        logger.error( "Can't execute while in " + state + ".",
+        survivorThread = null ;
+        logger.error( "Can't stop while in " + state + ".",
             new Exception( "(Just for stack trace)" ) ) ;
       }
     }
@@ -339,6 +388,10 @@ public abstract class AbstractService< SETUP, COMPLETION >
           "Execution complete with resulting value of " + completion + " for " + this + "."
       ) ;
       terminationFuture.complete( completion ) ;
+    }
+
+    if( survivorThread != null ) {
+      survivorThread.interrupt() ;
     }
   }
 
@@ -358,6 +411,13 @@ public abstract class AbstractService< SETUP, COMPLETION >
   private static final Map<AbstractService, Integer > INSTANCE_INDEX =
       new MapMaker().weakKeys().makeMap() ;
 
+  protected final ThreadFactory threadFactory(
+      final String role,
+      final String purpose
+  ) {
+    return threadFactory( role, purpose, true ) ;
+  }
+
   /**
    * Creates a dedicated {@code ThreadFactory} with nice counters.
    * Created {@code Thread} will have a name looking like this:
@@ -376,7 +436,8 @@ public abstract class AbstractService< SETUP, COMPLETION >
    */
   protected final ThreadFactory threadFactory(
       final String role,
-      final String purpose
+      final String purpose,
+      final boolean daemon
   ) {
     return runnable -> {
       final StringBuilder stringBuilder = new StringBuilder() ;
@@ -392,7 +453,7 @@ public abstract class AbstractService< SETUP, COMPLETION >
       }
       stringBuilder.append( threadCounter.getAndIncrement() ) ;
       final Thread thread = new Thread( runnable, stringBuilder.toString() ) ;
-      thread.setDaemon( true ) ;
+      thread.setDaemon( daemon ) ;
 
       // ThreadPoolExecutor ignores this because there is already a Throwable handler
       // in the Future object it returns.
@@ -481,7 +542,7 @@ public abstract class AbstractService< SETUP, COMPLETION >
       checkState( validInitialStatePredicate.test( preExecutionState ),
           "Not one of the expected state: " + preExecutionState ) ;
       state( newState ) ;
-      executionContext.computationFuture = resultFuture ;
+      executionContextDecorator.executionContext.computationFuture = resultFuture ;
     }
 
     // Can't reference the Future before its creation so we use a BlockingQueue for safety.
@@ -498,7 +559,7 @@ public abstract class AbstractService< SETUP, COMPLETION >
         synchronized( lock ) {
           checkState( state() == newState ) ;
           state( preExecutionState ) ;
-          executionContext.computationFuture = null ;
+          executionContextDecorator.executionContext.computationFuture = null ;
         }
       }
     } ) ;

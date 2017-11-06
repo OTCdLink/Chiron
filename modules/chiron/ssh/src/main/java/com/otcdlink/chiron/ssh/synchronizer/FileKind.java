@@ -7,7 +7,7 @@ public enum FileKind {
   PACKAGED,
 
   /**
-   * Used by {@code com.otcdlink.piston.driver.remotelauncher.RemoteLauncher} to pass additional
+   * Used by {@code com.otcdlink.rider.driver.remotelauncher.RemoteLauncher} to pass additional
    * files.
    */
   OTHER,

@@ -6,7 +6,6 @@ import com.google.common.base.Strings;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.util.Iterator;
 
 public final class TextWrapTools {
@@ -23,7 +22,7 @@ public final class TextWrapTools {
   } ;
 
   public static void writeWrapped(
-      final Writer writer,
+      final Appendable appendable,
       final String text,
       final int indent,
       final int width
@@ -34,9 +33,9 @@ public final class TextWrapTools {
       if( first ) {
         first = false ;
       } else {
-        writer.append( "\n" ) ;
+        appendable.append( "\n" ) ;
       }
-      writeWrapped( writer, Splitter.on( WHITESPACE_MATCHER ).split( line ), indent, width ) ;
+      writeWrapped( appendable, Splitter.on( WHITESPACE_MATCHER ).split( line ), indent, width ) ;
     }
   }
 
@@ -44,30 +43,30 @@ public final class TextWrapTools {
    * Inspired by <a href="http://stackoverflow.com/a/5689524" >StackOverflow</a>.
    */
   private static void writeWrapped(
-      final Writer writer,
+      final Appendable appendable,
       final Iterable< String > words,
       final int indent,
       final int width
   ) throws IOException {
     int lineLength = 0 ;
     final String leftPadding = Strings.repeat( " ", indent ) ;
-    writer.append( leftPadding ) ;
+    appendable.append( leftPadding ) ;
     final Iterator< String > iterator = words.iterator() ;
     if( iterator.hasNext() ) {
       final String next = iterator.next() ;
-      writer.append( next ) ;
+      appendable.append( next ) ;
       lineLength += next.length() ;
       while( iterator.hasNext() ) {
         final String word = iterator.next() ;
         if( word.length() + 1 + lineLength > width ) {
-          writer.append( '\n' ) ;
-          writer.append( leftPadding ) ;
+          appendable.append( '\n' ) ;
+          appendable.append( leftPadding ) ;
           lineLength = 0 ;
         } else {
           lineLength++ ;
-          writer.append( ' ' ) ;
+          appendable.append( ' ' ) ;
         }
-        writer.append( word ) ;
+        appendable.append( word ) ;
         lineLength += word.length() ;
       }
     }
