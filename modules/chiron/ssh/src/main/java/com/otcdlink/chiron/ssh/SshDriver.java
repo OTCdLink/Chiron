@@ -14,6 +14,7 @@ import net.schmizz.sshj.connection.channel.direct.Session;
 import net.schmizz.sshj.connection.channel.direct.Signal;
 import net.schmizz.sshj.transport.TransportException;
 import net.schmizz.sshj.xfer.InMemorySourceFile;
+import net.schmizz.sshj.xfer.scp.SCPDownloadClient;
 import net.schmizz.sshj.xfer.scp.SCPUploadClient;
 import org.slf4j.Logger;
 
@@ -31,6 +32,28 @@ import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Executes a command through SSH.
+ *
+ * <h1>Tips and tricks</h1>
+ *
+ * <h2>Find available ciphers with nmap</h2>
+ * <a href="https://superuser.com/a/1219759/511199">(From StackOverflow)</a>
+ * <pre>
+   nmap --script ssh2-enum-algos -sV -p 22 192.168.100.110
+   </pre>
+ *
+ * <h2>Find SSH Client available ciphers</h2>
+ * <a href="https://superuser.com/a/869005/511199">(From StackOverflow)</a>
+ * <pre>
+   ssh -Q cipher
+   ssh -Q mac
+   ssh -Q kex
+   </pre>
+ *
+ * <h2>List identities known by ssh-agent</h2>
+ * <a href="https://www.reddit.com/r/osx/comments/52zn5r/difficulties_with_sshagent_in_macos_sierra/d84ocwo/" >(From Reddit)</a>
+ * <pre>
+   ssh-add -l
+   </pre>
  */
 public class SshDriver< SETUP extends SshDriver.Setup >
     extends AbstractService< SETUP, Integer >
@@ -72,7 +95,7 @@ public class SshDriver< SETUP extends SshDriver.Setup >
      * {@link #onStdoutLine(String)}.
      *
      * <h1>{@link SshDriver} implementation note</h1>
-     * {@link SshDriver}'s implementation should use {@link ExecutionContext#startupEvaluator}
+     * {@link SshDriver}'s implementation should use {@code ExecutionContext#startupEvaluator}
      * instead, which is cleared after a successful detection.
      */
     public final Predicate< String > startupEvaluator ;
@@ -99,8 +122,8 @@ public class SshDriver< SETUP extends SshDriver.Setup >
 
   }
 
-  protected static class ExecutionContext
-      extends AbstractService.ExecutionContext< Setup, Integer >
+  protected class ExecutionContext
+      extends AbstractService.ExecutionContext< SETUP, Integer >
   {
     Session sshSession = null ;
     Session.Command remoteProcessCommand = null ;
@@ -115,7 +138,7 @@ public class SshDriver< SETUP extends SshDriver.Setup >
      */
     volatile Predicate< String > startupEvaluator = null ;
 
-    protected ExecutionContext( final Setup setup, final boolean firstStart ) {
+    protected ExecutionContext( final SETUP setup, final boolean firstStart ) {
       super( setup, firstStart ) ;
       startupEvaluator = setup.startupEvaluator ;
     }
@@ -123,7 +146,7 @@ public class SshDriver< SETUP extends SshDriver.Setup >
 
   @Override
   protected AbstractService.ExecutionContext< SETUP, Integer > newExecutionContext(
-      final Setup setup,
+      final SETUP setup,
       final boolean firstStart
   ) {
     return ( AbstractService.ExecutionContext< SETUP, Integer > )
@@ -436,6 +459,10 @@ public class SshDriver< SETUP extends SshDriver.Setup >
 
   protected final SCPUploadClient createScpUploadClient() {
     return sshService.newScpFileTransfer().newSCPUploadClient() ;
+  }
+
+  protected final SCPDownloadClient createScpDownloadClient() {
+    return sshService.newScpFileTransfer().newSCPDownloadClient() ;
   }
 
 }

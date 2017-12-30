@@ -32,8 +32,8 @@ import com.otcdlink.chiron.middle.tier.CommandInterceptor;
 import com.otcdlink.chiron.middle.tier.ConnectionDescriptor;
 import com.otcdlink.chiron.middle.tier.TimeBoundary;
 import com.otcdlink.chiron.middle.tier.WebsocketFrameSizer;
+import com.otcdlink.chiron.toolbox.CollectingException;
 import com.otcdlink.chiron.toolbox.Credential;
-import com.otcdlink.chiron.toolbox.MultiplexingException;
 import com.otcdlink.chiron.toolbox.TcpPortBooker;
 import com.otcdlink.chiron.toolbox.UrxTools;
 import com.otcdlink.chiron.toolbox.concurrent.Lazy;
@@ -524,13 +524,13 @@ public abstract class AbstractConnectorFixture<
   }
 
   protected final void stopAll(
-      final MultiplexingException.Collector.Task... upendStopTasks
-  ) throws MultiplexingException {
+      final CollectingException.Collector.Task... upendStopTasks
+  ) throws CollectingException {
 
     LOGGER.info( "Stopping everything ..." ) ;
 
-    final MultiplexingException.Collector< MultiplexingException > collector =
-        MultiplexingException.newCollector() ;
+    final CollectingException.Collector<CollectingException> collector =
+        CollectingException.newCollector() ;
 
     if( downend != null ) {
       collector.execute(

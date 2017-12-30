@@ -24,13 +24,13 @@ public final class Slice extends AbstractByteBuf {
 
   protected final int indexInRecycler ;
   public final long sliceIndexInFile ;
-  protected final Consumer<Slice> recycler ;
+  protected final Consumer< Slice > recycler ;
   private final ByteBuf buffer ;
 
   protected Slice(
       final int indexInRecycler,
       final int maxCapacity,
-      final Consumer<Slice> recycler,
+      final Consumer< Slice > recycler,
       final ByteBuf wrapped,
       final int readerIndex,
       final int writerIndex,

@@ -1,6 +1,7 @@
 package com.otcdlink.chiron.toolbox.internet;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.regex.Pattern;
 
@@ -23,6 +24,10 @@ public final class LocalAddressTools {
       throw new RuntimeException( "Could not create " + Hostname.class.getSimpleName() +
           " using '" + LOCAL_ADDRESS + "'", e ) ;
     }
+  }
+
+  public static InetSocketAddress localSocketAddress( final int port ) {
+    return new InetSocketAddress( LOCAL_ADDRESS, port ) ;
   }
 
   private static final Pattern LOCALHOST_NAME_PATTERN = Pattern.compile( "^localhost$" ) ;

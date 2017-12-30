@@ -13,7 +13,7 @@ import java.io.File;
 public interface ProjectDirectoryConstants {
 
   File DEFAULT_PROJECT_HOME = new File(
-      SafeSystemProperty.Standard.USER_HOME.value, "/Projects/OTCdLink" ) ;
+      SafeSystemProperty.Standard.USER_HOME.value, "/Projects/OTCdLink.trader" ) ;
 
   String MAVEN_MODULES_DIRECTORY_NAME = "maven-modules" ;
 

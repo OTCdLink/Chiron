@@ -33,6 +33,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * the {@link KEY} by the (optional) {@link #keyStringifier}.
  *
  * TODO add more methods mimicking {@code ScheduledExecutorService}'s.
+ *
+ * @see reactor.core.scheduler.Scheduler#createWorker() which has probably safer and
+ *     faster implementation.
  */
 public final class ExecutorPartitioner< KEY > {
 

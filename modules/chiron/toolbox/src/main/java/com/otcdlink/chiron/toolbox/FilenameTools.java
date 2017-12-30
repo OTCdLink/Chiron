@@ -1,5 +1,7 @@
 package com.otcdlink.chiron.toolbox;
 
+import com.google.common.base.Preconditions;
+
 import java.util.regex.Pattern;
 
 public final class FilenameTools {
@@ -25,6 +27,11 @@ public final class FilenameTools {
     sanitized = FILENAME_SANITIZER_FORBIDDEN_PATTERN.matcher( sanitized ).replaceAll( "" ) ;
     sanitized = FILENAME_SANITIZER_DOUBLEDOT_PATTERN.matcher( sanitized ).replaceAll( "." ) ;
     return sanitized ;
+  }
+
+  public static String removeSuffix( final String name, final String suffix ) {
+    Preconditions.checkArgument( name.endsWith( suffix ) ) ;
+    return name.substring( 0, name.length() - suffix.length() ) ;
   }
 
   /**

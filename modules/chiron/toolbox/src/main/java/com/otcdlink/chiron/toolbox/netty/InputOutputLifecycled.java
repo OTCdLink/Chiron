@@ -1,19 +1,16 @@
 package com.otcdlink.chiron.toolbox.netty;
 
+import com.otcdlink.chiron.toolbox.service.Lifecycled;
+
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
 
-public interface InputOutputLifecycled extends Closeable {
-
-  CompletableFuture< ? > start() ;
-
-  CompletableFuture< ? > stop() ;
+public interface InputOutputLifecycled extends Closeable, Lifecycled< Void > {
 
   /**
    * Asynchronous (faster), only for {@code Closeable} support in tests within
    * a {@code try( ... )} clause.
-   * Prefer {@link #stop()} for explicit calls.
+   * Prefer {@link #stop()}{@code .join()} for explicit calls.
    */
   @Override
   default void close() throws IOException {

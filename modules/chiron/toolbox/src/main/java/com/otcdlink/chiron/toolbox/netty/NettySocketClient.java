@@ -47,7 +47,7 @@ public class NettySocketClient extends EventLoopGroupOwner implements InputOutpu
 
 
   @Override
-  public final CompletableFuture< ? > start() {
+  public final CompletableFuture< Void > start() {
     synchronized( lock ) {
       checkState( bootstrap == null ) ;
       if( state == State.STOPPED ) {
@@ -61,7 +61,7 @@ public class NettySocketClient extends EventLoopGroupOwner implements InputOutpu
   }
 
   @Override
-  public final CompletableFuture< ? > stop() {
+  public final CompletableFuture< Void > stop() {
     synchronized( lock ) {
       if( state == State.STARTED ) {
         bootstrap = null ;

@@ -1,11 +1,20 @@
 package com.otcdlink.chiron.toolbox.internet;
 
 import com.google.common.base.Splitter;
+import com.otcdlink.chiron.toolbox.SafeSystemProperty;
 import com.otcdlink.chiron.toolbox.StringWrapper;
+import com.otcdlink.chiron.toolbox.concurrent.ExecutorTools;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Iterator;
+import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -92,4 +101,95 @@ public class Hostname extends StringWrapper< Hostname > {
   }
 
   public static final Hostname LOCALHOST = new Hostname() ;
+
+
+  /**
+   * Return computer's host name, resolved using a mix of strategies.
+   * If all of them fail, returns {@link #LOCALHOST}.
+   */
+  public static Hostname computerHostname() {
+    try {
+      return THIS_HOSTNAME.get() ;
+    } catch( InterruptedException | ExecutionException e ) {
+      return LOCALHOST ;
+    }
+  }
+
+  private static final Future< Hostname > THIS_HOSTNAME ;
+
+  static {
+    final ExecutorService executorService = Executors.newSingleThreadExecutor(
+        ExecutorTools.newThreadFactory( "resolve-hostname" ) ) ;
+    THIS_HOSTNAME = executorService.submit( () -> {
+      try {
+        return Hostname.parse( InetAddress.getLocalHost().getHostName() ) ;
+      } catch( final ParseException | UnknownHostException fail1 ) {
+        final String hostnameAsString = osSpecificHostnameResolution() ;
+        if( hostnameAsString != null ) {
+          try {
+            return Hostname.parse( hostnameAsString ) ;
+          } catch( final ParseException ignore ) { }
+        }
+        return LOCALHOST ;
+      }
+    } ) ;
+  }
+
+  /**
+   * https://stackoverflow.com/a/28043703
+   *
+   * @return {@code null} if everything failed.
+   */
+  private static String osSpecificHostnameResolution() {
+    final String operatingSystemName = SafeSystemProperty.Standard.OS_NAME.value.toLowerCase() ;
+
+    try {
+      if( operatingSystemName.contains( "win" ) ) {
+        final String computernameInEnv = System.getenv( "COMPUTERNAME" ) ;
+        if( computernameInEnv != null ) {
+          return computernameInEnv;
+        }
+        final String hostnameExec = execReadToString( "hostname" ) ;
+        if( hostnameExec != null ) {
+          return hostnameExec ;
+        }
+      } else {
+        final boolean unixOrLinux = operatingSystemName.contains( "nix" ) ||
+            operatingSystemName.contains( "nux" ) ;
+        if( unixOrLinux ) {
+          final String hostnameInEnv = System.getenv( "HOSTNAME" ) ;
+          if( hostnameInEnv != null ) {
+            return hostnameInEnv;
+          }
+        }
+        if( unixOrLinux || SafeSystemProperty.Standard.OperatingSystem.isMacOsX() ) {
+          final String hostnameExec = execReadToString( "hostname" ) ;
+          if( hostnameExec != null ) {
+            return hostnameExec ;
+          }
+        }
+        if( unixOrLinux ) {
+          final String etcHostname = execReadToString( "cat /etc/hostname" ) ;
+          if( etcHostname != null ) {
+            return etcHostname ;
+          }
+        }
+      }
+    } catch( final IOException ignore ) { }
+    return null ;
+  }
+
+  public static String execReadToString( final String execCommand ) throws IOException {
+    final Process proc = Runtime.getRuntime().exec( execCommand ) ;
+    try( InputStream stream = proc.getInputStream() ) {
+      try( Scanner s = new Scanner( stream ).useDelimiter( "\\A" ) ) {
+        return s.hasNext() ? s.next() : "" ;
+      }
+    }
+  }
+
+
+  public static void main( final String... arguments ) {
+    System.out.println( computerHostname().asString() ) ;
+  }
 }

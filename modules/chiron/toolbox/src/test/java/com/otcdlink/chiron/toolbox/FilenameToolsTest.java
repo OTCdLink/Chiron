@@ -10,4 +10,9 @@ public class FilenameToolsTest {
   public void filenameSanitization() throws Exception {
     assertThat( FilenameTools.sanitize( "-)_../\\x" ) ).isEqualTo( "-_.x" ) ;
   }
+
+  @Test
+  public void suffixRemoval() throws Exception {
+    assertThat( FilenameTools.removeSuffix( "foo.txt", ".txt" ) ).isEqualTo( "foo" ) ;
+  }
 }

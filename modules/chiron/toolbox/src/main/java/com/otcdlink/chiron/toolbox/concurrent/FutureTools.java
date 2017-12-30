@@ -8,6 +8,8 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Function;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 public final class FutureTools {
 
   private FutureTools() { }
@@ -81,5 +83,14 @@ public final class FutureTools {
     } else {
       throw new CompletionException( failure ) ;
     }
+  }
+
+  public static < ANY > CompletableFuture< ANY > newWithExceptionalCompletion(
+      final Throwable throwable
+  ) {
+    checkNotNull( throwable ) ;
+    final CompletableFuture< ANY > completableFuture = new CompletableFuture<>() ;
+    completableFuture.completeExceptionally( throwable ) ;
+    return completableFuture ;
   }
 }

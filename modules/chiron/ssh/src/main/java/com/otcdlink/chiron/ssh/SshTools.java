@@ -32,6 +32,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.base.Preconditions.checkState;
+
 public final class SshTools {
 
   private static final Logger LOGGER = LoggerFactory.getLogger( SshTools.class ) ;
@@ -306,6 +308,7 @@ public final class SshTools {
 
   private static List< AuthMethod > getAuthMethods( final AgentProxy agent ) throws Exception {
     final Identity[] identities = agent.getIdentities() ;
+    checkState( identities.length > 0, "No identities for " + agent ) ;
     final List< AuthMethod > result = new ArrayList<>() ;
     for( final Identity identity : identities ) {
       result.add( new AuthAgent( agent, identity ) ) ;

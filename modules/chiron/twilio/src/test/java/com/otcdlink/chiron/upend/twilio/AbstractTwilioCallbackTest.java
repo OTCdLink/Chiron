@@ -2,7 +2,7 @@ package com.otcdlink.chiron.upend.twilio;
 
 import com.google.common.collect.ImmutableMultimap;
 import com.otcdlink.chiron.fixture.http.WatchedResponseAssert;
-import com.otcdlink.chiron.toolbox.MultiplexingException;
+import com.otcdlink.chiron.toolbox.CollectingException;
 import com.otcdlink.chiron.toolbox.TcpPortBooker;
 import com.otcdlink.chiron.toolbox.netty.NettyHttpClient;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -96,7 +96,7 @@ public abstract class AbstractTwilioCallbackTest {
 
   @Before
   public void setUp() throws Exception {
-    MultiplexingException.newCollector().execute(
+    CollectingException.newCollector().execute(
         () -> start( port, CONTEXT_PATH, twilioHttpCallback ),
         httpClient::start
     ).throwIfAny( "Test setUp failed." ) ;
@@ -105,7 +105,7 @@ public abstract class AbstractTwilioCallbackTest {
 
   @After
   public void tearDown() throws Exception {
-    MultiplexingException.newCollector().execute(
+    CollectingException.newCollector().execute(
         this::stop,
         httpClient::stop
     ).throwIfAny( "Test tearDown failed." ) ;

@@ -1,6 +1,7 @@
 package com.otcdlink.chiron.fixture.tcp;
 
 import com.otcdlink.chiron.toolbox.TcpPortBooker;
+import com.otcdlink.chiron.toolbox.internet.LocalAddressTools;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,7 +100,7 @@ public class EchoServerTest {
   private static final Logger LOGGER = LoggerFactory.getLogger( EchoServerTest.class ) ;
 
   private final InetSocketAddress listenAddress =
-      new InetSocketAddress( TcpPortBooker.THIS.find() ) ;
+      new InetSocketAddress( LocalAddressTools.LOCAL_ADDRESS, TcpPortBooker.THIS.find() ) ;
 
 
 

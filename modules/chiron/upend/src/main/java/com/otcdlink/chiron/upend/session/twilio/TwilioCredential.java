@@ -21,7 +21,7 @@ public class TwilioCredential {
   private static final Pattern PATTERN =
       Pattern.compile( "(AC[0-9a-zA-Z]+):([0-9a-zA-Z]+):(" + PhoneNumber.PATTERN + ")" ) ;
   static {
-    LOGGER.debug( "Crafted regex " + PATTERN.pattern() ) ;
+    LOGGER.trace( "Crafted regex " + PATTERN.pattern() ) ;
   }
 
 

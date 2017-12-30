@@ -112,8 +112,8 @@ public class NettySocketServer extends EventLoopGroupOwner implements SocketServ
    *     {@link State#STARTED}.
    */
   @Override
-  public CompletableFuture< ? > start() {
-    final CompletableFuture< ? > completableFuture = new CompletableFuture<>() ;
+  public CompletableFuture< Void > start() {
+    final CompletableFuture< Void > completableFuture = new CompletableFuture<>() ;
     eventLoopGroup().execute( () -> {
       synchronized( lock ) {
         if( state == State.STOPPED ) {
@@ -173,9 +173,9 @@ public class NettySocketServer extends EventLoopGroupOwner implements SocketServ
    *     {@link #eventLoopGroup} which implies completing every pending task.
    */
   @Override
-  public final CompletableFuture< ? > stop() {
+  public final CompletableFuture< Void > stop() {
 
-    final CompletableFuture< ? > closeAllFuture = new CompletableFuture<>() ;
+    final CompletableFuture< Void > closeAllFuture = new CompletableFuture<>() ;
 
     synchronized( lock ) {
       if( state == State.STARTED ) {

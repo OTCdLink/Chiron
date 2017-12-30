@@ -180,9 +180,9 @@ public abstract class EventLoopGroupOwner {
    *
    *
    */
-  protected final CompletableFuture< ? > regenerateEventLoopIfNeeded() {
+  protected final CompletableFuture< Void > regenerateEventLoopIfNeeded() {
     if( eventLoopGroupFactory != null ) {
-      final CompletableFuture< ? > completableFuture = new CompletableFuture<>() ;
+      final CompletableFuture< Void > completableFuture = new CompletableFuture<>() ;
       /** Don't call {@link Future#sync()} since this method can get called
        * from the {@link EventLoopGroup} itself so it would cause a deadlock.
        * TODO: support custom timeout/quiet period. */
@@ -203,7 +203,7 @@ public abstract class EventLoopGroupOwner {
   }
 
 
-  protected static final CompletableFuture< ? > COMPLETED_FUTURE =
+  protected static final CompletableFuture< Void > COMPLETED_FUTURE =
       CompletableFuture.completedFuture( null ) ;
 
 

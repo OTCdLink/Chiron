@@ -27,13 +27,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import static com.otcdlink.chiron.toolbox.internet.LocalAddressTools.localSocketAddress;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -308,7 +308,7 @@ public class NettyHttpClientTest {
       final String uriContext,
       final HttpHandler httpHandler
   ) throws IOException {
-    final HttpServer server = HttpServer.create( new InetSocketAddress( port ), 0 ) ;
+    final HttpServer server = HttpServer.create( localSocketAddress( port ), 0 ) ;
     server.setExecutor( Executors.newSingleThreadExecutor( runnable -> {
       final Thread thread = new Thread( runnable, HttpServer.class.getSimpleName() ) ;
       thread.setDaemon( true ) ;

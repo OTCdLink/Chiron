@@ -119,7 +119,7 @@ public class SshJavaDriver< SETUP extends SshJavaDriver.Setup > extends SshDrive
     super.customInitialize() ;
   }
 
-  protected final void synchronizeFiles()
+  protected void synchronizeFiles()
       throws IOException, ExecutionException, InterruptedException
   {
     final ExecutorService executorService =

@@ -90,7 +90,7 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
     this.wellFormed = malformationMessage == null ;
 
     if( wellFormed ) {
-      LOGGER.debug( "Successfully parsed " + this.toString( 100, true ) + "." ) ;
+      LOGGER.trace( "Successfully parsed " + this.toString( 100, true ) + "." ) ;
     } else {
       if( expected ) {
         LOGGER.warn( "Malformed property '" + key + "': " + malformationMessage + "." ) ;
@@ -512,6 +512,8 @@ public abstract class SafeSystemProperty< PROPERTY, VALUE >
     StringType USER_NAME = forString( "user.name" ) ;
 
     FileType JAVA_HOME = forFile( "java.home" ) ;
+
+    FileType JAVA_IO_TMPDIR = forFile( "java.io.tmpdir" ) ;
 
     StringType LINE_SEPARATOR = forString( "line.separator" ) ;
     StringType PATH_SEPARATOR = forString( "path.separator" ) ;

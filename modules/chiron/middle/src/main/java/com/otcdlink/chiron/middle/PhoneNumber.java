@@ -34,7 +34,7 @@ public final class PhoneNumber extends StringWrapper< PhoneNumber > {
 
   public static final Pattern PATTERN = Pattern.compile( "\\+?(?: *\\d+)+" ) ;
   static {
-    LOGGER.debug( "Crafted regex " + PATTERN.pattern() ) ;
+    LOGGER.trace( "Crafted regex " + PATTERN.pattern() ) ;
   }
 
   public static final Comparator< PhoneNumber > COMPARATOR

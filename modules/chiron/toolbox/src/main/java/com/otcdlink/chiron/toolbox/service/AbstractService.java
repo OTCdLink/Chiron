@@ -292,7 +292,7 @@ public abstract class AbstractService< SETUP, COMPLETION >
   }
 
   @Override
-  public final CompletableFuture< COMPLETION > run() throws Exception {
+  public final CompletableFuture< COMPLETION > run() {
     final CompletableFuture< COMPLETION > terminationFuture ;
     synchronized( lock ){
       start() ;

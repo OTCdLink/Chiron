@@ -9,9 +9,12 @@ import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.function.Function;
+import java.util.stream.Collector;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -120,7 +123,7 @@ public final class ImmutableKeyHolderMap<
   public static <
       KEY extends KeyHolder.Key< KEY >,
       VALUE extends KeyHolder< KEY >
-  >ImmutableKeyHolderMap< KEY, ? extends VALUE > copyOf( final Map< KEY, VALUE > map ) {
+  >ImmutableKeyHolderMap< KEY, VALUE > copyOf( final Map< KEY, VALUE > map ) {
     return new ImmutableKeyHolderMap( ImmutableMap.copyOf( map ) ) ;
   }
 
@@ -150,7 +153,9 @@ public final class ImmutableKeyHolderMap<
   }
 
 
-
+// ===============
+// Ancillary tools
+// ===============
 
 
   public static<
@@ -186,8 +191,38 @@ public final class ImmutableKeyHolderMap<
     public ImmutableKeyHolderMap< KEY, VALUE > build() {
       return new ImmutableKeyHolderMap<>( delegate.build() ) ;
     }
+
+    /**
+     * TODO: avoid creating {@link ImmutableKeyHolderMap}s.
+     */
+    public static <
+        V extends KeyHolder< K >,
+        K extends KeyHolder.Key< K >
+    > Builder< K, V > combine( final Builder< K, V > builder1, Builder< K, V > builder2
+    ) {
+      final Builder< K, V > combinator = builder();
+      combinator.putAll( builder1.build().values() ) ;
+      combinator.putAll( builder2.build().values() ) ;
+      return combinator ;
+    }
   }
 
+
+  public static <
+      KEY extends KeyHolder.Key< KEY >,
+      VALUE extends KeyHolder< KEY >
+  > ImmutableKeyHolderMap< KEY, VALUE >
+  withSortedKeys(
+      final ImmutableKeyHolderMap< KEY, VALUE > original
+  ) {
+    List< KEY > keys = new ArrayList<>( original.keySet() ) ;
+    Collections.sort( keys ) ;
+    final ImmutableKeyHolderMap.Builder< KEY, VALUE > builder = ImmutableKeyHolderMap.builder() ;
+    for( final KEY key : keys ) {
+      builder.put( original.get( key ) ) ;
+    }
+    return builder.build() ;
+  }
 
 // =====================
 // Nice additional stuff
@@ -226,6 +261,37 @@ public final class ImmutableKeyHolderMap<
   public String toString() {
     return getClass().getSimpleName() + "{" + Joiner.on( ", " ).join( values() ) + "}" ;
   }
+
+  static <
+      K extends KeyHolder.Key< K >,
+      V extends KeyHolder< K >
+  > Collector< V, ?, ImmutableKeyHolderMap< K, V > >
+  toImmutableKeyHolderMap(
+  ) {
+    return toImmutableKeyHolderMap( v -> v ) ;
+  }
+
+  static <
+      T,
+      K extends KeyHolder.Key< K >,
+      V extends KeyHolder< K >
+  > Collector< T, ?, ImmutableKeyHolderMap< K, V > >
+  toImmutableKeyHolderMap(
+      Function< ? super T, ? extends V > valueFunction
+  ) {
+    checkNotNull( valueFunction ) ;
+    return Collector.of(
+        ImmutableKeyHolderMap.Builder< K, V >::new,
+        ( builder, input ) -> {
+          final V value = valueFunction.apply( input ) ;
+          builder.put( value ) ;
+        },
+        ImmutableKeyHolderMap.Builder::combine,
+        ImmutableKeyHolderMap.Builder::build
+    ) ;
+  }
+
+
 
 // ========================
 // Methods of Map interface

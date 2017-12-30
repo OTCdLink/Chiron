@@ -7,6 +7,7 @@ import com.otcdlink.chiron.toolbox.text.LineBreak;
 import com.otcdlink.chiron.toolbox.text.TextWrapTools;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Map;
 
@@ -15,6 +16,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 public interface Diagnostic {
 
   ImmutableList< Diagnostic > subDiagnostics() ;
+
+  default String asString() throws IOException {
+    final StringWriter stringWriter = new StringWriter() ;
+    print( stringWriter ) ;
+    return stringWriter.toString() ;
+  }
 
   /**
    * Prints with reasonable defaults.

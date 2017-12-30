@@ -27,7 +27,7 @@
     <library.slf4j.version>1.7.25</library.slf4j.version>
     <library.google-guava.version>23.3-jre</library.google-guava.version>
     <library.netty.version>4.1.10.Final</library.netty.version>
-    <library.bouncycastle.version>1.56</library.bouncycastle.version>
+    <library.bouncycastle.version>1.58</library.bouncycastle.version>
     <library.jsch-agentproxy.version>0.0.9</library.jsch-agentproxy.version>
     <!--<library.jsch-agentproxy.version>0.9.0-OTCdLink-fix-SNAPSHOT</library.jsch-agentproxy.version>-->
     <library.jmh.version>1.18</library.jmh.version>
@@ -244,7 +244,7 @@
       <dependency>
         <groupId>com.hierynomus</groupId>
         <artifactId>sshj</artifactId>
-        <version>0.21.1</version>
+        <version>0.23.0</version>
       </dependency>
 
       <dependency>

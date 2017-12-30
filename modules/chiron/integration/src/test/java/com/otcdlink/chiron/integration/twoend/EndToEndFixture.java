@@ -23,7 +23,7 @@ import com.otcdlink.chiron.middle.session.SessionIdentifier;
 import com.otcdlink.chiron.middle.tier.CommandInterceptor;
 import com.otcdlink.chiron.middle.tier.TimeBoundary;
 import com.otcdlink.chiron.middle.tier.WebsocketFrameSizer;
-import com.otcdlink.chiron.toolbox.MultiplexingException;
+import com.otcdlink.chiron.toolbox.CollectingException;
 import com.otcdlink.chiron.toolbox.clock.UpdateableClock;
 import com.otcdlink.chiron.toolbox.internet.InternetProxyAccess;
 import com.otcdlink.chiron.toolbox.internet.LocalAddressTools;
@@ -235,7 +235,7 @@ public class EndToEndFixture
   }
 
 
-  public void stopAll() throws MultiplexingException {
+  public void stopAll() throws CollectingException {
     stopAll(
         () -> {
           /** Some test may already have called {@link UpendConnector#stop()} so we avoid doing

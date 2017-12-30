@@ -23,6 +23,7 @@ public interface TcpPortBooker {
         try {
           final int port = counter.incrementAndGet() ;
           serverSocket = new ServerSocket( port ) ;
+
           serverSocket.close() ;
           return port ;
         } catch( final IOException ignore ) { }

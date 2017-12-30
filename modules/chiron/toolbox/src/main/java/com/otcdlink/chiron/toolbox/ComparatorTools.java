@@ -97,6 +97,16 @@ public final class ComparatorTools {
     } ;
   }
 
+  public static < COMPARABLE extends Comparable< COMPARABLE > > Comparator< COMPARABLE >
+  newComparableComparator() {
+    return new WithNull< COMPARABLE >() {
+      @Override
+      protected int compareNoNulls( COMPARABLE first, COMPARABLE second ) {
+        return first.compareTo( second ) ;
+      }
+    } ;
+  }
+
   public static final Comparator< Boolean > BOOLEAN_COMPARATOR = new WithNull< Boolean >() {
     @Override
     protected int compareNoNulls( final Boolean first, final Boolean boolean2 ) {

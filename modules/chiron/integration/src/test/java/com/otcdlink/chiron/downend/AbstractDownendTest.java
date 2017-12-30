@@ -12,8 +12,8 @@ import com.otcdlink.chiron.middle.session.SessionLifecycle;
 import com.otcdlink.chiron.middle.session.SignonFailure;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
 import com.otcdlink.chiron.middle.tier.TimeBoundary;
+import com.otcdlink.chiron.toolbox.CollectingException;
 import com.otcdlink.chiron.toolbox.Credential;
-import com.otcdlink.chiron.toolbox.MultiplexingException;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import mockit.FullVerificationsInOrder;
 import mockit.Mocked;
@@ -118,7 +118,7 @@ public class AbstractDownendTest<
   protected boolean runTearDown = true ;
 
   @After
-  public void tearDown() throws MultiplexingException, InterruptedException, TimeoutException {
+  public void tearDown() throws CollectingException, InterruptedException, TimeoutException {
 
     if( runTearDown ) {
       LOGGER.info( "Tearing down test ..." ) ;

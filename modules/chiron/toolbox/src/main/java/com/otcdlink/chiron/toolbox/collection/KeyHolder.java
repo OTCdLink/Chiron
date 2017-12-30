@@ -50,6 +50,10 @@ public interface KeyHolder< KEY extends KeyHolder.Key< KEY > > {
       return index ;
     }
 
+    public final String asString() {
+      return Long.toString( index ) ;
+    }
+
     @Override
     public int compareTo( final KEY other ) {
       if( other == null ) {
