@@ -16,3 +16,4 @@ Here is a serie of articles (in French) on Chiron:
 8. [Façade Web](https://groups.google.com/d/msg/techos/PwgN0vjFGDw/Fs2uOVEWBgAJ)
 9. [Contrat réactif](https://groups.google.com/d/msg/techos/ez1EVlC494A/ydToX8VXBgAJ)
 10. [Gourmandises](https://groups.google.com/d/msg/techos/R8UlmbZ-sMY/tHi1vm6XAgAJ)
+11. [Conclusion](https://groups.google.com/d/msg/techos/REAlXHybW7o/eCNKAhDuAgAJ)
