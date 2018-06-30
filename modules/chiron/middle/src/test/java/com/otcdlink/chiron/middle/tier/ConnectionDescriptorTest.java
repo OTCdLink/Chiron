@@ -14,7 +14,7 @@ public class ConnectionDescriptorTest {
     final ConnectionDescriptor connectionDescriptor = new ConnectionDescriptor(
         "someVersion",
         true,
-        TimeBoundary.Builder.createNew()
+        TimeBoundary.newBuilder()
             .pingInterval( 11 )
             .pongTimeoutOnDownend( 12 )
             .reconnectDelay( 13, 14 )

@@ -23,7 +23,7 @@ public class DigestToolsTest {
   @Test
   public void md5() throws Exception {
     final String content = "Wikipedia, l'encyclopedie libre et gratuite" ;
-    final DigestTools.Md5 md5 = DigestTools.md5( content.getBytes( Charsets.US_ASCII ) ) ;
+    final DigestTools.Md5 md5 = DigestTools.Md5.ofBytes( content.getBytes( Charsets.US_ASCII ) ) ;
     assertThat( md5.hex() ).isEqualTo( "d6aa97d33d459ea3670056e737c99a3d" ) ;
   }
 
@@ -35,7 +35,7 @@ public class DigestToolsTest {
   @Test
   public void sha1() throws Exception {
     final String content = "The quick brown fox jumps over the lazy dog" ;
-    final DigestTools.Sha1 sha1 = DigestTools.sha1( content.getBytes( Charsets.US_ASCII ) ) ;
+    final DigestTools.Sha1 sha1 = DigestTools.Sha1.ofBytes( content.getBytes( Charsets.US_ASCII ) ) ;
     assertThat( sha1.hex() ).isEqualTo( "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12" ) ;
     assertThat( sha1.base64() ).isEqualTo( "L9ThxnotKPzthJ7hu3bnORuT6xI=" ) ;
   }
@@ -49,11 +49,22 @@ public class DigestToolsTest {
   public void sha256ForFile() throws Exception {
     final String content = "This is the file content to hash" ;
     final File file = new File( NameAwareRunner.testDirectory(), "some.txt" ) ;
-    Files.write( content, file, Charsets.UTF_8 ) ;
-    final DigestTools.Sha256 actual = DigestTools.sha256( file ) ;
+    Files.asCharSink( file, Charsets.UTF_8 ).write( content ) ;
+    final DigestTools.Sha256 actual = DigestTools.Sha256.ofFile( file ) ;
     assertThat( actual.hex() ).isEqualTo(
         "6a995ba4978e6183de9ee51af8a5ceb507941cbe54dc8c6ce919dbd0fe657a58" ) ;
     assertThat( actual.base64() ).isEqualTo( "aplbpJeOYYPenuUa+KXOtQeUHL5U3Ixs6Rnb0P5lelg=" ) ;
+  }
+
+  @Test
+  public void parseHex() {
+    final String content = "This is the file content to hash" ;
+    final DigestTools.Sha256 actual = DigestTools.Sha256
+        .ofStringBytes( content, Charsets.US_ASCII ) ;
+    assertThat( actual.hex() ).isEqualTo(
+        "6a995ba4978e6183de9ee51af8a5ceb507941cbe54dc8c6ce919dbd0fe657a58" ) ;
+    final DigestTools.Sha256 parsed = DigestTools.Sha256.parseHex( actual.hex() ) ;
+    assertThat( actual.hex() ).isEqualTo( parsed.hex() ) ;
   }
 
 

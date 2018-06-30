@@ -19,7 +19,7 @@ import com.otcdlink.chiron.toolbox.netty.NettyTools;
 import com.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
 import io.netty.channel.Channel;
 import io.netty.util.ResourceLeakDetector;
-import mockit.FullVerificationsInOrder;
+import mockit.FullVerifications;
 import mockit.Injectable;
 import org.junit.After;
 import org.junit.Before;
@@ -69,7 +69,7 @@ public class EndToEndTest {
       @Injectable final OutwardSessionSupervisor< Channel, InetAddress >
           outboundSessionSupervisor
   ) throws Exception {
-    EndToEndTestFragments.simpleAuthenticatedEcho(
+    new EndToEndTestShop().simpleAuthenticatedEcho(
         fixture, signonMaterializer, outboundSessionSupervisor ) ;
 
   }
@@ -121,7 +121,7 @@ public class EndToEndTest {
     fixture.stopAll() ;
     fixture.waitForDownendConnectorState( DownendConnector.State.STOPPED ) ;
 
-    new FullVerificationsInOrder() {{
+    new FullVerifications() {{
       /** Our {@link CommandConsumer} should have seen no {@link Command}, was intercepted. */
     }} ;
 
@@ -131,7 +131,7 @@ public class EndToEndTest {
   public void newTimeBoundary() throws Exception {
     setTestThreadName() ;
 
-    final TimeBoundary.ForAll initialTimeBoundary = TimeBoundary.Builder.createNew()
+    final TimeBoundary.ForAll initialTimeBoundary = TimeBoundary.newBuilder()
         .pingInterval( 888_888_888 )
         .pongTimeoutOnDownend( 2500 )
         .reconnectDelay( 1000, 2000 )
@@ -139,7 +139,7 @@ public class EndToEndTest {
         .sessionInactivityForever()
         .build()
     ;
-    final TimeBoundary.ForAll newTimeBoundary = TimeBoundary.Builder.createNew()
+    final TimeBoundary.ForAll newTimeBoundary = TimeBoundary.newBuilder()
         .pingInterval( 999_999_999 )
         .pongTimeoutOnDownend( 2500 )
         .reconnectDelay( 1000, 2000 )

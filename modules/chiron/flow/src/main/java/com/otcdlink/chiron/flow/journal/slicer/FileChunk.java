@@ -16,10 +16,7 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.BitSet;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -32,35 +29,39 @@ class FileChunk {
   private static final Logger LOGGER = LoggerFactory.getLogger( FileChunk.class ) ;
 
   private final int sliceMaximumCapacity ;
-  private final Consumer< FileChunk > recycler ;
 
   private final MappedByteBuffer mappedByteBuffer ;
   private final ByteBuf chunkBuffer ;
   private int nextSliceIndexInChunk = 0 ;
 
-  /**
-   * Supports CAS, when {@link Status#isInUse()} returns {@code false} we can run
-   * {@link #recycle()}.
-   */
-  private final AtomicReference< Status > sliceAvailability ;
+  // private final String toString ;
+
 
   public FileChunk(
       final FileChannel fileChannel,
       final int probableSliceCount,
       final int sliceMaximumCapacity,
-      final Consumer< FileChunk > recycler,
       final long firstByteInFile,
       final long chunkLength
   ) throws IOException {
     checkNotNull( fileChannel ) ;
     this.sliceMaximumCapacity = sliceMaximumCapacity ;
-    sliceAvailability = new AtomicReference<>( new Status( probableSliceCount ) ) ;
-    this.recycler = checkNotNull( recycler ) ;
     this.mappedByteBuffer = fileChannel.map(
         FileChannel.MapMode.READ_ONLY, firstByteInFile, chunkLength ) ;
     this.chunkBuffer = Unpooled.wrappedBuffer( mappedByteBuffer ) ;
     nextSliceIndexInChunk = 0 ;
+
+    // this.toString = getClass().getSimpleName() + "{" +
+    //     "firstByteInFile=" + firstByteInFile + ";" +
+    //     "length=" + mappedByteBuffer.capacity() +
+    //     "}"
+    // ;
   }
+
+  // @Override
+  // public String toString() {
+  //   return toString ;
+  // }
 
   public void forEachByte( final int start, final ByteProcessor byteProcessor ) {
     chunkBuffer.forEachByte( start, chunkBuffer.readableBytes() - start, byteProcessor ) ;
@@ -79,50 +80,15 @@ class FileChunk {
   ) {
     final Slice slice;
     slice = newSlice(
-        nextSliceIndexInChunk,
         chunkBuffer,
         sliceStartInChunk,
         sliceEndInChunk,
         sliceIndexInFile
     ) ;
-    sliceAvailability.updateAndGet( bitSet -> bitSet.raise( nextSliceIndexInChunk ) ) ;
     nextSliceIndexInChunk ++ ;
     return slice;
   }
 
-  /**
-   * Recycle, if all {@link Slice}s were recycled.
-   * <p>
-   * Not synchronized, must be called always by the same "slicer" thread.
-   */
-  public void prepareToRecycle() {
-    final Status updated = sliceAvailability.updateAndGet(
-        status -> status.chunkInUse( false ) ) ;
-    if( ! updated.isInUse() ) {
-      recycle() ;
-    }
-  }
-
-  /**
-   * May be called from any thread.
-   */
-  private void recycle( final Slice slice ) {
-    final Status updated = sliceAvailability.updateAndGet(
-        status -> status.clear( slice.indexInRecycler ) ) ;
-    if( ! updated.isInUse() ) {
-      recycle() ;
-    }
-  }
-
-  /**
-   * May be called from any thread.
-   * We need some kind of callback to make {@link FileChunk} available again.
-   */
-  private void recycle() {
-    chunkBuffer.release() ;
-    closeDirectBuffer( mappedByteBuffer ) ;
-    recycler.accept( this ) ;
-  }
 
   /**
    * Tries to close the {@code java.nio.MappedByteBuffer} which otherwise waits to be
@@ -187,7 +153,6 @@ class FileChunk {
 
 
   private Slice newSlice(
-      final int indexInRecycler,
       final ByteBuf wrapped,
       final int readerIndex,
       final int writerIndex,
@@ -195,66 +160,18 @@ class FileChunk {
 
   ) {
     final Slice slice = new Slice(
-        indexInRecycler,
         sliceMaximumCapacity,
-        this::recycle,
         wrapped,
         readerIndex,
         writerIndex,
         sliceIndexInFile
     ) ;
-    return slice;
+    // LOGGER.trace( "Created " + slice + "." ) ;
+    return slice ;
   }
 
   public int readableBytes() {
     return chunkBuffer.readableBytes() ;
-  }
-
-  private static class Status {
-
-    private final boolean chunkInUse ;
-    private final BitSet slicesUsage ;
-
-    public Status( final int sliceCount ) {
-      chunkInUse = true ;
-      this.slicesUsage = new BitSet( sliceCount ) ;
-      this.slicesUsage.set( 0, sliceCount - 1, true ) ;
-    }
-
-    private Status( final BitSet slicesUsage, final boolean chunkInUse ) {
-      this.chunkInUse = chunkInUse ;
-      this.slicesUsage = slicesUsage ;
-    }
-
-    public Status clear( final int bitIndex ) {
-      return set( bitIndex, false ) ;
-    }
-
-    public Status raise( final int bitIndex ) {
-      return set( bitIndex, true ) ;
-    }
-
-    public Status set( final int bitIndex, final boolean value ) {
-      final BitSet copy = this.slicesUsage.get( 0, this.slicesUsage.length() ) ;
-      copy.set( bitIndex, value ) ;
-      return new Status( copy, chunkInUse ) ;
-    }
-
-    public Status chunkInUse( final boolean inUse ) {
-      return new Status( slicesUsage, inUse ) ;
-    }
-
-    private boolean isChunkInUse() {
-      return chunkInUse ;
-    }
-
-    private boolean allSliceReleased() {
-      return slicesUsage.isEmpty() ;
-    }
-
-    public boolean isInUse() {
-      return isChunkInUse() || ! allSliceReleased() ;
-    }
   }
 
 }

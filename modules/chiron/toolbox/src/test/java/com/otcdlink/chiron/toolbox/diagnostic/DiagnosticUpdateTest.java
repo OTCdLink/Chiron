@@ -2,9 +2,9 @@ package com.otcdlink.chiron.toolbox.diagnostic;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
+import mockit.Expectations;
 import mockit.FullVerifications;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,14 +24,14 @@ public class DiagnosticUpdateTest {
     diagnosticUpdater.addListener( listener1 ) ;
     diagnosticUpdater.addListener( listener2 ) ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       listener1.updated( DIAGNOSTIC ) ;
       listener2.updated( DIAGNOSTIC ) ;
     }} ;
     diagnosticUpdater.update( DIAGNOSTIC ) ;
     new FullVerifications() {{ }} ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       listener1.updated( DIAGNOSTIC ) ;
     }} ;
     diagnosticUpdater.removeListener( listener2 ) ;

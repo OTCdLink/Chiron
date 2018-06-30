@@ -14,9 +14,8 @@ import com.otcdlink.chiron.upend.UpendConnector;
 import com.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
 import com.otcdlink.chiron.upend.session.SessionSupervisor;
 import io.netty.channel.Channel;
+import mockit.Expectations;
 import mockit.FullVerifications;
-import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,16 +29,16 @@ import static com.otcdlink.chiron.AbstractConnectorFixture.CREDENTIAL_OK;
 import static com.otcdlink.chiron.AbstractConnectorFixture.SESSION_IDENTIFIER;
 import static com.otcdlink.chiron.fixture.TestNameTools.setTestThreadName;
 
-final class EndToEndTestFragments {
+class EndToEndTestShop {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger( EndToEndTestFragments.class ) ;
+  private static final Logger LOGGER = LoggerFactory.getLogger( EndToEndTestShop.class ) ;
 
-  private EndToEndTestFragments() { }
+  protected EndToEndTestShop() { }
 
-  public static void simpleAuthenticatedEcho(
+  public void simpleAuthenticatedEcho(
       final EndToEndFixture fixture,
-      @Injectable final SignonMaterializer signonMaterializer,
-      @Injectable final OutwardSessionSupervisor< Channel, InetAddress > outboundSessionSupervisor
+      final SignonMaterializer signonMaterializer,
+      final OutwardSessionSupervisor< Channel, InetAddress > outboundSessionSupervisor
   ) throws Exception {
     authenticate( fixture, signonMaterializer, outboundSessionSupervisor ) ;
 
@@ -48,16 +47,16 @@ final class EndToEndTestFragments {
     terminate( fixture, outboundSessionSupervisor ) ;
   }
 
-  protected static void authenticate(
+  protected void authenticate(
       final EndToEndFixture fixture,
-      final Supplier<DownendConnector.Setup< Command.Tag, EchoDownwardDuty< Command.Tag > >>
+      final Supplier< DownendConnector.Setup< Command.Tag, EchoDownwardDuty< Command.Tag > > >
           downendSetupSupplier,
       final Function<
           DownendConnector.Setup< Command.Tag, EchoDownwardDuty< Command.Tag > >,
           UpendConnector.Setup<EchoUpwardDuty< Designator >>
       > upendSetupSupplier,
-      @Injectable final SignonMaterializer signonMaterializer,
-      @Injectable final OutwardSessionSupervisor< Channel, InetAddress > outboundSessionSupervisor
+      final SignonMaterializer signonMaterializer,
+      final OutwardSessionSupervisor< Channel, InetAddress > outboundSessionSupervisor
   ) throws Exception {
     authenticate(
         fixture,
@@ -69,7 +68,7 @@ final class EndToEndTestFragments {
     ) ;
   }
 
-  protected static void authenticate(
+  protected void authenticate(
       final EndToEndFixture fixture,
       final Supplier< DownendConnector.Setup< Command.Tag, EchoDownwardDuty< Command.Tag > > >
           downendSetupSupplier,
@@ -77,8 +76,8 @@ final class EndToEndTestFragments {
           DownendConnector.Setup< Command.Tag, EchoDownwardDuty< Command.Tag > >,
           UpendConnector.Setup< EchoUpwardDuty< Designator > >
       > upendSetupSupplier,
-      @Injectable final SignonMaterializer signonMaterializer,
-      @Injectable final OutwardSessionSupervisor< Channel, InetAddress > outboundSessionSupervisor,
+      final SignonMaterializer signonMaterializer,
+      final OutwardSessionSupervisor< Channel, InetAddress > outboundSessionSupervisor,
       final Consumer< DownendConnector.Change > changeConsumer
   ) throws Exception {
     setTestThreadName() ;
@@ -93,7 +92,7 @@ final class EndToEndTestFragments {
     final BlockingMonolist< SessionSupervisor.PrimarySignonAttemptCallback >
         primarySignonAttemptCallbackCapture = new BlockingMonolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       signonMaterializer.readCredential( withCapture( primarySignonCredentialConsumerCapture ) ) ;
       signonMaterializer.setProgressMessage( "Signing in …" ) ;
       signonMaterializer.setProgressMessage( null ) ;
@@ -129,19 +128,19 @@ final class EndToEndTestFragments {
 
   }
 
-  protected static void authenticate(
+  protected void authenticate(
       final EndToEndFixture fixture,
-      @Injectable final SignonMaterializer signonMaterializer,
-      @Injectable final OutwardSessionSupervisor< Channel, InetAddress > outboundSessionSupervisor
+      final SignonMaterializer signonMaterializer,
+      final OutwardSessionSupervisor< Channel, InetAddress > outboundSessionSupervisor
   ) throws Exception {
     authenticate( fixture, false, signonMaterializer, outboundSessionSupervisor ) ;
   }
 
-  protected static void authenticate(
+  protected void authenticate(
       final EndToEndFixture fixture,
       final boolean useProxy,
-      @Injectable final SignonMaterializer signonMaterializer,
-      @Injectable final OutwardSessionSupervisor< Channel, InetAddress > outboundSessionSupervisor
+      final SignonMaterializer signonMaterializer,
+      final OutwardSessionSupervisor< Channel, InetAddress > outboundSessionSupervisor
   ) throws Exception {
     setTestThreadName() ;
     authenticate(
@@ -160,18 +159,17 @@ final class EndToEndTestFragments {
 
   }
 
-  public static void terminate(
+  public void terminate(
       final EndToEndFixture fixture,
       final OutwardSessionSupervisor< Channel, InetAddress > outwardSessionSupervisor
   ) throws InterruptedException {
     if( outwardSessionSupervisor != null ) {
-      new StrictExpectations() {{
-        outwardSessionSupervisor.closed( ( Channel ) any, ( SessionIdentifier ) any, false ) ;
-        // Sometimes the call above doesn't happen, this seems to depend on ping timing sequence.
-        minTimes = 0 ;
+      new Expectations() {{
+        outwardSessionSupervisor.closed( ( Channel ) any, ( SessionIdentifier ) any, true ) ;
       }} ;
     }
     fixture.downend().stop() ;
     fixture.waitForDownendConnectorState( DownendConnector.State.STOPPED ) ;
+    new FullVerifications() {{ }} ;
   }
 }

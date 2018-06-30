@@ -36,7 +36,7 @@ public class NotifyingThrottlerTest {
     } } ;
 
     addWatcher( watcher ) ;
-    applyCommand( 1, SessionScopedThrottler.Throttling.PASSED ) ;
+    applyCommand( 1, Throttler.Effect.PASSED ) ;
   }
 
 
@@ -96,10 +96,10 @@ public class NotifyingThrottlerTest {
 
   private void applyCommand(
       final Number command,
-      final SessionScopedThrottler.Throttling expectedThrottling
+      final Throttler.Effect expectedEffect
   ) throws InterruptedException {
-    final SessionScopedThrottler.Throttling throttling = throttler.evaluateAndUpdate( command ) ;
-    assertThat( throttling ).isEqualTo( expectedThrottling ) ;
+    final Throttler.Effect effect = throttler.evaluateAndUpdate( command ) ;
+    assertThat( effect ).isEqualTo( expectedEffect ) ;
     callHappenedSemaphore.acquire( 1 ) ;
   }
 

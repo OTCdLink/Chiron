@@ -18,8 +18,7 @@ public class JournalFileReaderTest
         file,
         new FileDesignatorCodecTools.InwardDesignatorDecoder(),
         new EchoCodecFixture.PartialUpendDecoder(),
-        0,
-        true
+        0
     ) ;
   }
 

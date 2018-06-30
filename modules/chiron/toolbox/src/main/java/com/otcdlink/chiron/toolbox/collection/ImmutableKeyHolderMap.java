@@ -262,7 +262,7 @@ public final class ImmutableKeyHolderMap<
     return getClass().getSimpleName() + "{" + Joiner.on( ", " ).join( values() ) + "}" ;
   }
 
-  static <
+  public static <
       K extends KeyHolder.Key< K >,
       V extends KeyHolder< K >
   > Collector< V, ?, ImmutableKeyHolderMap< K, V > >
@@ -271,7 +271,7 @@ public final class ImmutableKeyHolderMap<
     return toImmutableKeyHolderMap( v -> v ) ;
   }
 
-  static <
+  public static <
       T,
       K extends KeyHolder.Key< K >,
       V extends KeyHolder< K >

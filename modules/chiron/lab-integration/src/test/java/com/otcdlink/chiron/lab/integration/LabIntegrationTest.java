@@ -22,9 +22,10 @@ import com.otcdlink.chiron.toolbox.internet.HostPort;
 import com.otcdlink.chiron.toolbox.internet.LocalAddressTools;
 import com.otcdlink.chiron.toolbox.netty.NettyTools;
 import com.otcdlink.chiron.upend.session.SecondaryAuthenticator;
+import mockit.Expectations;
+import mockit.FullVerifications;
 import mockit.FullVerificationsInOrder;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +68,7 @@ public class LabIntegrationTest {
     final BlockingMonolist< Consumer< Credential > > credentialConsumerCapture =
         new BlockingMonolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       signonMaterializer.readCredential( withCapture( credentialConsumerCapture ) ) ;
       signonMaterializer.setProgressMessage( "Signing in …" ) ;
       signonMaterializer.setProgressMessage( null ) ;
@@ -118,7 +119,7 @@ public class LabIntegrationTest {
     final BlockingMonolist< Consumer<Credential> > credentialConsumerCapture =
         new BlockingMonolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       signonMaterializer.readCredential( withCapture( credentialConsumerCapture ) ) ;
       signonMaterializer.setProgressMessage( "Signing in …" ) ;
       signonMaterializer.setProgressMessage( null ) ;
@@ -127,6 +128,7 @@ public class LabIntegrationTest {
 
     labDownend.start() ;
     credentialConsumerCapture.getOrWait().accept( CREDENTIAL_ALICE ) ;
+    new FullVerifications() {{ }} ;
 
     assertStateChanges( changeWatcher, DownendConnector.State.CONNECTING, DownendConnector.State.CONNECTED ) ;
     LOGGER.info( "Connected, now verifying last ." ) ;
@@ -188,7 +190,7 @@ public class LabIntegrationTest {
         secondaryCodeVerificationCapture = new BlockingMonolist<>() ;
 
 
-    new StrictExpectations() {{
+    new Expectations() {{
       signonMaterializer.readCredential( withCapture( credentialConsumerCapture ) ) ;
       signonMaterializer.setProgressMessage( "Signing in …" ) ;
       signonMaterializer.setProgressMessage( null ) ;
@@ -215,7 +217,7 @@ public class LabIntegrationTest {
     labDownend.upwardDuty().increment( blockingTracker, 1 ) ;
     blockingTracker.waitForResponse() ;
 
-    new FullVerificationsInOrder() {{
+    new FullVerifications() {{
       labDownwardDuty.counter( ( Tracker ) any, 1 ) ;
     }} ;
 

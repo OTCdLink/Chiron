@@ -48,7 +48,11 @@ public class Designator {
 
 
   public enum Kind {
-    UPWARD, INTERNAL, DOWNWARD, ;
+    UPWARD,
+    INTERNAL,
+    DOWNWARD,
+    UNCHECKED_FOR_TEST_ONLY,
+    ;
   }
 
   public final Kind kind ;
@@ -94,7 +98,7 @@ public class Designator {
     if( stamp.equals( cause ) ) {
       throw new IllegalArgumentException( "Stamp " + stamp + " same as cause" ) ;
     }
-    if( tag != null && sessionIdentifier == null ) {
+    if( tag != null && sessionIdentifier == null && kind != Kind.UNCHECKED_FOR_TEST_ONLY ) {
       throw new NullPointerException( SessionIdentifier.class.getSimpleName() +
           " can't be null if there is a " + Command.Tag.class.getSimpleName() ) ;
     }
@@ -224,7 +228,7 @@ public class Designator {
 
   public static class Factory implements FactoryForInternal {
 
-    private final Stamp.Generator uniqueTimestampGenerator ;
+    protected final Stamp.Generator uniqueTimestampGenerator ;
 
     public Factory( final Stamp.Generator uniqueTimestampGenerator ) {
       this.uniqueTimestampGenerator = checkNotNull( uniqueTimestampGenerator ) ;
@@ -333,6 +337,20 @@ public class Designator {
     ) {
       return new Designator(
           Kind.INTERNAL,
+          uniqueTimestampGenerator.generate(),
+          cause,
+          tag,
+          sessionIdentifier
+      ) ;
+    }
+
+    public Designator unchecked(
+        final Stamp cause,
+        final SessionIdentifier sessionIdentifier,
+        final Command.Tag tag
+    ) {
+      return new Designator(
+          Kind.UNCHECKED_FOR_TEST_ONLY,
           uniqueTimestampGenerator.generate(),
           cause,
           tag,

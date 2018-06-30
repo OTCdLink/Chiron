@@ -4,6 +4,8 @@ import com.google.common.base.Equivalence;
 import com.otcdlink.chiron.toolbox.UrxTools;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -242,6 +244,14 @@ public final class SchemeHostPort {
     } catch( final MalformedURLException e ) {
       throw new CreationException( "Could not create URL from '" + urlString + "'", e ) ;
     }
+  }
+
+  public InetSocketAddress asInetSocketAddressQuiet() {
+    return hostPort.asInetSocketAddressQuiet() ;
+  }
+
+  public InetAddress asInetAddressQuiet() {
+    return hostPort.asInetAddressQuiet() ;
   }
 
 

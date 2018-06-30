@@ -11,9 +11,9 @@ import com.otcdlink.chiron.toolbox.netty.NettyTools;
 import com.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
 import com.otcdlink.chiron.upend.session.SessionSupervisor;
 import io.netty.channel.Channel;
+import mockit.Expectations;
 import mockit.FullVerifications;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -39,49 +39,8 @@ public class EndToEndPlugTest {
       @Injectable final OutwardSessionSupervisor< Channel, InetAddress >
           outboundSessionSupervisor
   ) throws Exception {
-    EndToEndTestFragments.simpleAuthenticatedEcho(
+    new EndToEndTestShop().simpleAuthenticatedEcho(
         fixture, signonMaterializer, outboundSessionSupervisor ) ;
-  }
-
-
-  @Test( timeout = TIMEOUT_MS )
-  public void simpleReconnect(
-      @Injectable final SignonMaterializer signonMaterializer,
-      @Injectable final OutwardSessionSupervisor< Channel, InetAddress >
-          outboundSessionSupervisor
-  ) throws Exception {
-    EndToEndTestFragments.authenticate(
-        fixture, true, signonMaterializer, outboundSessionSupervisor ) ;
-
-    final BlockingMonolist<SessionSupervisor.ReuseCallback> reuseCallbackCapture =
-        new BlockingMonolist<>() ;
-    new StrictExpectations() {{
-      outboundSessionSupervisor.closed( ( Channel ) any, SESSION_IDENTIFIER, false ) ;
-      outboundSessionSupervisor.tryReuse(
-          SESSION_IDENTIFIER,
-          ( Channel ) any,
-          withCapture( reuseCallbackCapture )
-      ) ;
-    }} ;
-
-    fixture.restartHttpProxy() ;
-
-    final SessionSupervisor.ReuseCallback reuseCallback = reuseCallbackCapture.getOrWait() ;
-    LOGGER.info( "Got " + reuseCallback ) ;
-    new FullVerifications() {{ }} ;
-
-    reuseCallback.reuseOutcome( null ) ;
-
-    while( true ) {
-      final DownendConnector.Change change = fixture.nextDownendChange() ;
-      LOGGER.debug( "Obtained " + change + " while actively waiting for " +
-          DownendConnector.State.SIGNED_IN + " ..." ) ;
-      if( change.kind == DownendConnector.State.SIGNED_IN ) {
-        break ;
-      }
-    }
-    fixture.commandRoundtrip( SESSION_IDENTIFIER ) ;
-    EndToEndTestFragments.terminate( fixture, outboundSessionSupervisor ) ;
   }
 
 
@@ -91,11 +50,10 @@ public class EndToEndPlugTest {
       @Injectable final OutwardSessionSupervisor< Channel, InetAddress >
           outboundSessionSupervisor
   ) throws Exception {
-    EndToEndTestFragments.authenticate(
+    new EndToEndTestShop().authenticate(
         fixture,
         fixture.downendSetup(
-//            new TimeBoundary( 1000, 2000, 1000, 2000, 3000 ),
-            TimeBoundary.Builder.createNew()
+            TimeBoundary.newBuilder()
                 .pingInterval( 1000 )
                 .pongTimeoutOnDownend( 2500 )
                 .reconnectDelay( 1000, 2000 )
@@ -125,7 +83,7 @@ public class EndToEndPlugTest {
         AbstractConnectorFixture.PingTimingPresets.QUICK_RECONNECT ;
     final long sleepDelay = timeBoundary.reconnectDelayRangeMs.upperBound * 2L ;
 
-    EndToEndTestFragments.authenticate(
+    new EndToEndTestShop().authenticate(
         fixture,
         fixture.downendSetup(
             false,
@@ -142,7 +100,7 @@ public class EndToEndPlugTest {
 
     final BlockingMonolist< SessionSupervisor.ReuseCallback > reuseCallbackCapture =
         new BlockingMonolist<>() ;
-    new StrictExpectations() {{
+    new Expectations() {{
       outboundSessionSupervisor.closed( ( Channel ) any, SESSION_IDENTIFIER, false ) ;
       outboundSessionSupervisor.tryReuse(
           SESSION_IDENTIFIER,
@@ -171,7 +129,7 @@ public class EndToEndPlugTest {
       }
     }
     fixture.commandRoundtrip( SESSION_IDENTIFIER ) ;
-    EndToEndTestFragments.terminate( fixture, outboundSessionSupervisor ) ;
+    new EndToEndTestShop().terminate( fixture, outboundSessionSupervisor ) ;
   }
 
 // =======

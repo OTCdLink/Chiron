@@ -1,5 +1,6 @@
 package com.otcdlink.chiron.upend.session.implementation;
 
+import com.otcdlink.chiron.Multicaptor;
 import com.otcdlink.chiron.command.Stamp;
 import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.designator.DesignatorForger;
@@ -22,9 +23,9 @@ import com.otcdlink.chiron.upend.session.SignonInwardDuty;
 import com.otcdlink.chiron.upend.session.SignonOutwardDuty;
 import com.otcdlink.chiron.upend.session.twilio.AuthenticationFailure;
 import com.otcdlink.chiron.upend.session.twilio.AuthenticationFailureNotice;
-import mockit.FullVerificationsInOrder;
+import mockit.Expectations;
+import mockit.FullVerifications;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.Ignore;
@@ -152,7 +153,7 @@ public class DefaultSessionSupervisorTest {
         )
     ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       clock.getCurrentDateTime() ; result = T_3 ;
       primarySignonAttemptCallback.signonResult(
           withArgThat( hasKind(  SignonFailure.UNMATCHED_NETWORK_ADDRESS ) ) ) ;
@@ -174,7 +175,7 @@ public class DefaultSessionSupervisorTest {
         USER_X.login()
     ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " notifying " +
         SessionSupervisor.SignonAttemptCallback.class.getSimpleName() +
@@ -222,13 +223,14 @@ public class DefaultSessionSupervisorTest {
     final Designator designatorInternalNoSession = DesignatorForger.newForger()
         .instant( T_2 ).internal() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       clock.getCurrentDateTime() ; result = T_2 ;
+      designatorFactory.internal() ; result = designatorInternalNoSession ;
       signonInwardDuty.signoutQuiet( ( Designator ) any, SESSION_1 ) ;
     }} ;
 
     sessionSupervisor.closed( CHANNEL_A1, SESSION_1, true ) ;
-
+    new FullVerifications() {{ }} ;
   }
 
 
@@ -250,7 +252,8 @@ public class DefaultSessionSupervisorTest {
             clock,
             stampGenerator,
             designatorFactory,
-            Duration.millis( 2 ), sessionIdentifierGenerator,
+            Duration.millis( 2 ),
+            sessionIdentifierGenerator,
             signonInwardDuty,
             null,
             new Duration( 1 ),
@@ -259,23 +262,39 @@ public class DefaultSessionSupervisorTest {
         )
     ;
 
+
+    final Multicaptor< DefaultSessionSupervisor.SessionCreationDesignator<
+        MyChannel,
+        MyAddress
+    > > sessionCreationDesignatorCapture = new Multicaptor<>( 2 ) ;
+
+    final Multicaptor< DefaultSessionSupervisor.PrimarySignonAttemptDesignator<
+        MyChannel,
+        MyAddress
+    > > primarySignonAttemptDesignatorCapture = new Multicaptor<>( 2 ) ;
+
     oneFactorAuthentication(
         clock,
         stampGenerator,
         sessionIdentifierGenerator,
         signonInwardDuty,
         primarySignonAttemptCallback,
-        sessionSupervisor
+        sessionSupervisor,
+        sessionCreationDesignatorCapture,
+        0,
+        primarySignonAttemptDesignatorCapture,
+        0
     ) ;
 
     final Designator designatorInternal =
         DesignatorForger.newForger().instant( T_1 ).internal() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       channelCloser.close( CHANNEL_A1 ) ;
     }} ;
 
     sessionSupervisor.terminateSession( designatorInternal, SESSION_1 ) ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( "Authenticating again to see if User's session was cleaned ..." ) ;
 
@@ -285,7 +304,11 @@ public class DefaultSessionSupervisorTest {
         sessionIdentifierGenerator,
         signonInwardDuty,
         primarySignonAttemptCallback,
-        sessionSupervisor
+        sessionSupervisor,
+        sessionCreationDesignatorCapture,
+        1,
+        primarySignonAttemptDesignatorCapture,
+        1
     ) ;
 
 
@@ -316,22 +339,44 @@ public class DefaultSessionSupervisorTest {
         )
     ;
 
+    final Multicaptor< DefaultSessionSupervisor.SessionCreationDesignator<
+        MyChannel,
+        MyAddress
+    > > sessionCreationDesignatorCapture = new Multicaptor<>( 2 ) ;
+
+    final Multicaptor< DefaultSessionSupervisor.PrimarySignonAttemptDesignator<
+        MyChannel,
+        MyAddress
+    > > primarySignonAttemptDesignatorCapture = new Multicaptor<>( 2 ) ;
+
+
     oneFactorAuthentication(
         clock,
         stampGenerator,
         sessionIdentifierGenerator,
         signonInwardDuty,
         primarySignonAttemptCallback,
-        sessionSupervisor
+        sessionSupervisor,
+        sessionCreationDesignatorCapture,
+        0,
+        primarySignonAttemptDesignatorCapture,
+        0
     ) ;
 
-    new StrictExpectations() {{
+    final Designator designatorInternal = DesignatorForger.newForger().instant( T_3 ).internal() ;
+
+    new Expectations() {{
       clock.getCurrentDateTime() ; result = T_3 ;
+      designatorFactory.internal() ;
+      result = designatorInternal ;
       signonInwardDuty.signoutQuiet( ( Designator ) any, ( SessionIdentifier ) any ) ;
       // Don't ask for the channel to close because Netty is already closing it.
+//      minTimes = 1 ;
     }} ;
 
     sessionSupervisor.closed( CHANNEL_A1, SESSION_1, true ) ;
+
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( "Authenticating again to see if User's session was cleaned ..." ) ;
 
@@ -341,7 +386,11 @@ public class DefaultSessionSupervisorTest {
         sessionIdentifierGenerator,
         signonInwardDuty,
         primarySignonAttemptCallback,
-        sessionSupervisor
+        sessionSupervisor,
+        sessionCreationDesignatorCapture,
+        1,
+        primarySignonAttemptDesignatorCapture,
+        1
     ) ;
 
   }
@@ -382,12 +431,12 @@ public class DefaultSessionSupervisorTest {
         sessionSupervisor
     ) ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       channelCloser.close( CHANNEL_A1 ) ;
     }} ;
 
     sessionSupervisor.kickoutAll() ;
-
+    new FullVerifications() {{ }} ;
   }
 
 
@@ -431,25 +480,30 @@ public class DefaultSessionSupervisorTest {
         sessionSupervisor
     ) ;
 
-    new StrictExpectations() {{
+    final Designator designatorInternal = DesignatorForger.newForger()
+        .session( SESSION_1 )
+        .cause( Stamp.raw( T_2.getMillis(), 0 ) )
+        .instant( T_3 )
+        .internal()
+    ;
+    new Expectations() {{
       clock.getCurrentDateTime() ; result = T_3 ;
       designatorFactory.internal() ;
-      result = new Designator(
-          Designator.Kind.INTERNAL, newStamp( 3 ), newStamp( 2 ), null, SESSION_1 ){} ;
+      result = designatorInternal ;
       signonInwardDuty.signoutQuiet( ( Designator ) any, ( SessionIdentifier ) any ) ;
       clock.getCurrentDateTime() ; result = T_3 ;
     }} ;
     sessionSupervisor.closed( CHANNEL_A1, SESSION_1, false ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " notified of " + CHANNEL_A1 + " closed " +
         ", while keeping " + SESSION_1 + "." ) ;
 
-    final Monolist< DefaultSessionSupervisor.SessionCreationDesignator >
-        sessionRegistrationDesignatorCaptor = new Monolist<>() ;
+    final Multicaptor< DefaultSessionSupervisor.SessionCreationDesignator >
+        sessionRegistrationDesignatorCaptor = new Multicaptor<>( 1 ) ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       stampGenerator.generate() ; result = newStamp( 4 ) ;
       signonInwardDuty.registerSession(
           withCapture( sessionRegistrationDesignatorCaptor ), SESSION_1, USER_X.login() ) ;
@@ -459,11 +513,11 @@ public class DefaultSessionSupervisorTest {
     sessionSupervisor.tryReuse( SESSION_1, CHANNEL_B1, reuseCallback ) ;
 
     final DefaultSessionSupervisor.SessionCreationDesignator sessionCreationDesignator =
-        sessionRegistrationDesignatorCaptor.get() ;
+        sessionRegistrationDesignatorCaptor.get( 0 ) ;
 
     sessionCreationDesignator.signonAttemptCallback.sessionAttributed( SESSION_1 ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " notified as " +
         SessionSupervisor.ReuseCallback.class.getSimpleName() +
@@ -516,7 +570,7 @@ public class DefaultSessionSupervisorTest {
         internalDesignatorCapture = new Monolist<>() ;
     final Designator internal = DesignatorForger.newForger().instant( T_2 ).internal() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       designatorFactory.internalZero( designator ) ; result = internal ;
       signonInwardDuty.failedSignonAttempt(
           withCapture( internalDesignatorCapture ),
@@ -535,7 +589,7 @@ public class DefaultSessionSupervisorTest {
         )
     ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
     assertThat( internalDesignatorCapture.get() ).isSameAs( internal ) ;
 
     LOGGER.info( sessionSupervisor + " notified as " +
@@ -584,7 +638,7 @@ public class DefaultSessionSupervisorTest {
     ) ;
 
 
-    new StrictExpectations() {{
+    new Expectations() {{
       primarySignonAttemptCallback.signonResult(
           new SignonFailureNotice( SignonFailure.INVALID_CREDENTIAL ) ) ;
     }} ;
@@ -594,7 +648,7 @@ public class DefaultSessionSupervisorTest {
         new SignonDecision<>( new SignonFailureNotice( SignonFailure.INVALID_CREDENTIAL ) )
     ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " notified as " +
         SignonInwardDuty.class.getSimpleName() +
@@ -763,7 +817,7 @@ public class DefaultSessionSupervisorTest {
     final SignonFailureNotice signonFailureNotice =
         new SignonFailureNotice( SignonFailure.UNEXPECTED ) ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       secondarySignonAttemptCallback.signonResult(
           signonFailureNotice
       ) ;
@@ -772,7 +826,7 @@ public class DefaultSessionSupervisorTest {
     sessionSupervisor.secondarySignonAttempted(
         secondarySignonAttemptDesignator, signonFailureNotice ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " notified as " + SignonOutwardDuty. class.getSimpleName() +
         " that Secondary Signon is possible." ) ;
@@ -854,7 +908,7 @@ public class DefaultSessionSupervisorTest {
     final Designator designatorInternal =
         DesignatorForger.newForger().instant( T_2 ).internal() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       designatorFactory.internal() ; result = designatorInternal ;
       signonInwardDuty.failedSignonAttempt(
           designatorInternal,
@@ -868,7 +922,7 @@ public class DefaultSessionSupervisorTest {
     verificationCallback.secondaryAuthenticationResult(
         new AuthenticationFailureNotice( AuthenticationFailure.INCORRECT_CODE, "" )
     ) ;
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " notified as " +
         SecondaryAuthenticator.VerificationCallback.class.getSimpleName() +
@@ -949,14 +1003,14 @@ public class DefaultSessionSupervisorTest {
     ;
 
 
-    new StrictExpectations() {{
+    new Expectations() {{
       secondarySignonAttemptCallback.signonResult( new SignonFailureNotice(
           SignonFailure.INVALID_SECONDARY_TOKEN, "Unknown Secondary Token" ) ) ;
     }} ;
 
     verificationCallback.secondaryAuthenticationResult(
         new AuthenticationFailureNotice( AuthenticationFailure.UNKNOWN_SECONDARY_TOKEN ) ) ;
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " notified as " +
         SecondaryAuthenticator.VerificationCallback.class.getSimpleName() +
@@ -1038,7 +1092,7 @@ public class DefaultSessionSupervisorTest {
     ;
 
 
-    new StrictExpectations() {{
+    new Expectations() {{
       secondarySignonAttemptCallback.signonResult( new SignonFailureNotice(
           SignonFailure.SECONDARY_AUTHENTICATION_GENERIC_FAILURE,
           AuthenticationFailure.INTERNAL_ERROR.description()
@@ -1047,7 +1101,7 @@ public class DefaultSessionSupervisorTest {
 
     verificationCallback.secondaryAuthenticationResult(
         new AuthenticationFailureNotice( AuthenticationFailure.INTERNAL_ERROR ) ) ;
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " notified as " +
         SecondaryAuthenticator.VerificationCallback.class.getSimpleName() +
@@ -1083,7 +1137,7 @@ public class DefaultSessionSupervisorTest {
         )
     ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       secondarySignonAttemptCallback.signonResult(
           new SignonFailureNotice( SignonFailure.INVALID_SECONDARY_TOKEN ) ) ;
     }} ;
@@ -1096,7 +1150,7 @@ public class DefaultSessionSupervisorTest {
         secondarySignonAttemptCallback
     ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " requested as " + SignonInwardDuty.class.getSimpleName() +
         " to perform a Secondary Signon attempt (but there was no matching Primary)." ) ;
@@ -1144,7 +1198,7 @@ public class DefaultSessionSupervisorTest {
         )
     ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       secondarySignonAttemptCallback.signonResult(
           new SignonFailureNotice(
               SignonFailure.INVALID_SECONDARY_TOKEN,
@@ -1158,7 +1212,7 @@ public class DefaultSessionSupervisorTest {
         null
     ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " notified " + SignonInwardDuty.class.getSimpleName() +
         " that a Secondary Signon was attempt (but there was no matching Primary)." ) ;
@@ -1223,7 +1277,7 @@ public class DefaultSessionSupervisorTest {
 
     forceScavenge( sessionSupervisor, clock, T_5 ) ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       secondarySignonAttemptCallback.signonResult(
           withArgThat( hasKind( SignonFailure.INVALID_SECONDARY_TOKEN ) ) ) ;
     }} ;
@@ -1236,7 +1290,7 @@ public class DefaultSessionSupervisorTest {
         secondarySignonAttemptCallback
     ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " notified " + secondarySignonAttemptCallback +
         " that Signon did fail." ) ;
@@ -1257,6 +1311,39 @@ public class DefaultSessionSupervisorTest {
       final SessionSupervisor.PrimarySignonAttemptCallback primarySignonAttemptCallback,
       final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor
   ) {
+    oneFactorAuthentication(
+        clock,
+        stampGenerator,
+        sessionIdentifierGenerator,
+        signonInwardDuty,
+        primarySignonAttemptCallback,
+        sessionSupervisor,
+        new Multicaptor<>( 1 ),
+        0,
+        new Multicaptor<>( 1 ),
+        0
+    ) ;
+  }
+
+  private static void oneFactorAuthentication(
+      final Clock clock,
+      final Stamp.Generator stampGenerator,
+      final SessionIdentifierGenerator sessionIdentifierGenerator,
+      final SignonInwardDuty signonInwardDuty,
+      final SessionSupervisor.PrimarySignonAttemptCallback primarySignonAttemptCallback,
+      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final Multicaptor< DefaultSessionSupervisor.SessionCreationDesignator<
+          MyChannel,
+          MyAddress
+      > > sessionCreationDesignatorCapture,
+      final int sessionCreationDesignatorCaptureIndex,
+      final Multicaptor< DefaultSessionSupervisor.PrimarySignonAttemptDesignator<
+          MyChannel,
+          MyAddress
+      > > primarySignonAttemptDesignatorCapture,
+      final int primarySignonAttemptDesignatorCaptureIndex
+
+  ) {
     final DefaultSessionSupervisor.PrimarySignonAttemptDesignator<
         MyChannel,
         MyAddress
@@ -1265,7 +1352,9 @@ public class DefaultSessionSupervisorTest {
         signonInwardDuty,
         primarySignonAttemptCallback,
         sessionSupervisor,
-        USER_X
+        USER_X,
+        primarySignonAttemptDesignatorCapture,
+        primarySignonAttemptDesignatorCaptureIndex
     ) ;
 
 
@@ -1276,7 +1365,9 @@ public class DefaultSessionSupervisorTest {
             stampGenerator,
             sessionIdentifierGenerator,
             signonInwardDuty,
-            designator
+            designator,
+            sessionCreationDesignatorCapture,
+            sessionCreationDesignatorCaptureIndex
         )
     ;
 
@@ -1297,16 +1388,39 @@ public class DefaultSessionSupervisorTest {
       final DefaultSessionSupervisor.PrimarySignonAttemptDesignator< MyChannel, MyAddress >
           designator
   ) {
-    final Monolist< DefaultSessionSupervisor.SessionCreationDesignator >
-        sessionCreationDesignatorCapture = new Monolist<>() ;
+    return primarySignonAttempted(
+        sessionSupervisor,
+        clock,
+        stampGenerator,
+        sessionIdentifierGenerator,
+        signonInwardDuty,
+        designator,
+        new Multicaptor<>( 1 ),
+        0
+    ) ;
+  }
 
-    new StrictExpectations() {{
+  private static DefaultSessionSupervisor.SessionCreationDesignator primarySignonAttempted(
+      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final Clock clock,
+      final Stamp.Generator stampGenerator,
+      final SessionIdentifierGenerator sessionIdentifierGenerator,
+      final SignonInwardDuty signonInwardDuty,
+      final DefaultSessionSupervisor.PrimarySignonAttemptDesignator< MyChannel, MyAddress >
+          designator,
+      final Multicaptor< DefaultSessionSupervisor.SessionCreationDesignator<
+          MyChannel,
+          MyAddress
+      > > primarySignonAttemptDesignatorCapture,
+      final int primarySignonAttemptDesignatorCaptureIndex
+  ) {
+    new Expectations() {{
       clock.getCurrentDateTime() ; result = T_2 ;  // Scavenging needs this.
       sessionIdentifierGenerator.generate() ; result = SESSION_1;
       clock.getCurrentDateTime() ; result = T_2 ;
       stampGenerator.generate() ; result = newStamp( 2 ) ;
       signonInwardDuty.registerSession(
-          withCapture( sessionCreationDesignatorCapture ),
+          withCapture( primarySignonAttemptDesignatorCapture ),
           SESSION_1,
           USER_X.login()
       ) ;
@@ -1314,10 +1428,10 @@ public class DefaultSessionSupervisorTest {
 
     sessionSupervisor.primarySignonAttempted( designator, new SignonDecision<>( USER_X ) ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     final DefaultSessionSupervisor.SessionCreationDesignator sessionCreationDesignator =
-        sessionCreationDesignatorCapture.get() ;
+        primarySignonAttemptDesignatorCapture.get( primarySignonAttemptDesignatorCaptureIndex ) ;
 
     LOGGER.info( sessionSupervisor + " notified as " +
         SecondaryAuthenticator.VerificationCallback.class.getSimpleName() +
@@ -1337,12 +1451,33 @@ public class DefaultSessionSupervisorTest {
       final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
       final MyUser user
   ) {
-    final Monolist< DefaultSessionSupervisor.PrimarySignonAttemptDesignator<
-        MyChannel,
-        MyAddress
-    > > designatorCapture = new Monolist<>() ;
+    return requestPrimaryAuthentication(
+        stampGenerator,
+        signonInwardDuty,
+        primarySignonAttemptCallback,
+        sessionSupervisor,
+        user,
+        new Multicaptor<>( 1 ),
+        0
+    ) ;
+  }
 
-    new StrictExpectations() {{
+  private static DefaultSessionSupervisor.PrimarySignonAttemptDesignator<
+      MyChannel,
+      MyAddress
+  > requestPrimaryAuthentication(
+      final Stamp.Generator stampGenerator,
+      final SignonInwardDuty signonInwardDuty,
+      final SessionSupervisor.PrimarySignonAttemptCallback primarySignonAttemptCallback,
+      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final MyUser user,
+      final Multicaptor< DefaultSessionSupervisor.PrimarySignonAttemptDesignator<
+          MyChannel,
+          MyAddress
+      > > designatorCapture,
+      final int designatorCaptureIndex
+  ) {
+    new Expectations() {{
       stampGenerator.generate() ; result = newStamp( 0 ) ;
       signonInwardDuty.primarySignonAttempt(
           withCapture( designatorCapture ),
@@ -1355,10 +1490,10 @@ public class DefaultSessionSupervisorTest {
         CHANNEL_A1, ADDRESS_1, primarySignonAttemptCallback ) ;
 
     final DefaultSessionSupervisor.PrimarySignonAttemptDesignator< MyChannel, MyAddress >
-        primarySignonAttemptDesignator = designatorCapture.get() ;
+        primarySignonAttemptDesignator = designatorCapture.get( designatorCaptureIndex ) ;
     assertThat( primarySignonAttemptDesignator.stamp ).isNotNull() ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " requested to perform Primary Signon, it forwarded to " +
         signonInwardDuty + " passing " + primarySignonAttemptCallback + "." ) ;
@@ -1383,7 +1518,7 @@ public class DefaultSessionSupervisorTest {
   ) {
     final Monolist< SecondaryAuthenticator.SecondaryTokenCallback >
         secondaryTokenCallbackCapture = new Monolist<>() ;
-    new StrictExpectations() {{
+    new Expectations() {{
       secondaryAuthenticator.requestAuthentication(
           USER_X.phoneNumber(), withCapture( secondaryTokenCallbackCapture ) ) ;
     }} ;
@@ -1391,7 +1526,7 @@ public class DefaultSessionSupervisorTest {
 
     sessionSupervisor.primarySignonAttempted( designator, new SignonDecision<>( USER_X ) ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     final SecondaryAuthenticator.SecondaryTokenCallback secondaryTokenCallback =
         secondaryTokenCallbackCapture.get() ;
@@ -1414,12 +1549,12 @@ public class DefaultSessionSupervisorTest {
       final Clock clock,
       final DateTime now
   ) {
-    new StrictExpectations() {{
+    new Expectations() {{
       clock.getCurrentDateTime() ;
       result = now ;
     }} ;
     sessionSupervisor.scavenge() ;
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
   }
 
   private static void receiveSecondaryToken(
@@ -1428,13 +1563,13 @@ public class DefaultSessionSupervisorTest {
       final SessionSupervisor.PrimarySignonAttemptCallback primarySignonAttemptCallback,
       final SecondaryAuthenticator.SecondaryTokenCallback secondaryTokenCallback
   ) {
-    new StrictExpectations() {{
+    new Expectations() {{
       clock.getCurrentDateTime() ; result = T_1 ;
       primarySignonAttemptCallback.needSecondarySignon( USER_X, SECONDARY_TOKEN_1 ) ;
     }} ;
 
     secondaryTokenCallback.secondaryToken( SECONDARY_TOKEN_1 ) ;
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " got notified by " +
         SecondaryAuthenticator.class.getSimpleName() +
@@ -1453,7 +1588,7 @@ public class DefaultSessionSupervisorTest {
     final Monolist< SecondaryAuthenticator.VerificationCallback >
         verificationCallbackCapture = new Monolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       secondaryAuthenticator.verifySecondaryCode(
           SECONDARY_TOKEN_1,
           SECONDARY_CODE_1,
@@ -1463,7 +1598,7 @@ public class DefaultSessionSupervisorTest {
 
     sessionSupervisor.secondarySignonAttempted( secondarySignonAttemptDesignator, null ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     final SecondaryAuthenticator.VerificationCallback verificationCallback =
         verificationCallbackCapture.get() ;
@@ -1481,7 +1616,7 @@ public class DefaultSessionSupervisorTest {
   ) {
     final Monolist< DefaultSessionSupervisor.SecondarySignonAttemptDesignator >
         secondarySignonAttemptDesignatorCapture = new Monolist<>() ;
-    new StrictExpectations() {{
+    new Expectations() {{
       stampGenerator.generate() ; result = newStamp( 1 ) ;
       signonInwardDuty.secondarySignonAttempt(
           withCapture( secondarySignonAttemptDesignatorCapture ), USER_X.login() ) ;
@@ -1495,7 +1630,7 @@ public class DefaultSessionSupervisorTest {
         secondarySignonAttemptCallback
     ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     final DefaultSessionSupervisor.SecondarySignonAttemptDesignator
         secondarySignonAttemptDesignator = secondarySignonAttemptDesignatorCapture.get() ;
@@ -1520,7 +1655,7 @@ public class DefaultSessionSupervisorTest {
     final Monolist< DefaultSessionSupervisor.SessionCreationDesignator >
         sessionCreationDesignatorCapture = new Monolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       clock.getCurrentDateTime() ; result = now ;
       sessionIdentifierGenerator.generate() ; result = SESSION_1;
       clock.getCurrentDateTime() ; result = now ;
@@ -1533,7 +1668,7 @@ public class DefaultSessionSupervisorTest {
     }} ;
 
     verificationCallback.secondaryAuthenticationResult( null ) ;
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     final DefaultSessionSupervisor.SessionCreationDesignator sessionCreationDesignator =
         sessionCreationDesignatorCapture.get() ;
@@ -1552,7 +1687,7 @@ public class DefaultSessionSupervisorTest {
       final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
       final DefaultSessionSupervisor.SessionCreationDesignator sessionCreationDesignator
   ) {
-    new StrictExpectations() {{
+    new Expectations() {{
       clock.getCurrentDateTime() ; result = T_3 ;
       signonAttemptCallback.sessionAttributed( SESSION_1 ) ;
     }} ;
@@ -1563,7 +1698,7 @@ public class DefaultSessionSupervisorTest {
         USER_X.login()
     ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( sessionSupervisor + " notified as " + SignonOutwardDuty.class.getSimpleName() +
         " of successful Session creation." ) ;

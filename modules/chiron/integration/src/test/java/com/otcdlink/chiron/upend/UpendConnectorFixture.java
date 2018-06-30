@@ -163,7 +163,7 @@ public final class UpendConnectorFixture {
          * There is no authentication therefore no {@link SessionIdentifier} but
          * {@link Designator.Factory} needs one. So we tweak the {@link ChannelPipeline}
          * to force a {@link SessionIdentifier}, and force {@link Channel} association
-         * with a {@link SessionIdentifier.
+         * with a {@link SessionIdentifier}
          */
         upendConnector = new UpendConnector<>(
             upendSetup,

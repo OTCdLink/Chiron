@@ -38,8 +38,7 @@ public class RecoveringJournalFileReader< DESIGNATOR, DUTY >
         journalFile,
         designatorDecoder,
         commandBodyDecoder,
-        expectedSchemaVersion,
-        recycleSlice
+        expectedSchemaVersion
     ) ;
     this.recoveryFile = checkNotNull( recoveryFile ) ;
     this.recoveredFile = checkNotNull( recoveredFile ) ;

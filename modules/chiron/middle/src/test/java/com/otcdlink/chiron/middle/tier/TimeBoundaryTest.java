@@ -12,7 +12,7 @@ public class TimeBoundaryTest {
 
   @Test
   public void variance() throws Exception {
-    final TimeBoundary.ForAll timeBoundary = TimeBoundary.Builder.createNew()
+    final TimeBoundary.ForAll timeBoundary = TimeBoundary.newBuilder()
         .pingInterval( 1 )
         .pongTimeoutOnDownend( 1 )
         .reconnectDelay( 1, 3 )

@@ -195,6 +195,10 @@ public abstract class Conductor< INBOUND, OUTBOUND, GUIDED_OUT > {
       return guidedOutQueue.isEmpty() ;
     }
 
+    public final ImmutableList< GUIDED_OUT > outboundQueueSnapshot() {
+      return ImmutableList.copyOf( guidedOutQueue ) ;
+    }
+
     public final RecordingGuide record(
         final GUIDED_OUT guidedOut
     ) {

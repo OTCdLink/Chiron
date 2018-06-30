@@ -19,6 +19,7 @@ import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Executes tasks in some given {@code Executor}, but guarantees that all those launched with
@@ -160,7 +161,9 @@ public final class ExecutorPartitioner< KEY > {
           try {
             command.run() ;
             while( counter.decrementAndGet() > 0 ) {
-              final Runnable nextRunnable = queue.remove() ;
+              final Runnable nextRunnable;
+              checkState( queue != null, "How is it possible?" ) ;
+              nextRunnable = queue.remove() ;
               nextRunnable.run() ;
             }
           } catch( final Throwable throwable ) {

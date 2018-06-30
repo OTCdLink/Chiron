@@ -12,12 +12,13 @@ import com.otcdlink.chiron.middle.session.SessionLifecycle;
 import com.otcdlink.chiron.middle.session.SignonFailure;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
 import com.otcdlink.chiron.middle.tier.TimeBoundary;
+import com.otcdlink.chiron.mockster.Mockster;
 import com.otcdlink.chiron.toolbox.CollectingException;
 import com.otcdlink.chiron.toolbox.Credential;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import mockit.FullVerificationsInOrder;
+import mockit.Expectations;
+import mockit.FullVerifications;
 import mockit.Mocked;
-import mockit.StrictExpectations;
 import org.junit.After;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.otcdlink.chiron.mockster.Mockster.nextInvocationIsNonBlockingOperative;
+import static com.otcdlink.chiron.mockster.Mockster.withCapture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 
@@ -64,7 +67,7 @@ public class AbstractDownendTest<
     final BlockingMonolist< Consumer< SecondaryCode > > secondaryCodeCapture =
         new BlockingMonolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       signonMaterializer.readCredential( withCapture( credentialCapture ) ) ;
       signonMaterializer.setProgressMessage( "Signing in …" ) ;
       signonMaterializer.setProgressMessage( null ) ;
@@ -93,7 +96,52 @@ public class AbstractDownendTest<
     assertThat( inboundPhaseFrames.get( 1 ).text() ).contains( "SECONDARY_SIGNON" ) ;
 
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
+
+    LOGGER.info( "Signon success, we can send stuff now." ) ;
+  }
+  protected void initializeAndSignon2(
+      final DownendFixture<ENDPOINT_SPECIFIC, DOWNEND, SETUP> fixture,
+      final TimeBoundary.ForAll tuning,
+      final Mockster mockster,
+      final SignonMaterializer signonMaterializer
+  ) throws Exception {
+    fixture.initialize( signonMaterializer, tuning ) ;
+
+    fixture.phaseGuide()
+        .record( SessionLifecycle.SecondarySignonNeeded.create( DownendFixture.SECONDARY_TOKEN ) )
+        .record( SessionLifecycle.SessionValid.create( DownendFixture.SESSION_IDENTIFIER ) )
+    ;
+
+    final CompletableFuture< ? > startDone = fixture.downend().start() ;
+    mockster.verify( () -> {
+      final Consumer< Credential > credentialConsumer ;
+      signonMaterializer.readCredential( credentialConsumer = withCapture() ) ;
+      nextInvocationIsNonBlockingOperative() ;
+      credentialConsumer.accept( DownendFixture.CREDENTIAL_OK ) ;
+      signonMaterializer.setProgressMessage( "Signing in …" ) ;
+      signonMaterializer.setProgressMessage( null ) ;
+      signonMaterializer.setProblemMessage(
+          new SignonFailureNotice( SignonFailure.MISSING_SECONDARY_CODE ) ) ;
+      final Consumer< SecondaryCode > secondaryCodeConsumer ;
+      signonMaterializer.readSecondaryCode( secondaryCodeConsumer = withCapture() ) ;
+      nextInvocationIsNonBlockingOperative( ) ;
+      secondaryCodeConsumer.accept( DownendFixture.SECONDARY_CODE_OK ) ;
+      signonMaterializer.setProgressMessage( "Signing in …" ) ;
+      signonMaterializer.done() ;
+
+      fixture.waitForDownendConnectorState( DownendConnector.State.SIGNED_IN ) ;
+      fixture.checkPhaseGuideOutboundQueueEmptyIfAny() ;
+      startDone.join() ;
+    }, false ) ;
+
+    LOGGER.info( "Started " + fixture.downend() + "." ) ;
+
+    final ImmutableList< TextWebSocketFrame > inboundPhaseFrames =
+        fixture.phaseGuide().drainInbound() ;
+    assertThat( inboundPhaseFrames ).hasSize( 2 ) ;
+    assertThat( inboundPhaseFrames.get( 0 ).text() ).contains( "PRIMARY_SIGNON" ) ;
+    assertThat( inboundPhaseFrames.get( 1 ).text() ).contains( "SECONDARY_SIGNON" ) ;
 
     LOGGER.info( "Signon success, we can send stuff now." ) ;
   }
@@ -160,8 +208,8 @@ public class AbstractDownendTest<
   }
 
 
-      protected static final long TIMEOUT_MS = 5_000 ;
-//  protected static final long TIMEOUT_MS = 1_000_000 ;
+//      protected static final long TIMEOUT_MS = 5_000 ;
+  protected static final long TIMEOUT_MS = 1_000_000 ;
 
   protected static final SignonFailureNotice SIGNON_FAILURE_NOTICE_INVALID_CREDENTIAL =
       new SignonFailureNotice( SignonFailure.INVALID_CREDENTIAL ) ;

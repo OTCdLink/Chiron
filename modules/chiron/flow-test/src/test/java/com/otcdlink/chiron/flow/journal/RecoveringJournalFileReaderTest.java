@@ -86,7 +86,7 @@ public class RecoveringJournalFileReaderTest
             new FileDesignatorCodecTools.InwardDesignatorDecoder(),
             new EchoCodecFixture.PartialUpendDecoder(),
             0,
-            true
+            false  // TODO: set back to true before committing. Recycling disabled for bug investigation.
         )
     ;
     return reader ;

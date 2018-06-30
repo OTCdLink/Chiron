@@ -19,14 +19,14 @@ public class CollectingExceptionTest {
 
   @Test
   public void throwMyExceptions() {
-    final CollectingException.Collector<MyCollectingException> collector
-        = new CollectingException.Collector<>( MyCollectingException::new ) ;
+    final CollectingException.Collector collector
+        = new CollectingException.Collector( MyCollectingException::new ) ;
     collector.collect( new IOException( "io" ) ) ;
     collector.collect( new RuntimeException( "runtime" ) ) ;
     try {
       collector.throwIfAny( "io+runtime" ) ;
       fail( "Should have thrown " + MyCollectingException.class.getSimpleName() ) ;
-    } catch( final MyCollectingException exceptions ) {
+    } catch( final CollectingException exceptions ) {
       assertThat( exceptions.exceptions ).hasSize( 2 ) ;
       assertThat( exceptions.getMessage() ).isEqualTo(
             "io+runtime (2 exceptions)\n"

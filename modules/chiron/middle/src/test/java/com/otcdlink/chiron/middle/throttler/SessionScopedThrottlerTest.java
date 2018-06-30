@@ -10,9 +10,9 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.otcdlink.chiron.middle.throttler.SessionScopedThrottler.Throttling.NOT_APPLICABLE;
-import static com.otcdlink.chiron.middle.throttler.SessionScopedThrottler.Throttling.PASSED;
-import static com.otcdlink.chiron.middle.throttler.SessionScopedThrottler.Throttling.THROTTLED;
+import static com.otcdlink.chiron.middle.throttler.Throttler.Effect.NOT_APPLICABLE;
+import static com.otcdlink.chiron.middle.throttler.Throttler.Effect.PASSED;
+import static com.otcdlink.chiron.middle.throttler.Throttler.Effect.THROTTLED;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class SessionScopedThrottlerTest {
@@ -90,7 +90,7 @@ public class SessionScopedThrottlerTest {
   private void assertOn(
       final DateTime timestamp,
       final Number command,
-      final SessionScopedThrottler.Throttling expected,
+      final Throttler.Effect expected,
       final ImmutableList<ThrottlerFixture.NumberRestriction> expectedAddedRestrictions,
       final ImmutableList<ThrottlerFixture.NumberRestriction> expectedRemovedRestrictions
   ) {

@@ -9,8 +9,9 @@ import com.otcdlink.chiron.toolbox.clock.Clock;
 import com.otcdlink.chiron.toolbox.netty.NettyTools;
 import com.otcdlink.chiron.toolbox.netty.RichHttpRequest;
 import io.netty.channel.Channel;
+import mockit.Expectations;
+import mockit.FullVerifications;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.assertj.core.api.AutoCloseableSoftAssertions;
 import org.junit.Test;
 
@@ -49,11 +50,12 @@ public class DesignatorTest {
     assertThat( derived1 ).isInstanceOf( RenderingAwareDesignator.class ) ;
     final RenderingAwareDesignator renderingAwareDesignator1 = ( RenderingAwareDesignator ) derived1 ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       renderer.apply( ( RichHttpRequest ) any, "in" ) ; result = "out" ; times = 2 ;
     }} ;
     assertThat( renderingAwareDesignator1.renderFrom( fullHttpRequest(), "in" ) ).isEqualTo( "out" ) ;
     assertThat( renderingAwareDesignator1.renderFrom( fullHttpRequest(), "in" ) ).isEqualTo( "out" ) ;
+    new FullVerifications() {{ }} ;
   }
 
   @Test

@@ -6,6 +6,8 @@ import com.otcdlink.chiron.middle.session.SessionIdentifier;
 import com.otcdlink.chiron.toolbox.clock.Clock;
 import org.joda.time.DateTime;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /**
  * Only for tests: creates arbitrary {@link Designator}s.
  */
@@ -39,6 +41,8 @@ public final class DesignatorForger {
      */
     CounterStep flooredInstant( final int plusMilliseconds ) ;
 
+    CreationStep stamp( final Stamp stamp ) ;
+
     CreationStep nextStamp( final Stamp stamp ) ;
   }
 
@@ -50,6 +54,7 @@ public final class DesignatorForger {
     Designator downward() ;
     Designator upward() ;
     Designator internal() ;
+    Designator unchecked() ;
   }
 
 
@@ -60,6 +65,25 @@ public final class DesignatorForger {
     private final Stamp cause ;
     private final DateTime instant ;
     private final long counter ;
+
+    /**
+     * Shorcuts setting of {@link #instant} and {@link #counter}.
+     */
+    private final Stamp stamp ;
+
+    public Progress(
+        final SessionIdentifier sessionIdentifier,
+        final Command.Tag commandTag,
+        final Stamp cause,
+        final Stamp stamp
+    ) {
+      this.sessionIdentifier = sessionIdentifier ;
+      this.commandTag = commandTag ;
+      this.cause = cause ;
+      this.stamp = checkNotNull( stamp ) ;
+      this.instant = null ;
+      counter = -1 ;
+    }
 
     public Progress(
         final SessionIdentifier sessionIdentifier,
@@ -73,6 +97,7 @@ public final class DesignatorForger {
       this.cause = cause ;
       this.instant = instant ;
       this.counter = counter ;
+      this.stamp = null ;
     }
 
     @Override
@@ -162,6 +187,17 @@ public final class DesignatorForger {
     }
 
     @Override
+    public CreationStep stamp( final Stamp stamp ) {
+      return new Progress(
+          this.sessionIdentifier,
+          this.commandTag,
+          this.cause,
+          stamp
+
+      );
+    }
+
+    @Override
     public CreationStep nextStamp( final Stamp stamp ) {
       final DateTime stampInstant = stamp.timestampUtc() ;
       long counterOfNext = -1 ;
@@ -181,8 +217,18 @@ public final class DesignatorForger {
     }
 
     private Designator.Factory designatorFactory() {
-      return new Designator.Factory(
-          new InstrumentedStampGenerator( instant.getMillis(), counter ) ) ;
+      if( stamp == null ) {
+        return new Designator.Factory(
+            new InstrumentedStampGenerator( instant.getMillis(), counter ) ) ;
+
+      } else {
+        return new Designator.Factory( new Stamp.Generator( () -> 0 ) {
+          @Override
+          public Stamp generate() {
+            return stamp ;
+          }
+        } ) ;
+      }
     }
 
     @Override
@@ -200,6 +246,10 @@ public final class DesignatorForger {
       return designatorFactory().internal( cause, sessionIdentifier, commandTag ) ;
     }
 
+    @Override
+    public Designator unchecked() {
+      return designatorFactory().unchecked( cause, sessionIdentifier, commandTag ) ;
+    }
   }
 
   private static class InstrumentedStampGenerator extends Stamp.Generator {

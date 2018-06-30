@@ -102,7 +102,6 @@ public class JournalReplayFixture {
         designatorDecoder,
         commandBodyDecoder,
         0,
-        false,
         lineBreak
     ) ;
     Flux.fromIterable( fileReader.sliceIterable() )

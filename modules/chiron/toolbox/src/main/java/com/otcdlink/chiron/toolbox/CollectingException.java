@@ -6,6 +6,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -45,8 +47,8 @@ public class CollectingException extends Exception {
     return stringBuilder.toString() ;
   }
 
-  public static Collector< CollectingException > newCollector() {
-    return new Collector<>( CollectingException::new ) ;
+  public static Collector newCollector() {
+    return new Collector( CollectingException::new ) ;
   }
 
 
@@ -61,13 +63,19 @@ public class CollectingException extends Exception {
     }
   }
 
-  public static final class Collector< E extends CollectingException> {
+  public static final class Collector {
 
     private final List< Throwable > collected = Collections.synchronizedList( new ArrayList<>() ) ;
-    private final BiFunction< String, ImmutableList< Throwable >, E > constructor ;
+
+    private final BiFunction<
+        String,
+        ImmutableList< Throwable >,
+        ? extends CollectingException
+    > constructor ;
 
     public Collector(
-        final BiFunction< String, ImmutableList< Throwable >, E > constructor
+        final BiFunction< String, ImmutableList< Throwable >, ? extends CollectingException >
+            constructor
     ) {
       this.constructor = checkNotNull( constructor ) ;
     }
@@ -80,7 +88,7 @@ public class CollectingException extends Exception {
       collected.addAll( throwables ) ;
     }
 
-    public void throwIfAny( final String message ) throws E {
+    public void throwIfAny( final String message ) throws CollectingException {
       if( ! empty() ) {
         // Using the same lock as {@code java.util.Collections.SynchronizedList} internally,
         // so it's correct.
@@ -93,7 +101,7 @@ public class CollectingException extends Exception {
     public< RETURNED > RETURNED returnOrThrow(
         final RETURNED returned,
         final String message
-    ) throws E {
+    ) throws CollectingException {
       if( ! empty() ) {
         throw constructor.apply( message, ImmutableList.copyOf( collected ) ) ;
       }
@@ -113,6 +121,27 @@ public class CollectingException extends Exception {
         }
       }
       return this ;
+    }
+
+    public Collector bringToCompletionAndCollectFailures(
+        final Iterable< CompletableFuture< ? > > completableFutures
+    ) {
+      for( final CompletableFuture completableFuture : completableFutures ) {
+        bringToCompletionAndCollectFailure( completableFuture ) ;
+      }
+      return this ;
+    }
+
+    public void bringToCompletionAndCollectFailure(
+        final CompletableFuture< ? > completableFuture
+    ) {
+      try {  // Better way to extract a failure?
+        completableFuture.get() ;
+      } catch( InterruptedException e ) {
+        collect( e ) ;
+      } catch( ExecutionException e ) {
+        collect( e.getCause() ) ;
+      }
     }
 
     public interface Task {

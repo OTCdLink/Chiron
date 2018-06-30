@@ -33,16 +33,14 @@ public class JournalFileReader< DESIGNATOR, DUTY >
   private final CommandBodyDecoder< DESIGNATOR, DUTY > commandBodyDecoder ;
   private final BytebufTools.Coating coating = BytebufTools.threadLocalRecyclableCoating() ;
   private final int expectedSchemaVersion ;
-  private final boolean recycleSlice ;
   private FileSlicer fileSlicer ;
   private final LineBreak lineBreak ;
 
   public JournalFileReader(
       final File journalFile,
-      final Decoder< DESIGNATOR > designatorDecoder,
-      final CommandBodyDecoder< DESIGNATOR, DUTY > commandBodyDecoder,
-      final int expectedSchemaVersion,
-      final boolean recycleSlice
+      final Decoder<DESIGNATOR> designatorDecoder,
+      final CommandBodyDecoder<DESIGNATOR, DUTY> commandBodyDecoder,
+      final int expectedSchemaVersion
 
   ) throws FileNotFoundException {
     this(
@@ -50,7 +48,6 @@ public class JournalFileReader< DESIGNATOR, DUTY >
         designatorDecoder,
         commandBodyDecoder,
         expectedSchemaVersion,
-        recycleSlice,
         LineBreak.DEFAULT
     ) ;
   }
@@ -60,16 +57,14 @@ public class JournalFileReader< DESIGNATOR, DUTY >
       final Decoder< DESIGNATOR > designatorDecoder,
       final CommandBodyDecoder< DESIGNATOR, DUTY > commandBodyDecoder,
       final int expectedSchemaVersion,
-      final boolean recycleSlice,
       final LineBreak lineBreak
-  ) throws FileNotFoundException {
+  ) {
     this.journalFile = checkNotNull( journalFile ) ;
     this.designatorDecoder = checkNotNull( designatorDecoder ) ;
     this.designatorDecoderFileAware =
         designatorDecoder instanceof FileDesignatorCodecTools.FileAwareDecoder ;
     this.commandBodyDecoder = checkNotNull( commandBodyDecoder ) ;
     this.expectedSchemaVersion = expectedSchemaVersion ;
-    this.recycleSlice = recycleSlice ;
     this.lineBreak = checkNotNull( lineBreak ) ;
   }
 
@@ -109,9 +104,6 @@ public class JournalFileReader< DESIGNATOR, DUTY >
         firstLine( slice ) ;
       } else {
         synchronousSink.next( decode( slice ) ) ;
-      }
-      if( recycleSlice ) {
-        slice.recycle() ;
       }
     } catch( final Exception e ) {
       synchronousSink.error( e ) ;

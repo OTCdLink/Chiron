@@ -12,9 +12,10 @@ import com.otcdlink.chiron.integration.echo.EchoUpwardDuty;
 import com.otcdlink.chiron.integration.echo.UpwardEchoCommand;
 import com.otcdlink.chiron.toolbox.clock.UpdateableClock;
 import com.otcdlink.chiron.toolbox.netty.NettyTools;
+import mockit.Expectations;
+import mockit.FullVerifications;
 import mockit.FullVerificationsInOrder;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +45,7 @@ public class CommandTransceiverTest
     TestNameTools.setTestThreadName() ;
      initializeAndSignon( fixture, signonMaterializer ) ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       tracker.afterResponseHandled() ;
     }} ;
 
@@ -55,8 +56,9 @@ public class CommandTransceiverTest
     ConnectorChangeAssert.assertThat( fixture.nextDownendChange() )
         .isInFlightStatusStateChange().is( CommandInFlightStatus.QUIET ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
   }
+
   @Test( timeout = TIMEOUT_MS )
   public void simpleEcho(
       @Injectable final SignonMaterializer signonMaterializer,
@@ -68,7 +70,7 @@ public class CommandTransceiverTest
          AbstractConnectorFixture.PingTimingPresets.QUIET,
          signonMaterializer
      ) ;
-    new StrictExpectations() {{
+    new Expectations() {{
       tracker.afterResponseHandled() ;
     }} ;
 
@@ -79,7 +81,7 @@ public class CommandTransceiverTest
     ConnectorChangeAssert.assertThat( fixture.nextDownendChange() )
         .isInFlightStatusStateChange().is( CommandInFlightStatus.QUIET ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
   }
 
   @Test( timeout = TIMEOUT_MS )
@@ -105,7 +107,7 @@ public class CommandTransceiverTest
     TestNameTools.setTestThreadName() ;
       fixture.initializeNoSignonAndStartAll( AbstractConnectorFixture.PingTimingPresets.QUIET ) ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       tracker1.afterResponseHandled() ;
     }} ;
 
@@ -131,7 +133,7 @@ public class CommandTransceiverTest
     ConnectorChangeAssert.assertThat( fixture.nextDownendChange() )
         .isInFlightStatusStateChange().is( CommandInFlightStatus.IN_FLIGHT ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
   }
 
   /**
@@ -145,7 +147,7 @@ public class CommandTransceiverTest
     fixture.commandToTextWebsocketGuide().recordNoResponse() ;
     fixture.downend().send( upwardEchoCommand( tracker ) ) ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       tracker.onConnectionLost() ;
       tracker.onConnectionRestored() ;
     }} ;
@@ -170,7 +172,7 @@ public class CommandTransceiverTest
     LOGGER.info( "Remaining " + DownendConnector.Change.class.getSimpleName() + "s: " +
         fixture.drainDownendChanges() + "." ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
   }
 
@@ -185,7 +187,7 @@ public class CommandTransceiverTest
     fixture.commandToTextWebsocketGuide().recordNoResponse() ;
     fixture.downend().send( upwardEchoCommand( tracker ) ) ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       tracker.afterTimeout() ;
     }} ;
 
@@ -205,7 +207,7 @@ public class CommandTransceiverTest
         .isInFlightStatusStateChange().is( CommandInFlightStatus.QUIET ) ;
 
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
 //    fixture.downend().stop().sync() ;
 //    fixture.checkNoMoreDownendChange() ;

@@ -9,6 +9,7 @@ import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,7 +63,7 @@ public class PongTier extends SimpleChannelInboundHandler< PingWebSocketFrame > 
   protected void channelRead0(
       final ChannelHandlerContext channelHandlerContext,
       final PingWebSocketFrame pingWebSocketFrame
-  ) throws Exception {
+  ) {
     final Long pingCounter = ChannelTools.extractLongOrNull( LOGGER, pingWebSocketFrame ) ;
     final ByteBuf buffer = channelHandlerContext.alloc().buffer() ;
     buffer.writeLong( pingCounter ) ;
@@ -91,7 +92,8 @@ public class PongTier extends SimpleChannelInboundHandler< PingWebSocketFrame > 
   }
 
   private void rescheduleTimeout( final ChannelHandlerContext channelHandlerContext ) {
-    final ScheduledFuture< ? > scheduledFuture = channelHandlerContext.executor().schedule(
+    final EventExecutor executor = channelHandlerContext.executor() ;
+    final ScheduledFuture< ? > scheduledFuture = executor.schedule(
         () -> closeChannel( channelHandlerContext ),
         timeoutIfNoPingMs,
         TimeUnit.MILLISECONDS

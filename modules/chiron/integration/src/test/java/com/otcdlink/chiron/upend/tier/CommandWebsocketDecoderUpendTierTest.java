@@ -14,8 +14,8 @@ import com.otcdlink.chiron.middle.CommandAssert;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import mockit.Expectations;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -41,7 +41,7 @@ public class CommandWebsocketDecoderUpendTierTest {
     final EmbeddedChannel embeddedChannel = new EmbeddedChannel( channelHandler ) ;
     embeddedChannel.attr( ChannelTools.SESSION_KEY ).set( SESSION_IDENTIFIER ) ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       designatorFactory.upward( TAG, SESSION_IDENTIFIER ) ;
       result = DUMMY_UPWARD_COMMAND.endpointSpecific ;
     }} ;

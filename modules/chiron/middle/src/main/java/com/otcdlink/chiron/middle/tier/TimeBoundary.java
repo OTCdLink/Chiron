@@ -15,6 +15,10 @@ import static com.otcdlink.chiron.middle.tier.TimeBoundary.ForAll.Key.PING_TIMEO
 
 public interface TimeBoundary {
 
+  static Builder.PingIntervalStep newBuilder() {
+    return new Builder.StepCombinator() ;
+  }
+
   /**
    * Timeout used by {@code DownendConnector} for initial connection, at the time
    * {@link ConnectionDescriptor} is not available.
@@ -25,7 +29,7 @@ public interface TimeBoundary {
    * Supports a lag of 500 ms (upstream <i>and</i> downstream).
    */
   @SuppressWarnings( "unused" )
-  ForAll LENIENT_500 = Builder.createNew()
+  ForAll LENIENT_500 = TimeBoundary.newBuilder()
       .pingInterval( 1000 )
       .pongTimeoutOnDownend( 2500 )  // Need this to support a lag of 500 ms induced by HttpProxy.
       .reconnectDelay( DEFAULT_CONNECT_TIMEOUT_MS, 3000 )
@@ -35,7 +39,7 @@ public interface TimeBoundary {
   ;
 
   @SuppressWarnings( "unused" )
-  ForAll NOPE = Builder.createNew()
+  ForAll NOPE = TimeBoundary.newBuilder()
       .pingIntervalNever()
       .pongTimeoutNever()
       .reconnectDelay( 1000, 1000 )
@@ -114,9 +118,6 @@ public interface TimeBoundary {
   }
 
   interface Builder {
-    static PingIntervalStep createNew() {
-      return new StepCombinator() ;
-    }
 
     interface PingIntervalStep {
       PongTimeoutStep pingInterval( int ms ) ;
@@ -359,7 +360,7 @@ public interface TimeBoundary {
     }
 
     public static ForAll parse( Function< Key, Integer > valueResolver ) {
-      return TimeBoundary.Builder.createNew()
+      return TimeBoundary.newBuilder()
           .pingInterval( valueResolver.apply( Key.PING_INTERVAL_MS ) )
           .pongTimeoutOnDownend( valueResolver.apply( Key.PONG_TIMEOUT_MS ) )
           .reconnectDelay(

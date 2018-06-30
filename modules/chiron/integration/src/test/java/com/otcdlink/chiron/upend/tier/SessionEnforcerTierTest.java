@@ -11,9 +11,10 @@ import com.otcdlink.chiron.upend.session.SessionSupervisor;
 import com.otcdlink.chiron.upend.session.SessionSupervisor.PrimarySignonAttemptCallback;
 import io.netty.channel.Channel;
 import io.netty.channel.embedded.EmbeddedChannel;
+import mockit.Expectations;
+import mockit.FullVerifications;
 import mockit.FullVerificationsInOrder;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -53,7 +54,7 @@ public class SessionEnforcerTierTest {
     final BlockingMonolist<SessionSupervisor.ReuseCallback> reuseCallbackCaptor =
         new BlockingMonolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       sessionSupervisor.tryReuse(
           ReactiveSessionFixture.SESSION_1,
           embeddedChannelNew,
@@ -63,8 +64,9 @@ public class SessionEnforcerTierTest {
     }} ;
 
     embeddedChannelNew.writeInbound( ReactiveSessionFixture.USER_X_RESIGNON_GOOD_WITH_MODIFY_CHANNEL_ROLE ) ;
-    reuseCallbackCaptor.getOrWait().reuseOutcome( null ) ;
 
+    reuseCallbackCaptor.getOrWait().reuseOutcome( null ) ;
+    new FullVerifications() {{ }} ;
     Assertions.assertThat( ( ( SessionLifecycle.Phase ) embeddedChannelNew.readOutbound() ) )
         .isEqualTo( SessionLifecycle.SessionValid.create( ReactiveSessionFixture.SESSION_1 ) ) ;
 
@@ -95,7 +97,7 @@ public class SessionEnforcerTierTest {
     final Monolist< SessionSupervisor.SecondarySignonAttemptCallback >
         secondarySignonAttemptCallbackCapture = new Monolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       sessionSupervisor.attemptSecondarySignon(
           embeddedChannel,
           withInstanceOf( SocketAddress.class ),
@@ -106,7 +108,7 @@ public class SessionEnforcerTierTest {
     }} ;
     embeddedChannel.writeInbound( ReactiveSessionFixture.USER_X_SECONDARY_SIGNON_GOOD_WITH_MODIFY_CHANNEL_ROLE ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( HANDLER_CLASSNAME + "successfully read " +
         ReactiveSessionFixture.USER_X_SECONDARY_SIGNON_GOOD_WITH_MODIFY_CHANNEL_ROLE + "." ) ;
@@ -134,13 +136,13 @@ public class SessionEnforcerTierTest {
     final EmbeddedChannel embeddedChannel = createChannel( sessionSupervisor, channelRegistrar ) ;
     successfulPrimarySignon( embeddedChannel, channelRegistrar, sessionSupervisor ) ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       sessionSupervisor.closed( embeddedChannel, ReactiveSessionFixture.SESSION_1, false ) ;
       channelRegistrar.unregisterChannel( embeddedChannel ); ;
     }} ;
     embeddedChannel.close() ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( HANDLER_CLASSNAME + " notified of " + CHANNEL_CLASSNAME + " closing." ) ;
   }
@@ -158,7 +160,7 @@ public class SessionEnforcerTierTest {
     final Monolist< PrimarySignonAttemptCallback >
         primarySignonAttemptCallbackCapture = new Monolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       sessionSupervisor.attemptPrimarySignon(
           ReactiveSessionFixture.USER_X_PRIMARY_SIGNON_GOOD_WITH_MODIFY_CHANNEL_ROLE.login(),
           ReactiveSessionFixture.USER_X_PRIMARY_SIGNON_GOOD_WITH_MODIFY_CHANNEL_ROLE.password(),
@@ -169,7 +171,7 @@ public class SessionEnforcerTierTest {
     }} ;
     embeddedChannel.writeInbound( ReactiveSessionFixture.USER_X_PRIMARY_SIGNON_GOOD_WITH_MODIFY_CHANNEL_ROLE ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( HANDLER_CLASSNAME + "successfully read " +
         ReactiveSessionFixture.USER_X_PRIMARY_SIGNON_GOOD_WITH_MODIFY_CHANNEL_ROLE + "." ) ;
@@ -185,7 +187,7 @@ public class SessionEnforcerTierTest {
     final PrimarySignonAttemptCallback primarySignonAttemptCallback =
         attemptPrimarySignon( embeddedChannel, sessionSupervisor ) ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       channelRegistrar.registerChannel( ReactiveSessionFixture.SESSION_1, ( Channel ) any ) ;
     }} ;
 
@@ -199,7 +201,7 @@ public class SessionEnforcerTierTest {
     final SessionLifecycle.SessionValid sessionValid = embeddedChannel.readOutbound() ;
     assertThat( sessionValid.sessionIdentifier() ).isEqualTo( ReactiveSessionFixture.SESSION_1 ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( HANDLER_CLASSNAME + " successfully wrote " + sessionValid + ".") ;
 
@@ -210,14 +212,14 @@ public class SessionEnforcerTierTest {
       final OutwardSessionSupervisor< Channel, SocketAddress > sessionSupervisor,
       final UpendConnector.ChannelRegistrar channelRegistrar
   ) {
-    new StrictExpectations() {{
+    new Expectations() {{
       channelRegistrar.unregisterChannel( embeddedChannel ) ; result = ReactiveSessionFixture.SESSION_1;
       sessionSupervisor.closed( embeddedChannel, ReactiveSessionFixture.SESSION_1, true ) ;
     }} ;
     final SessionLifecycle.Signoff signoff = SessionLifecycle.Signoff.create() ;
     embeddedChannel.writeInbound( signoff ) ;
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( HANDLER_CLASSNAME + " successfully read " + signoff + "." ) ;
 

@@ -40,8 +40,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Pipelining processings in multiple threads (with something like
  * {@link Flux#publishOn(Scheduler)}) seems to have a negative performance impact.
  * Use {@link Flux#buffer(int)} to reduce the cost of the inter-thread throughput.
- * Using multiple threads also reduces the negative performance impact of calling
- * {@link Slice#recycle()}.
  * <p>
  * This is the correct approach:
  * <pre>
@@ -49,7 +47,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *     .map( slice -> { ... ; return slice ; }
  *     .buffer( FileSlicer#DEFAULT_FLUX_BUFFER_SIZE )
  *     .publishOn( scheduler )  // Switch to another thread.
- *     .doOnNext( slice -> slice::recycle )
  *     .subscribe()
  *   ;
  * </pre>
@@ -71,16 +68,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * If the end of the {@link FileChunk} is hit before the end of a delimiter, then the next created
  * {@link FileChunk} rewinds to the start position of the {@link Slice} that was left
  * uncompletely read, and reads it again.
+ *
+ * <h1>Resource freeing</h1>
  * <p>
- * As soon as a {@link Slice} is not longer needed, it is recommended to call
- * {@link Slice#recycle()}. Once every {@link Slice} mapping a Slice of a
- * {@link FileChunk} are marked for recycling, the {@link FileChunk} can free the underlying
- * {@code MappendByteBuffer} (instead of waiting for garbage collection to happen).
- * This is supposed to smooth GC activity.
- * <p>
- * <em>Sidenote:</em> in fact, calling {@link Slice#recycle()} causes a general slowdown by
- * about 30 % (measured on files of size ranging from 3 to 11 GB). To reduce this effect, run
- * {@link Slice#recycle()} in an ancillary thread.
+ * Instances of {@code java.nio.MappedByteBuffer} are handled by the GC, as the Javadoc suggests.
+ * There has been attempts to reference-count {@link Slice} instances with a {@code BitSet} in a
+ * thread-safe structure but this got things just slower. This also seemed to cause a random bug
+ * when reading big files on production machine: sometimes a {@link Slice} ended before
+ * the delimiter.
  *
  * <h1>Performance</h1>
  *
@@ -123,7 +118,7 @@ Processed 100000000 lines (11188888890 bytes) in 36216 ms (2761210 slice/s, 308 
  * <pre>
 # more /proc/cpuinfo
  model name	: Intel(R) Xeon(R) CPU E5-1620 0 @ 3.60GHz
- cpu MHz		: 1199.926
+ cpu MHz    : 1199.926
  cache size	: 10240 KB
  ...
    </pre>
@@ -223,10 +218,10 @@ public class FileSlicer implements Iterable< Slice > {
 
   }
 
-  @Override
-  public String toString() {
-    return getClass().getSimpleName() + '{' + file.getAbsolutePath() + '}' ;
-  }
+  // @Override
+  // public String toString() {
+  //   return getClass().getSimpleName() + '{' + file.getAbsolutePath() + '}' ;
+  // }
 
 // =======
 // Pooling
@@ -237,24 +232,17 @@ public class FileSlicer implements Iterable< Slice > {
       final long positionOfFirstByteToReadInFile,
       final long chunkLength
   ) throws IOException {
-    return new FileChunk(
+    final FileChunk fileChunk = new FileChunk(
         fileChannel,
         probableSliceCount,
         sliceMaximumLength,
-        this::recycle,
         positionOfFirstByteToReadInFile,
         chunkLength
     ) ;
+    LOGGER.debug( "Created " + fileChunk + "." ) ;
+    return fileChunk ;
   }
 
-  /**
-   * Sadly pooling doesn't work, there is something that keeps a reference somehow on a
-   * recycled instance and it ends up witn an NPE.
-   */
-  private void recycle( final FileChunk fileChunk ) {
-    // LOGGER.debug( "Recycled " + fileChunk + " in " + this + "." ) ;
-    // fileChunkPool.add( fileChunk ) ;
-  }
 
 // ========
 // Iterable
@@ -262,7 +250,7 @@ public class FileSlicer implements Iterable< Slice > {
 
   @Nonnull
   @Override
-  public Iterator<Slice> iterator() {
+  public Iterator< Slice > iterator() {
 
     if( fileLength == 0 ) {
       return ImmutableList.<Slice>of().iterator() ;
@@ -274,7 +262,7 @@ public class FileSlicer implements Iterable< Slice > {
   /**
    * Contains all the "moving parts" of a {@link FileSlicer}.
    */
-  private class SliceIterator extends AbstractIterator<Slice> {
+  private class SliceIterator extends AbstractIterator< Slice > {
 
     /**
      * The last byte processed by {@link #byteProcessor} or -1 before first processing.
@@ -356,7 +344,6 @@ public class FileSlicer implements Iterable< Slice > {
             lastSliceStartInFile = positionOfFirstByteToReadInFile ;
             fileChunk.forEachByte( lastByteReadInChunk + 1, byteProcessor ) ;
           } else {
-            fileChunk.prepareToRecycle() ;
             fileChunk = null ;  // Force recreation.
             continue ;
           }
@@ -374,12 +361,10 @@ public class FileSlicer implements Iterable< Slice > {
                     sliceIndexInFile ++, sliceStartInChunk, sliceEndInChunk + 1 ) ;
                 return iteratorNextResult ;
               } else {
-                fileChunk.prepareToRecycle() ;
                 fileChunk = null ;
                 return endOfData() ;
               }
             } else {
-              fileChunk.prepareToRecycle() ;
               fileChunk = null ;
               /** Force next {@link FileChunk} to start where incomplete {@link Slice}
                * ended. */

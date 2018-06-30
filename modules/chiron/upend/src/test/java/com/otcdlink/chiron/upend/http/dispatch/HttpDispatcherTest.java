@@ -21,8 +21,9 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponse;
+import mockit.Expectations;
+import mockit.FullVerifications;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -53,13 +54,14 @@ public class HttpDispatcherTest {
         httpRequest( channel, "/not-here" ) ;
 
     final Monolist< FullHttpResponse > commandCaptor = new Monolist<>() ;
-    new StrictExpectations() {{
+    new Expectations() {{
       channelHandlerContext.alloc() ;
       result = new UnpooledByteBufAllocator( false, true ) ;
       channelHandlerContext.writeAndFlush( withCapture( commandCaptor ) ) ;
     }} ;
 
     httpRequestRelayer.relay( richHttpRequest, channelHandlerContext ) ;
+    new FullVerifications() {{ }} ;
 
     final FullHttpResponse actual = commandCaptor.get() ;
     assertThat( actual.content().toString( Charsets.US_ASCII ) ).contains( "/not-here" ) ;
@@ -88,13 +90,14 @@ public class HttpDispatcherTest {
         httpRequest( channel, "/not-here" ) ;
 
     final Monolist< FullHttpResponse > commandCaptor = new Monolist<>() ;
-    new StrictExpectations() {{
+    new Expectations() {{
       channelHandlerContext.alloc() ;
       result = new UnpooledByteBufAllocator( false, true ) ;
       channelHandlerContext.writeAndFlush( withCapture( commandCaptor ) ) ;
     }} ;
 
     httpRequestRelayer.relay( richHttpRequest, channelHandlerContext ) ;
+    new FullVerifications() {{ }} ;
 
     final FullHttpResponse actual = commandCaptor.get();
     assertThat( actual.content().toString( Charsets.US_ASCII ) ).contains( "/not-here" ) ;
@@ -121,13 +124,14 @@ public class HttpDispatcherTest {
         httpRequest( channel, "/not-here" ) ;
 
     final Monolist< FullHttpResponse > commandCaptor = new Monolist<>() ;
-    new StrictExpectations() {{
+    new Expectations() {{
       channelHandlerContext.alloc() ;
       result = new UnpooledByteBufAllocator( false, true ) ;
       channelHandlerContext.writeAndFlush( withCapture( commandCaptor ) ) ;
     }} ;
 
     httpRequestRelayer.relay( richHttpRequest, channelHandlerContext ) ;
+    new FullVerifications() {{ }} ;
 
     final FullHttpResponse actual = commandCaptor.get() ;
     assertThat( actual.content().toString( Charsets.US_ASCII ) ).contains( "/not-here" ) ;
@@ -160,12 +164,13 @@ public class HttpDispatcherTest {
 
 
     final Monolist< HttpResponse > commandCaptor = new Monolist<>() ;
-    new StrictExpectations() {{
+    new Expectations() {{
       staticFileContentProvider.fileContent( "some-file" ) ; result = fileContent ;
       channelHandlerContext.write( withCapture( commandCaptor ) ) ;
       channelHandlerContext.pipeline() ;
       channelHandlerContext.newProgressivePromise() ;
     }} ;
+    new FullVerifications() {{ }} ;
 
     httpRequestRelayer.relay( richHttpRequest, channelHandlerContext ) ;
 
@@ -197,9 +202,10 @@ public class HttpDispatcherTest {
         httpRequest( channel, "/a/b/w/x.x" ) ;
 
     final Monolist< HttpResponse > commandCaptor = new Monolist<>() ;
-    new StrictExpectations() {{
+    new Expectations() {{
       channelHandlerContext.writeAndFlush( withCapture( commandCaptor ) ) ;
     }} ;
+    new FullVerifications() {{ }} ;
 
     httpRequestRelayer.relay( richHttpRequest, channelHandlerContext ) ;
 

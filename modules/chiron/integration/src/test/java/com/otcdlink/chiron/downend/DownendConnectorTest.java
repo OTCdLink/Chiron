@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.otcdlink.chiron.AbstractConnectorFixture;
 import com.otcdlink.chiron.ConnectorChangeAssert;
 import com.otcdlink.chiron.ExtendedChange;
+import com.otcdlink.chiron.Multicaptor;
 import com.otcdlink.chiron.command.Command;
 import com.otcdlink.chiron.command.Command.Tag;
 import com.otcdlink.chiron.fixture.BlockingMonolist;
@@ -18,13 +19,16 @@ import com.otcdlink.chiron.middle.CommandAssert;
 import com.otcdlink.chiron.middle.session.SessionLifecycle;
 import com.otcdlink.chiron.middle.tier.CommandInterceptor;
 import com.otcdlink.chiron.middle.tier.TimeBoundary;
+import com.otcdlink.chiron.mockster.Mockster;
 import com.otcdlink.chiron.toolbox.Credential;
 import com.otcdlink.chiron.toolbox.netty.NettyTools;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import mockit.Delegate;
+import mockit.Expectations;
+import mockit.FullVerifications;
 import mockit.Injectable;
 import mockit.Mocked;
-import mockit.StrictExpectations;
 import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -32,6 +36,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -42,6 +47,8 @@ import java.util.function.Consumer;
 
 import static com.otcdlink.chiron.downend.DownendFixture.CREDENTIAL_BAD;
 import static com.otcdlink.chiron.downend.DownendFixture.CREDENTIAL_OK;
+import static com.otcdlink.chiron.mockster.Mockster.nextInvocationIsNonBlockingOperative;
+import static com.otcdlink.chiron.mockster.Mockster.withCapture;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -281,11 +288,20 @@ public class DownendConnectorTest
   }
 
   @Test( timeout = TIMEOUT_MS )
-  public void sessionReuseFails( @Injectable final SignonMaterializer signonMaterializer )
+  public void sessionReuseFails()
       throws Exception
   {
     TestNameTools.setTestThreadName() ;
-    initializeAndSignon( fixture, AbstractConnectorFixture.PingTimingPresets.QUICK_RECONNECT, signonMaterializer ) ;
+
+    final Mockster mockster = new Mockster() ;
+    final SignonMaterializer signonMaterializer = mockster.mock( SignonMaterializer.class ) ;
+
+    initializeAndSignon2(
+        fixture,
+        AbstractConnectorFixture.PingTimingPresets.QUICK_RECONNECT,
+        mockster,
+        signonMaterializer
+    ) ;
 
     LOGGER.info( "Stopping and restarting " + fixture.babyUpend() + "." ) ;
     fixture.babyUpend().stop().join() ;
@@ -295,22 +311,24 @@ public class DownendConnectorTest
         .record( SessionLifecycle.SessionValid.create( DownendFixture.SESSION_IDENTIFIER ) )
     ;
 
-    final BlockingMonolist< Consumer< Credential > > credentialCapture = new BlockingMonolist<>() ;
-    new StrictExpectations() {{
-      signonMaterializer.readCredential( withCapture( credentialCapture ) ) ;
-      signonMaterializer.setProgressMessage( "Signing in …" ) ;
-      signonMaterializer.done() ;
-    }} ;
-
     fixture.babyUpend().start().join() ;
     fixture.phaseGuide().waitForInboundMatching(
         textFrame -> textFrame.text().contains( "RESIGNON" ) ) ;
     LOGGER.info( "Reconnection happened after restarting " + fixture.babyUpend() + "." ) ;
     LOGGER.info( "Full Signon must happen again (skipping Secondary here for brevity)." ) ;
 
-    credentialCapture.getOrWait().accept( DownendFixture.CREDENTIAL_OK ) ;
-    fixture.waitForDownendConnectorState( DownendConnector.State.SIGNED_IN ) ;
-    fixture.checkPhaseGuideOutboundQueueEmptyIfAny() ;
+    mockster.verify( () -> {
+      final Consumer< Credential > credentialCapture ;
+      signonMaterializer.readCredential( credentialCapture = withCapture() ) ;
+      nextInvocationIsNonBlockingOperative() ;
+      credentialCapture.accept( DownendFixture.CREDENTIAL_OK ) ;
+      signonMaterializer.setProgressMessage( "Signing in …" ) ;
+      signonMaterializer.done() ;
+
+      fixture.waitForDownendConnectorState( DownendConnector.State.SIGNED_IN ) ;
+      fixture.checkPhaseGuideOutboundQueueEmptyIfAny() ;
+    } ) ;
+
 
     final ImmutableList< TextWebSocketFrame > inboundPhaseFrames =
         fixture.phaseGuide().drainInbound() ;
@@ -330,32 +348,30 @@ public class DownendConnectorTest
         SessionLifecycle.SignonFailed.create( SIGNON_FAILURE_NOTICE_INVALID_CREDENTIAL ) )
     ;
 
-    final BlockingMonolist< Consumer<Credential> > credentialCapture1 = new BlockingMonolist<>() ;
-    final BlockingMonolist< Consumer< Credential > > credentialCapture2 = new BlockingMonolist<>() ;
+    final Multicaptor< Consumer< Credential > > credentialCapture = new Multicaptor<>( 2 ) ;
 
-    new StrictExpectations() {{
-      signonMaterializer.readCredential( withCapture( credentialCapture1 ) ) ;
+    new Expectations() {{
+      signonMaterializer.readCredential( withCapture( credentialCapture ) ) ;
       signonMaterializer.setProgressMessage( "Signing in …" ) ;
       signonMaterializer.setProgressMessage( null ) ;
       signonMaterializer.setProblemMessage( SIGNON_FAILURE_NOTICE_INVALID_CREDENTIAL ) ;
-      signonMaterializer.readCredential( withCapture( credentialCapture2 ) ) ;
       signonMaterializer.done() ;
     }} ;
 
     fixture.downend().start() ;
-    LOGGER.info( "Started " + fixture.downend() + ", now trying a bad " +
+    LOGGER.info( "Starting " + fixture.downend() + ", now trying a bad " +
         Credential.class.getSimpleName() + " ..." ) ;
 
-    credentialCapture1.getOrWait().accept( CREDENTIAL_BAD ) ;
+    credentialCapture.get( 0 ).accept( CREDENTIAL_BAD ) ;
     assertThat( fixture.phaseGuide().waitForNextInbound().text() ).contains( "PRIMARY_SIGNON" ) ;
 
     LOGGER.info( "Bad " + Credential.class.getSimpleName() + " sent, " +
         "asking for a new one tells to give up." ) ;
 
-    credentialCapture2.getOrWait().accept( null ) ;
+    credentialCapture.get( 1 ).accept( null ) ;
     fixture.waitForDownendConnectorState( ExtendedChange.ExtendedKind.NO_SIGNON ) ;
     fixture.checkPhaseGuideOutboundQueueEmptyIfAny() ;
-
+    new FullVerifications() {{ }} ;
     LOGGER.info( "Signon failed as supposed to." ) ;
   }
 
@@ -373,7 +389,7 @@ public class DownendConnectorTest
     final BlockingMonolist< Consumer< Credential > > credentialCapture = new BlockingMonolist<>() ;
     final BlockingMonolist< Runnable > afterCancellationCapture = new BlockingMonolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       signonMaterializer.readCredential( withCapture( credentialCapture ) ) ;
       signonMaterializer.setProgressMessage( "Signing in …" ) ;
       signonMaterializer.setProgressMessage( null ) ;
@@ -392,6 +408,7 @@ public class DownendConnectorTest
         "asking for a new one tells to give up." ) ;
 
     afterCancellationCapture.getOrWait().run() ;
+    new FullVerifications() {{ }} ;
 
     fixture.waitForDownendConnectorState( ExtendedChange.ExtendedKind.NO_SIGNON ) ;
     fixture.checkPhaseGuideOutboundQueueEmptyIfAny() ;
@@ -466,6 +483,17 @@ public class DownendConnectorTest
   static {
     NettyTools.forceNettyClassesToLoad() ;
     LOGGER.info( "=== Test ready to run ===" ) ;
+  }
+
+  private static < CAPTURED > Delegate< CAPTURED > delegate(
+      final List< CAPTURED > captureds
+  ) {
+    return new Delegate< CAPTURED >() {
+      @SuppressWarnings( "unused" )
+      void delegate( final CAPTURED consumer ) {
+        captureds.add( consumer ) ;
+      }
+    } ;
   }
 
 

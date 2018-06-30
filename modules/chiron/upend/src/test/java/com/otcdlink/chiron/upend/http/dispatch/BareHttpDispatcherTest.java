@@ -14,10 +14,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import mockit.Expectations;
 import mockit.FullVerifications;
 import mockit.FullVerificationsInOrder;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +55,7 @@ public class BareHttpDispatcherTest {
     final Monolist<RichHttpRequest> richHttpRequestCaptor =
         new Monolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       resolver.resolve(
           withCapture( evaluationContextCaptor ),
           withCapture( richHttpRequestCaptor )
@@ -99,7 +99,7 @@ public class BareHttpDispatcherTest {
     final Monolist<RichHttpRequest> richHttpRequestCaptor =
         new Monolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       outbound.outbound(
           withCapture( evaluationContextCaptor ),
           withCapture( richHttpRequestCaptor )
@@ -157,23 +157,25 @@ public class BareHttpDispatcherTest {
     ;
 
     final Monolist< Command > commandCapture = new Monolist<>() ;
-    new StrictExpectations() {{
+    new Expectations() {{
       channelHandlerContext.fireChannelRead( withCapture( commandCapture ) ) ;
     }} ;
     httpRequestRelayer.relay( richHttpRequest, channelHandlerContext ) ;
 
+    new FullVerifications() {{ }} ;
     final TransientCommandTwo transientCommandTwo = ( TransientCommandTwo ) commandCapture.get() ;
     assertThat( transientCommandTwo.parameter ).isEqualTo( "Stuff" ) ;
 
     final RenderingAwareDesignator renderingAwareDesignator =
         ( RenderingAwareDesignator ) transientCommandTwo.endpointSpecific ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       ( ( BiFunction ) renderer ).apply( any, any ) ;
       result = "Rendered" ;
     }} ;
     final Object rendered = renderingAwareDesignator.renderFrom(
         richHttpRequest, "ValueToRender" ) ;
+    new FullVerifications() {{ }} ;
     assertThat( rendered ).isEqualTo( "Rendered" ) ;
   }
 
@@ -201,7 +203,7 @@ public class BareHttpDispatcherTest {
         .build()
     ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       dutyCaller.call(
           ( EvaluationContext< SecondDuty > ) any,
           richHttpRequest
@@ -234,7 +236,7 @@ public class BareHttpDispatcherTest {
     final Monolist<RichHttpRequest> richHttpRequestCaptor =
         new Monolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       condition.shouldAccept(
           withCapture( evaluationContextCaptor ),
           withCapture( richHttpRequestCaptor )
@@ -255,7 +257,7 @@ public class BareHttpDispatcherTest {
     assertThat( evaluationContextCaptor.get().contextPath().isRoot() ).isTrue() ;
     assertThat( richHttpRequestCaptor.get() ).isSameAs( richHttpRequest ) ;
 
-    new FullVerificationsInOrder() {{
+    new FullVerifications() {{
       channelHandlerContext.fireChannelRead( command ) ;
     }} ;
   }
@@ -455,7 +457,7 @@ public class BareHttpDispatcherTest {
 
     final Monolist< FullHttpResponse > immediateResponseCapture = new Monolist<>() ;
 
-    new StrictExpectations() {{
+    new Expectations() {{
       dutyCaller.call(
           ( EvaluationContext< SecondDuty > ) any,
           richHttpRequest

@@ -1,8 +1,11 @@
 package com.otcdlink.chiron.toolbox.concurrent;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -92,5 +95,29 @@ public final class FutureTools {
     final CompletableFuture< ANY > completableFuture = new CompletableFuture<>() ;
     completableFuture.completeExceptionally( throwable ) ;
     return completableFuture ;
+  }
+
+  public static CompletableFuture[] toArray(
+      final Iterable< CompletableFuture< ? > > completableFutures
+  ) {
+    final List< CompletableFuture > completableFutureList = new ArrayList<>() ;
+    Iterables.addAll( completableFutureList, completableFutures ) ;
+    final CompletableFuture[] array = completableFutureList.toArray( new CompletableFuture[ 0 ] ) ;
+    return array ;
+  }
+
+  public static < T > void propagate(
+      final CompletableFuture< T > propagator,
+      final CompletableFuture< T > propagatedTo
+  ) {
+    propagator.whenComplete(
+        ( result, throwable ) -> {
+          if( throwable == null ) {
+            propagatedTo.complete( null ) ;
+          } else {
+            propagatedTo.completeExceptionally( throwable ) ;
+          }
+        }
+    ) ;
   }
 }

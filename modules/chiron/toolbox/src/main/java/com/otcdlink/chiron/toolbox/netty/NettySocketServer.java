@@ -182,6 +182,7 @@ public class NettySocketServer extends EventLoopGroupOwner implements SocketServ
         state = State.STOPPING ;
 
         LOGGER.info( "Preparing to stop " + this + " ..." ) ;
+        customPreStop() ;
 
         final ChannelGroupFuture channelGroupFuture = channels.flush().close() ;
         channels = null ;
@@ -222,6 +223,12 @@ public class NettySocketServer extends EventLoopGroupOwner implements SocketServ
     return closeAllFuture ;
 
   }
+
+  /**
+   * Called at the beginning of {@link #stop()}, with ownership of {@link #lock} and
+   * when all {@link Channel}s are still available.
+   */
+  protected void customPreStop() { }
 
   @Override
   public void close() throws IOException {

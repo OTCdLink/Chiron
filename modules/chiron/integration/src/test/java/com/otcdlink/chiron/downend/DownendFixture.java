@@ -372,7 +372,7 @@ public abstract class DownendFixture<
    */
   public void checkPhaseGuideOutboundQueueEmptyIfAny() {
     if( phaseGuide != null ) {
-      assertThat( phaseGuide.outboundQueueEmpty() ).isTrue() ;
+      assertThat( phaseGuide.outboundQueueSnapshot() ).isEmpty(); ;
     }
   }
 

@@ -1,6 +1,5 @@
 package com.otcdlink.chiron.middle.throttler;
 
-import com.otcdlink.chiron.command.Command;
 import com.otcdlink.chiron.middle.tier.CommandInterceptor;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 import com.otcdlink.chiron.toolbox.clock.Clock;
@@ -35,7 +34,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class SessionScopedThrottler<
     COMMAND,
     RESTRICTION extends SessionScopedThrottler.Restriction< COMMAND >
-> {
+> implements Throttler<COMMAND> {
   private static final Logger LOGGER = LoggerFactory.getLogger( SessionScopedThrottler.class ) ;
 
 
@@ -55,35 +54,19 @@ public class SessionScopedThrottler<
     this.throttlingDuration = checkNotNull( initialThrottlingDuration ) ;
   }
 
+  @Override
   public void throttlingDuration( final Duration throttlingDuration ) {
     checkArgument( throttlingDuration.getMillis() >= 0 ) ;
     this.throttlingDuration = checkNotNull( throttlingDuration ) ;
     LOGGER.info( "Throttling duration set to " + throttlingDuration + " for " + this + "." ) ;
   }
 
-  public enum Throttling {
-    /**
-     * Given {@link Command} doesn't support throttling.
-     */
-    NOT_APPLICABLE,
-
-    /**
-     * Given {@link Command} supports throttling and was throttled.
-     */
-    THROTTLED,
-
-    /**
-     * Given {@link Command} supports throttling and was not throttled.
-     */
-    PASSED,
-    ;
-  }
-
   /**
    * Evaluate a {@link COMMAND} againts existing {@link #restrictions}, adding some
    * {@link RESTRICTION} if needed to.
    */
-  public final Throttling evaluateAndUpdate( final COMMAND command ) {
+  @Override
+  public final Effect evaluateAndUpdate( final COMMAND command ) {
 //    if( Duration.ZERO.equals( throttlingDuration ) ) {
 //      return Throttling.PASSED ;
 //    } else {
@@ -95,27 +78,27 @@ public class SessionScopedThrottler<
     return throttlingDuration ;
   }
 
-  private Throttling evaluateAndUpdate( final DateTime now, final COMMAND command ) {
+  private Effect evaluateAndUpdate( final DateTime now, final COMMAND command ) {
     cleanup( now ) ;
-    Throttling throttling = Throttling.NOT_APPLICABLE ;
+    Effect effect = Effect.NOT_APPLICABLE ;
     if( restrictionFactory.supports( command ) ) {
-      throttling = Throttling.PASSED ;
+      effect = Effect.PASSED ;
       if( ! Duration.ZERO.equals( throttlingDuration ) ) {
         for( final Map.Entry< RESTRICTION, DateTime > entry : restrictions.entrySet() ) {
           if( entry.getKey().appliesTo( command ) ) {
-            throttling = Throttling.THROTTLED ;
+            effect = Effect.THROTTLED ;
             break ;
           }
         }
       }
-      if( throttling == Throttling.PASSED ) {
+      if( effect == Effect.PASSED ) {
         final RESTRICTION restriction = restrictionFactory.createFrom( command ) ;
         restrictions.put( restriction, now ) ;
         LOGGER.debug( "Added " + restriction + " to " + this + "." ) ;
         restrictionAdded( restriction ) ;
       }
     }
-    return throttling ;
+    return effect;
   }
 
   protected void restrictionAdded( final RESTRICTION restriction ) { }

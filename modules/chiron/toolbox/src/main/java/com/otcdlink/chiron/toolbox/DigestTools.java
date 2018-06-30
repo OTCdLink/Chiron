@@ -1,5 +1,7 @@
 package com.otcdlink.chiron.toolbox;
 
+import com.google.common.io.BaseEncoding;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -34,34 +36,34 @@ public final class DigestTools {
       super( BYTE_COUNT, base64 ) ;
     }
 
+    public static MessageDigest newMd5MessageDigest() {
+      final MessageDigest digest ;
+      try {
+        digest = MessageDigest.getInstance( "MD5" ) ;
+      } catch( final NoSuchAlgorithmException e ) {
+        throw new Error( "Can't find MD5 implementation", e ) ;
+      }
+      return digest ;
+    }
+
     public static Md5 parseBase64( final String string ) {
       return AbstractDigest.isValidBase64( BYTE_COUNT, string ) ? new Md5( string ) : null ;
     }
-  }
 
-  public static Md5 md5( final File file ) throws IOException {
-    final MessageDigest digest = newMd5MessageDigest() ;
-    return new Md5( hash( file, digest ) ) ;
-  }
-
-  public static Md5 md5( final byte[] bytes ) {
-    checkNotNull( bytes ) ;
-    final MessageDigest digest = newMd5MessageDigest() ;
-    return new Md5( digest.digest( bytes ) ) ;
-  }
-
-  public static MessageDigest newMd5MessageDigest() {
-    final MessageDigest digest ;
-    try {
-      digest = MessageDigest.getInstance( "MD5" ) ;
-    } catch( final NoSuchAlgorithmException e ) {
-      throw new Error( "Can't find MD5 implementation", e ) ;
+    public static Md5 ofFile( final File file ) throws IOException {
+      final MessageDigest digest = newMd5MessageDigest() ;
+      return new Md5( DigestTools.hash( file, digest ) ) ;
     }
-    return digest ;
+
+    public static Md5 ofBytes( final byte[] bytes ) {
+      checkNotNull( bytes ) ;
+      final MessageDigest digest = newMd5MessageDigest() ;
+      return new Md5( digest.digest( bytes ) ) ;
+    }
   }
 
 
-// ====
+  // ====
 // SHA1
 // ====
 
@@ -80,29 +82,28 @@ public final class DigestTools {
     public static Sha1 parseBase64( final String string ) {
       return AbstractDigest.isValidBase64( BYTE_COUNT, string ) ? new Sha1( string ) : null ;
     }
-  }
 
-  public static Sha1 sha1( final File file ) throws IOException {
-    final MessageDigest digest = newSha1MessageDigest() ;
-    return new Sha1( hash( file, digest ) ) ;
-  }
-
-  public static Sha1 sha1( final byte[] bytes ) {
-    checkNotNull( bytes ) ;
-    final MessageDigest digest = newSha1MessageDigest() ;
-    return new Sha1( digest.digest( bytes ) ) ;
-  }
-
-  public static MessageDigest newSha1MessageDigest() {
-    final MessageDigest digest ;
-    try {
-      digest = MessageDigest.getInstance( "SHA1" ) ;
-    } catch( final NoSuchAlgorithmException e ) {
-      throw new Error( "Can't find SHA1 implementation", e ) ;
+    public static MessageDigest newMessageDigest() {
+      final MessageDigest digest ;
+      try {
+        digest = MessageDigest.getInstance( "SHA1" ) ;
+      } catch( final NoSuchAlgorithmException e ) {
+        throw new Error( "Can't find SHA1 implementation", e ) ;
+      }
+      return digest ;
     }
-    return digest ;
-  }
 
+    public static Sha1 ofFile( final File file ) throws IOException {
+      final MessageDigest digest = newMessageDigest() ;
+      return new Sha1( DigestTools.hash( file, digest ) ) ;
+    }
+
+    public static Sha1 ofBytes( final byte[] bytes ) {
+      checkNotNull( bytes ) ;
+      final MessageDigest digest = newMessageDigest() ;
+      return new Sha1( digest.digest( bytes ) ) ;
+    }
+  }
 
 
 // ======
@@ -124,53 +125,41 @@ public final class DigestTools {
     public static Sha256 parseBase64( final String string ) {
       return AbstractDigest.isValidBase64( BYTE_COUNT, string ) ? new Sha256( string ) : null ;
     }
-  }
 
-
-  public static Sha256 sha256( final File file ) throws IOException {
-    final MessageDigest sha256Digest = newSha256MessageDigest() ;
-    return new Sha256( hash( file, sha256Digest ) ) ;
-  }
-
-  public static Sha256 sha256( final String string, final Charset charset ) {
-    checkNotNull( string ) ;
-    checkNotNull( charset ) ;
-    final MessageDigest sha256Digest = newSha256MessageDigest() ;
-    sha256Digest.update( string.getBytes( charset ) ) ;
-    return new Sha256( sha256Digest.digest() ) ;
-  }
-
-  public static MessageDigest newSha256MessageDigest() {
-    final MessageDigest sha256Digest ;
-    try {
-      sha256Digest = MessageDigest.getInstance( "SHA-256" ) ;
-    } catch( final NoSuchAlgorithmException e ) {
-      throw new Error( "Can't find SHA256 implementation", e ) ;
+    public static Sha256 parseHex( final String string ) {
+      checkNotNull( string ) ;
+      final byte[] decoded = BaseEncoding.base16().decode( string.toUpperCase() ) ;
+      return new Sha256( decoded ) ;
     }
-    return sha256Digest ;
+
+    public static Sha256 ofStringBytes( final String string, final Charset charset ) {
+      checkNotNull( string ) ;
+      checkNotNull( charset ) ;
+      final MessageDigest sha256Digest = newMessageDigest() ;
+      sha256Digest.update( string.getBytes( charset ) ) ;
+      return new Sha256( sha256Digest.digest() ) ;
+    }
+
+    public static Sha256 ofFile( final File file ) throws IOException {
+      final MessageDigest sha256Digest = newMessageDigest() ;
+      return new Sha256( hash( file, sha256Digest ) ) ;
+    }
+
+    public static MessageDigest newMessageDigest() {
+      final MessageDigest sha256Digest ;
+      try {
+        sha256Digest = MessageDigest.getInstance( "SHA-256" ) ;
+      } catch( final NoSuchAlgorithmException e ) {
+        throw new Error( "Can't find SHA256 implementation", e ) ;
+      }
+      return sha256Digest ;
+    }
+
   }
-
-
 
 // =====
 // Other
 // =====
-
-  private static final String HEXES = "0123456789abcdef" ;
-
-  /**
-   * http://www.rgagnon.com/javadetails/java-0596.html
-   */
-  public static String toHex( final byte[] bytes ) {
-    if( bytes == null ) {
-      return null ;
-    }
-    final StringBuilder hex = new StringBuilder( 2 * bytes.length ) ;
-    for( final byte b : bytes ) {
-      hex.append( HEXES.charAt( ( b & 0xF0 ) >> 4 ) ).append( HEXES.charAt( ( b & 0x0F ) ) ) ;
-    }
-    return hex.toString() ;
-  }
 
   public static byte[] hash( final File file, final MessageDigest digest ) throws IOException {
     try(
@@ -186,6 +175,23 @@ public final class DigestTools {
       final byte[] hashValue = digest.digest() ;
       return hashValue ;
     }
+  }
+
+
+  private static final String HEXES = "0123456789abcdef" ;
+
+  /**
+   * http://www.rgagnon.com/javadetails/java-0596.html
+   */
+  public static String toHex( final byte[] bytes ) {
+    if( bytes == null ) {
+      return null ;
+    }
+    final StringBuilder hex = new StringBuilder( 2 * bytes.length ) ;
+    for( final byte b : bytes ) {
+      hex.append( HEXES.charAt( ( b & 0xF0 ) >> 4 ) ).append( HEXES.charAt( ( b & 0x0F ) ) ) ;
+    }
+    return hex.toString() ;
   }
 
   public static abstract class AbstractDigest {

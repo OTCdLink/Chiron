@@ -287,7 +287,7 @@ public abstract class AbstractConnectorFixture<
      * This is nice for tests, not pinging avoids to pollute logs, and immediate reconnection
      * unveiled interesting bugs in {@link DownendConnector} state transitions.
      */
-    TimeBoundary.ForAll NO_PING = TimeBoundary.Builder.createNew()
+    TimeBoundary.ForAll NO_PING = TimeBoundary.newBuilder()
         .pingInterval( 1_000_000 )
         .pongTimeoutOnDownend( 1_000_000 )
         .reconnectImmediately()
@@ -296,7 +296,7 @@ public abstract class AbstractConnectorFixture<
         .build()
     ;
 
-    TimeBoundary.ForAll QUICK_PING = TimeBoundary.Builder.createNew()
+    TimeBoundary.ForAll QUICK_PING = TimeBoundary.newBuilder()
         .pingInterval( 5 )
         .pongTimeoutOnDownend( 1000 )
         .reconnectImmediately()
@@ -305,7 +305,7 @@ public abstract class AbstractConnectorFixture<
         .build()
     ;
 
-    TimeBoundary.ForAll PING_TIMEOUT = TimeBoundary.Builder.createNew()
+    TimeBoundary.ForAll PING_TIMEOUT = TimeBoundary.newBuilder()
         .pingInterval( 5 )
         .pongTimeoutOnDownend( 50 )
         .reconnectDelay( 50, 50 )
@@ -314,7 +314,7 @@ public abstract class AbstractConnectorFixture<
         .build()
     ;
 
-    TimeBoundary.ForAll QUICK_RECONNECT = TimeBoundary.Builder.createNew()
+    TimeBoundary.ForAll QUICK_RECONNECT = TimeBoundary.newBuilder()
         .pingInterval( 1000 )
         .pongTimeoutOnDownend( 1000 )
         .reconnectDelay( 50, 50 )
@@ -323,7 +323,7 @@ public abstract class AbstractConnectorFixture<
         .build()
     ;
 
-    TimeBoundary.ForAll QUIET = TimeBoundary.Builder.createNew()
+    TimeBoundary.ForAll QUIET = TimeBoundary.newBuilder()
         .pingIntervalNever()
         .pongTimeoutNever()
         .reconnectNever()
@@ -529,8 +529,7 @@ public abstract class AbstractConnectorFixture<
 
     LOGGER.info( "Stopping everything ..." ) ;
 
-    final CollectingException.Collector<CollectingException> collector =
-        CollectingException.newCollector() ;
+    final CollectingException.Collector collector = CollectingException.newCollector() ;
 
     if( downend != null ) {
       collector.execute(

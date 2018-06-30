@@ -3,9 +3,9 @@ package com.otcdlink.chiron.upend.http.dispatch;
 import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.toolbox.netty.RichHttpRequest;
 import io.netty.channel.Channel;
-import mockit.FullVerificationsInOrder;
+import mockit.Expectations;
+import mockit.FullVerifications;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,7 +60,7 @@ public class UsualHttpCommandsTest {
       final String requestUriPath,
       final String redirectionUri
   ) {
-    new StrictExpectations() {{
+    new Expectations() {{
       evaluationContext.contextPath() ; result = UriPath.from( contextPath ) ;
       evaluationContext.designator() ; result = designator ; times = -1 ;
     }} ;
@@ -80,7 +80,7 @@ public class UsualHttpCommandsTest {
           .isEqualTo( REQUEST_URI_BASE + redirectionUri ) ;
     }
 
-    new FullVerificationsInOrder() {{ }} ;
+    new FullVerifications() {{ }} ;
 
     LOGGER.info( "Verified " + description + "." ) ;
   }

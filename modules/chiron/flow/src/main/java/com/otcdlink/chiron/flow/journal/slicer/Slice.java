@@ -13,7 +13,6 @@ import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -22,42 +21,40 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public final class Slice extends AbstractByteBuf {
 
-  protected final int indexInRecycler ;
   public final long sliceIndexInFile ;
-  protected final Consumer< Slice > recycler ;
   private final ByteBuf buffer ;
 
+  // private final String toString ;
+
   protected Slice(
-      final int indexInRecycler,
       final int maxCapacity,
-      final Consumer< Slice > recycler,
       final ByteBuf wrapped,
       final int readerIndex,
       final int writerIndex,
       final long sliceIndexInFile
   ) {
     super( maxCapacity ) ;
-    this.recycler = checkNotNull( recycler ) ;
-    this.indexInRecycler = indexInRecycler ;
     buffer = checkNotNull( wrapped ) ;
     setIndex( readerIndex, writerIndex ) ;
-    this.sliceIndexInFile = sliceIndexInFile;
+    this.sliceIndexInFile = sliceIndexInFile ;
+
+    // this.toString = getClass().getSimpleName() + "{" +
+    //     "sliceIndexInFile=" + sliceIndexInFile + ";" +
+    //     "readerIndex=" + readerIndex + ";" +
+    //     "writerIndex=" + writerIndex + ";" +
+    //     "}"
+    // ;
   }
 
-  /**
-   * Must be called only once after this instance of {@link Slice} has been passed
-   * to the code processing {@link Slice}s.
-   * We don't override {@link #release()} since the contract is different, this contract is
-   * very specific to {@link FileChunk}.
-   */
-  public void recycle() {
-    recycler.accept( this ) ;
-  }
 
   public long lineIndexInFile() {
     return sliceIndexInFile;
   }
 
+  // @Override
+  // public String toString() {
+  //   return toString ;
+  // }
 
 // ====================================================
 // Mandatory methods, copied from UnpooledSlicedByteBuf
@@ -65,7 +62,7 @@ public final class Slice extends AbstractByteBuf {
 
 
   @Override
-  protected void finalize() throws Throwable { }
+  protected void finalize() { }
 
   @Override
   public final int refCnt() {

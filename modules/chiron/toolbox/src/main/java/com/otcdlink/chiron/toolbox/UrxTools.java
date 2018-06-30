@@ -269,6 +269,18 @@ public final class UrxTools {
 
   public static URL websocketUrlQuiet(
       final boolean useTls,
+      final HostPort hostPort,
+      final String path
+  ) {
+    try {
+      return websocketUrl( useTls, hostPort.hostname.asString(), hostPort.port, path ) ;
+    } catch( MalformedURLException e ) {
+      throw new RuntimeException( e ) ;
+    }
+  }
+
+  public static URL websocketUrlQuiet(
+      final boolean useTls,
       final String host,
       final int port,
       final String path

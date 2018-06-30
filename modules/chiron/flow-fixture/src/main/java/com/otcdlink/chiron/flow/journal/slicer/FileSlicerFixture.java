@@ -104,7 +104,6 @@ public class FileSlicerFixture {
         } )
         .buffer( FileSlicer.DEFAULT_FLUX_BUFFER_SIZE )  // Less inter-thread communication.
         .publishOn( scheduler( "recycle" ) )
-        .doOnNext( sliceList -> sliceList.forEach( Slice::recycle ) )
         .subscribe()
     ;
 

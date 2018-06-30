@@ -323,7 +323,12 @@ public final class DownendConnector< ENDPOINT_SPECIFIC, DOWNWARD_DUTY, UPWARD_DU
       final int delayMs
   ) {
     final CompletableFuture< Void > sendCompletion = new CompletableFuture<>() ;
-    stateUpdater.current().channel.eventLoop().schedule(
+    final Channel channel = stateUpdater.current().channel ;
+    if( channel == null ) {
+      LOGGER.warn( "No " + Channel.class.getSimpleName() + " for " + this + "." ) ;
+      return CompletableFuture.completedFuture( null ) ;
+    }
+    channel.eventLoop().schedule(
         () -> {
           final StateBody currentStateBody = stateUpdater.current() ;
           final ChannelFuture send = send( currentStateBody, command ) ;

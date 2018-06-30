@@ -65,6 +65,7 @@ public class NettySocketClient extends EventLoopGroupOwner implements InputOutpu
     synchronized( lock ) {
       if( state == State.STARTED ) {
         bootstrap = null ;
+        customStop() ;
         state = State.STOPPED ;
         LOGGER.info( "Stopped " + this + "." ) ;
         return regenerateEventLoopIfNeeded() ;
@@ -74,6 +75,11 @@ public class NettySocketClient extends EventLoopGroupOwner implements InputOutpu
       }
     }
   }
+
+  /**
+   * Called in a thread that owns {@link #lock}, before regenerating {@link #eventLoopGroup}.
+   */
+  protected void customStop() { }
 
   public boolean isStarted() {
     return state() == State.STARTED ;

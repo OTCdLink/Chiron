@@ -2,8 +2,8 @@ package com.otcdlink.chiron.toolbox.clock;
 
 
 import mockit.Expectations;
+import mockit.FullVerifications;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Test;
@@ -16,13 +16,14 @@ public class PulseModulatorTest {
     final PulseModulator pulseModulator = newPulseModulator( DAY_0_END ) ;
     startNewPulse( pulseModulator, tickee ) ;
 
-    new StrictExpectations() { {
+    new Expectations() { {
       tickee.tick( DAY_1_START ) ;
       times = 1 ;
     } } ;
 
     pulseModulator.increment() ;
     pulseModulator.increment() ;
+    new FullVerifications() {{ }} ;
   }
 
   /**
@@ -34,11 +35,12 @@ public class PulseModulatorTest {
     final PulseModulator pulseModulator = newPulseModulator( DAY_1_START ) ;
     final Pulse pulse = newPulse( pulseModulator, tickee ) ;
 
-    new StrictExpectations() { {
+    new Expectations() { {
       tickee.tick( DAY_1_START ) ;
       times = 1 ;
     } } ;
     pulse.start( null ) ;
+    new FullVerifications() {{ }} ;
   }
 
   /**
@@ -50,10 +52,11 @@ public class PulseModulatorTest {
     final PulseModulator pulseModulator = newPulseModulator( DAY_1_START ) ;
     final Pulse pulse = newPulse( pulseModulator, tickee ) ;
 
-    new StrictExpectations() { {
+    new Expectations() { {
       tickee.tick( DAY_1_START ) ;
     } } ;
     pulse.start( DAY_0_END ) ;
+    new FullVerifications() {{ }} ;
   }
 
   /**
@@ -74,9 +77,10 @@ public class PulseModulatorTest {
 
     final long differenceWithinDay = DAY_0_END.getMillis() - DAY_0_START.getMillis() ;
 
-    new StrictExpectations() { { } } ;
+    new Expectations() { { } } ;
 
     pulseModulator.increment( differenceWithinDay ) ;
+    new FullVerifications() {{ }} ;
   }
 
   @Test
@@ -86,7 +90,7 @@ public class PulseModulatorTest {
 
     final long differenceWithinDay = DAY_0_END.getMillis() - DAY_0_START.getMillis() ;
 
-    new StrictExpectations() { { } } ;
+    new Expectations() { { } } ;
 
     pulseModulator.increment( differenceWithinDay ) ;
 
@@ -95,7 +99,7 @@ public class PulseModulatorTest {
     } } ;
 
     pulseModulator.increment() ;
-
+    new FullVerifications() {{ }} ;
   }
 
   @Test
@@ -107,7 +111,7 @@ public class PulseModulatorTest {
       tickee.tick( DAY_1_START ) ;
     } } ;
     pulse.start( DAY_0_END ) ;
-
+    new FullVerifications() {{ }} ;
   }
 
 

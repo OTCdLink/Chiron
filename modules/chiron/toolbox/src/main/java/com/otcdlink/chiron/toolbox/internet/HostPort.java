@@ -4,6 +4,7 @@ import com.google.common.base.Equivalence;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -106,6 +107,18 @@ public final class HostPort {
   public InetSocketAddress asInetSocketAddressQuiet() {
     try {
       return asInetSocketAddress() ;
+    } catch( final UnknownHostException e ) {
+      throw new RuntimeException( e ) ;
+    }
+  }
+
+  public InetAddress asInetAddress() throws UnknownHostException {
+    return asInetSocketAddressQuiet().getAddress() ;
+  }
+
+  public InetAddress asInetAddressQuiet() {
+    try {
+      return asInetSocketAddress().getAddress() ;
     } catch( final UnknownHostException e ) {
       throw new RuntimeException( e ) ;
     }

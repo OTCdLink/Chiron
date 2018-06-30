@@ -2,17 +2,14 @@ package com.otcdlink.chiron.toolbox;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Joiner;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.function.Function;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import java.util.function.IntFunction;
 
 public enum EnumTools { ;
 
@@ -60,54 +57,80 @@ public enum EnumTools { ;
     }
   }
 
+  public static < ENUM extends Enum< ENUM > > ImmutableMap< Integer, ENUM > mapFromOrdinal(
+      final ENUM[] enumValues
+  ) {
+    final ImmutableMap.Builder< Integer, ENUM > builder = ImmutableMap.builder() ;
+    for( int i = 0 ; i < enumValues.length ; i ++ ) {
+      builder.put( i, enumValues[ i ] ) ;
+    }
+    return builder.build() ;
+  }
+
+  public static < ENUM extends Enum< ENUM > > IntFunction< ENUM > strictResolverFromOrdinal(
+      final java.util.function.Supplier< ENUM[] > valuesSupplier
+  ) {
+    return resolverFromOrdinal( valuesSupplier, true ) ;
+  }
+
+  public static < ENUM extends Enum< ENUM > > IntFunction< ENUM > lenientResolverFromOrdinal(
+      final java.util.function.Supplier< ENUM[] > valuesSupplier
+  ) {
+    return resolverFromOrdinal( valuesSupplier, false ) ;
+  }
+
   /**
    * Kind of caching function to resolve an {@code Enum} value from its ordinal value, which
-   * can be {@code null} in this case.
+   * might be {@code null}.
    * <p>
    * This doesn't conflict with the tests using fake enum value (with {@code EnumBuster})
    * as long as the test runs with a fresh {@code ClassLoader} (which is the default) and the
    * {@code EnumBuster} creates the fake value before caching occurs.
    *
+   * @param strict {@code false} to allow {@code null} result, {@code true} to throw
+   *     a {@link BadEnumOrdinalException} if resolution failed.
    * @param valuesSupplier reduces the chance to leak a reference to a (mutable) array.
    *     This is typically a reference to the static method {@code SomeEnum::values}.
    * @return {@code null} if no value found
    */
-  public static < ENUM extends Enum< ENUM > > Function< Integer, ENUM > resolverFromOrdinal(
-      final Supplier< ENUM[] > valuesSupplier
+  public static < ENUM extends Enum< ENUM > > IntFunction< ENUM > resolverFromOrdinal(
+      final java.util.function.Supplier< ENUM[] > valuesSupplier,
+      final boolean strict
   ) {
 
-    final ENUM[] values = valuesSupplier.get() ;
-    final Object[] safeValues = new Object[ values.length ] ;
-    System.arraycopy( values, 0, safeValues, 0, values.length ) ;
+    final ImmutableList< ENUM > safeValues = ImmutableList.copyOf( valuesSupplier.get() ) ;
 
-    final Function< Integer, ENUM > resolver = index -> {
-      if( index == null ) {
-        return null ;
+    final IntFunction< ENUM > resolver = index -> {
+      if( index >= 0 && index < safeValues.size() ) {
+        return safeValues.get( index ) ;
+      }
+      if( strict ) {
+        throw new BadEnumOrdinalException( index, safeValues ) ;
       } else {
-        checkArgument( index >= 0 ) ;
-        checkArgument( index < safeValues.length,
-            "Incorrect index of " + index + " for accessing " + Arrays.asList( safeValues ) ) ;
-        return ( ENUM ) safeValues[ index ];
+        return null ;
       }
     } ;
-    LOGGER.debug( "Created enum value resolver from " + Arrays.toString( safeValues ) + "." ) ;
+    LOGGER.debug( "Created enum value resolver from " + safeValues + "." ) ;
     return resolver ;
   }
 
-  public static < ENUM extends Enum< ENUM > > Function< String, ENUM > strictResolverFromName(
-      final Supplier< ENUM[] > valuesSupplier
+  public static < ENUM extends Enum< ENUM > > java.util.function.Function< String, ENUM >
+  strictResolverFromName(
+      final java.util.function.Supplier< ENUM[] > valuesSupplier
   ) {
     return resolverFromName( valuesSupplier, true ) ;
   }
 
-  public static < ENUM extends Enum< ENUM > > Function< String, ENUM > lenientResolverFromName(
-      final Supplier< ENUM[] > valuesSupplier
+  public static < ENUM extends Enum< ENUM > > java.util.function.Function< String, ENUM >
+  lenientResolverFromName(
+      final java.util.function.Supplier< ENUM[] > valuesSupplier
   ) {
     return resolverFromName( valuesSupplier, false ) ;
   }
 
-  public static < ENUM extends Enum< ENUM > > Function< String, ENUM > resolverFromName(
-      final Supplier< ENUM[] > valuesSupplier,
+  public static < ENUM extends Enum< ENUM > > java.util.function.Function< String, ENUM >
+  resolverFromName(
+      final java.util.function.Supplier< ENUM[] > valuesSupplier,
       final boolean strict
   ) {
     final ImmutableMap< String, ENUM > valuesByName ;
@@ -143,7 +166,7 @@ public enum EnumTools { ;
   }
 
   /**
-   * @see #lenientResolverFromName(Supplier) for caching
+   * @see #lenientResolverFromName(java.util.function.Supplier)  for caching
    */
   public static < ENUM extends Enum > ENUM fromNameLenient(
       final ENUM[] values,

@@ -96,8 +96,8 @@ public final class DownendStateTools {
     @Override
     public final void stateChanged( final DownendConnector.Change change ) {
       logger.debug( "Called #stateChanged( " + change + " for " + downendToString() + "." ) ;
-      super.stateChanged( change ) ;
       doStateChanged( change ) ;
+      super.stateChanged( change ) ;
     }
 
     private String downendToString() {

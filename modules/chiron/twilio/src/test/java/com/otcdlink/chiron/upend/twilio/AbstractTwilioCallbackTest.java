@@ -6,9 +6,9 @@ import com.otcdlink.chiron.toolbox.CollectingException;
 import com.otcdlink.chiron.toolbox.TcpPortBooker;
 import com.otcdlink.chiron.toolbox.netty.NettyHttpClient;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import mockit.Expectations;
 import mockit.FullVerifications;
 import mockit.Injectable;
-import mockit.StrictExpectations;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,7 +22,7 @@ public abstract class AbstractTwilioCallbackTest {
   @Test
   public void createTwiml() throws Exception {
 
-    new StrictExpectations() {{
+    new Expectations() {{
       twilioHttpCallback.createTwiml( "someToken" ) ;
       result = "<html>processed 'someToken'</html>" ;
     }} ;
@@ -40,7 +40,7 @@ public abstract class AbstractTwilioCallbackTest {
   @Test
   public void status() throws Exception {
 
-    new StrictExpectations() {{
+    new Expectations() {{
       twilioHttpCallback.updateTwilioCallStatus( "someToken", TwilioStatus.CALL_COMPLETED ) ;
     }} ;
 

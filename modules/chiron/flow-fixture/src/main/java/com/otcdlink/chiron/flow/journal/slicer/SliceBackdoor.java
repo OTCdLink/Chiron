@@ -14,9 +14,7 @@ public final class SliceBackdoor {
 
   public static Slice newSlice( long sliceIndexInFile ) {
     return new Slice(
-        0,
         1,
-        NULL_SLICE_BUFFER_CONSUMER,
         EMPTY_BYTEBUF,
         0,
         0,

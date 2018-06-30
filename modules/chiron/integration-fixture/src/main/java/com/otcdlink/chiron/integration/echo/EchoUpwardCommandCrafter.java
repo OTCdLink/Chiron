@@ -17,10 +17,6 @@ public class EchoUpwardCommandCrafter< DESIGNATOR > implements EchoUpwardDuty< D
 
   @Override
   public void requestEcho( final DESIGNATOR designator, final String message ) {
-    try {
-      commandConsumer.accept( new UpwardEchoCommand<>( designator, message ) ) ;
-    } catch( final Exception e ) {
-      throw new RuntimeException( "We should get rid of this stupid catch clause", e ) ;
-    }
+    commandConsumer.accept( new UpwardEchoCommand<>( designator, message ) ) ;
   }
 }
