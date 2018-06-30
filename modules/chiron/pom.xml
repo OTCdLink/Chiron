@@ -26,6 +26,7 @@
     <module>configuration</module>
     <module>middle</module>
     <module>middle-fixture</module>
+    <module>mockster</module>
     <module>downend</module>
     <module>testing</module>
     <module>fixture</module>
