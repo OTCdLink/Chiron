@@ -23,9 +23,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static org.assertj.core.api.Assertions.assertThat;
 
-class NettyHalfDuplex< INBOUND, OUTBOUND > implements HalfDuplex< INBOUND, OUTBOUND > {
+class NettyDuplex< INBOUND, OUTBOUND > implements FullDuplex< INBOUND, OUTBOUND > {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger( NettyHalfDuplex.class ) ;
+  private static final Logger LOGGER = LoggerFactory.getLogger( NettyDuplex.class ) ;
 
   private final AtomicBoolean active = new AtomicBoolean( true ) ;
 
@@ -37,7 +37,7 @@ class NettyHalfDuplex< INBOUND, OUTBOUND > implements HalfDuplex< INBOUND, OUTBO
   private final List< ReferenceCounted > referenceCountedObjects =
       Collections.synchronizedList( new ArrayList<>(  ) ) ;
 
-  NettyHalfDuplex( final Function< ? super OUTBOUND, ChannelFuture > asynchronousEmitter ) {
+  NettyDuplex( final Function< ? super OUTBOUND, ChannelFuture > asynchronousEmitter ) {
     this.asynchronousEmitter = checkNotNull( asynchronousEmitter ) ;
   }
 
@@ -91,8 +91,8 @@ class NettyHalfDuplex< INBOUND, OUTBOUND > implements HalfDuplex< INBOUND, OUTBO
   }
 
   public static final class ForTextWebSocketFrame< DUTY >
-      extends NettyHalfDuplex< TextWebSocketFrame, TextWebSocketFrame >
-      implements HalfDuplex.ForTextWebSocket< DUTY >
+      extends NettyDuplex< TextWebSocketFrame, TextWebSocketFrame >
+      implements FullDuplex.ForTextWebSocket< DUTY >
   {
     private final Function< Consumer< TextWebSocketFrame >, DUTY > dutyRedirector ;
 

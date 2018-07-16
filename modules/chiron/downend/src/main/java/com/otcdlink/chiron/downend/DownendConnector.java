@@ -655,7 +655,7 @@ public final class DownendConnector< ENDPOINT_SPECIFIC, DOWNWARD_DUTY, UPWARD_DU
    */
   private void afterWebsocketHandshake( final ConnectionDescriptor connectionDescriptor ) {
     final ScheduledFuture< ? > pingSchedule = setup.eventLoopGroup.schedule(
-        this::pingNow,
+        ( ScheduledInternally.Ping ) this::pingNow,
         connectionDescriptor.timeBoundary.pingIntervalMs(),
         TimeUnit.MILLISECONDS
     ) ;
@@ -816,6 +816,7 @@ public final class DownendConnector< ENDPOINT_SPECIFIC, DOWNWARD_DUTY, UPWARD_DU
       transition = stateUpdater.update(
           stateBody -> stateBody.stopping( new CompletableFuture<>() ) ) ;
       cancelPreviousAllFutures( transition ) ;
+      sessionDownendTier.clearSessionIdentifier() ;
       if( transition.previous.channel != null ) {
         LOGGER.debug( "Current state allow to really stop " + this + " ..." ) ;
         transition.previous.channel.writeAndFlush( new CloseWebSocketFrame() )
@@ -865,7 +866,7 @@ public final class DownendConnector< ENDPOINT_SPECIFIC, DOWNWARD_DUTY, UPWARD_DU
 
   private ScheduledFuture< ? > justScheduleReconnect( final long connectTimeoutMs ) {
     final ScheduledFuture< ? > schedule = setup.eventLoopGroup.schedule(
-        () -> {
+        ( ScheduledInternally.Reconnect ) () -> {
           try {
             connectPipeline();
           } catch( final InterruptedException e ) {
@@ -1214,7 +1215,7 @@ public final class DownendConnector< ENDPOINT_SPECIFIC, DOWNWARD_DUTY, UPWARD_DU
         channelFuture.addListener( future -> {
           if( future.isSuccess() ) {
             final ScheduledFuture< ? > schedule = setup.eventLoopGroup.schedule(
-                () -> pongTimeout( currentPingCounter ),
+                ( ScheduledInternally.PongTimeout ) () -> pongTimeout( currentPingCounter ),
                 pongTimeoutMs,
                 TimeUnit.MILLISECONDS
             ) ;

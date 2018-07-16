@@ -1,6 +1,7 @@
 package com.otcdlink.chiron.downend;
 
 import com.otcdlink.chiron.command.Command;
+import io.netty.channel.EventLoopGroup;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -27,4 +28,16 @@ public interface Downend< ENDPOINT_SPECIFIC, UPWARD_DUTY > {
    *     before the aforementioned completion.
    */
   CompletableFuture< Void > stop() ;
+
+  /**
+   * Tagging interfaces for tasks scheduled in {@link EventLoopGroup}.
+   * This is only for tests instrumenting the {@link EventLoopGroup}.
+   */
+  interface ScheduledInternally extends Runnable {
+    interface Ping extends ScheduledInternally { }
+    interface PongTimeout extends ScheduledInternally { }
+    interface Reconnect extends ScheduledInternally { }
+  }
+
+
 }

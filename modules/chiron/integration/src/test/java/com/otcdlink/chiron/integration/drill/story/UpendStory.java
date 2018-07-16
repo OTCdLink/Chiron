@@ -1,12 +1,14 @@
 package com.otcdlink.chiron.integration.drill.story;
 
-import com.otcdlink.chiron.command.Command;
+import com.otcdlink.chiron.fixture.NettyLeakDetectorRule;
 import com.otcdlink.chiron.fixture.http.WatchedResponseAssert;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill.ForUpendConnector.HttpRequestRelayerKind;
+import com.otcdlink.chiron.integration.drill.SketchLibrary;
 import com.otcdlink.chiron.toolbox.netty.Hypermessage;
 import com.otcdlink.chiron.toolbox.netty.NettyHttpClient;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +31,8 @@ public class UpendStory {
     ) {
       final ConnectorDrill.ForFakeDownend forFakeDownend = drill.forFakeDownend() ;
 
-      forFakeDownend.halfDuplex().texting().emitWithDutyCall().requestEcho( TAG_T0, "Yay" ) ;
+      forFakeDownend.duplex().texting().emitWithDutyCall()
+          .requestEcho( SketchLibrary.TAG_TR0, "Yay" ) ;
       drill.forUpendConnector().upwardDutyMock().requestEcho( any(), exactly( "Yay" ) ) ;
 
       // Can't send to Downend if there is no Session.
@@ -91,7 +94,7 @@ public class UpendStory {
 
   private static final Logger LOGGER = LoggerFactory.getLogger( UpendStory.class ) ;
 
-  private static final Command.Tag TAG_T0 = new Command.Tag( "T0" ) ;
-
+  @Rule
+  public final NettyLeakDetectorRule nettyLeakDetectorRule = new NettyLeakDetectorRule() ;
 
 }

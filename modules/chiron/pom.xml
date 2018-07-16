@@ -43,6 +43,7 @@
     <module>lab-upend</module>
     <module>lab-downend</module>
     <module>lab-integration</module>
+    <module>jupiter-experiment</module>
   </modules>
 
 

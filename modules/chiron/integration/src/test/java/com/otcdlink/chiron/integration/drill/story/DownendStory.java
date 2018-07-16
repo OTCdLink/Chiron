@@ -1,112 +1,393 @@
 package com.otcdlink.chiron.integration.drill.story;
 
 import com.otcdlink.chiron.command.Command;
+import com.otcdlink.chiron.downend.CommandInFlightStatus;
+import com.otcdlink.chiron.downend.CommandTransceiver;
+import com.otcdlink.chiron.downend.DownendConnector;
 import com.otcdlink.chiron.downend.Tracker;
 import com.otcdlink.chiron.downend.TrackerCurator;
+import com.otcdlink.chiron.fixture.NettyLeakDetectorRule;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill.ForSimpleDownend;
+import com.otcdlink.chiron.integration.drill.SketchLibrary;
+import com.otcdlink.chiron.integration.drill.SketchLibrary.Interceptor;
+import com.otcdlink.chiron.integration.echo.UpwardEchoCommand;
+import com.otcdlink.chiron.middle.session.SessionLifecycle;
+import com.otcdlink.chiron.middle.tier.TimeBoundary;
+import com.otcdlink.chiron.toolbox.Credential;
+import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static com.otcdlink.chiron.integration.drill.ConnectorDrill.AutomaticLifecycle.NONE;
+import static com.otcdlink.chiron.integration.drill.ConnectorDrill.AutomaticLifecycle.START;
+import static com.otcdlink.chiron.integration.drill.ConnectorDrill.EXECUTE_PING;
+import static com.otcdlink.chiron.integration.drill.ConnectorDrill.EXECUTE_PONG_TIMEOUT;
+import static com.otcdlink.chiron.integration.drill.SketchLibrary.Interceptor.MAGIC_INTERCEPTED;
+import static com.otcdlink.chiron.integration.drill.SketchLibrary.Interceptor.MAGIC_PLEASE_INTERCEPT;
+import static com.otcdlink.chiron.integration.drill.SketchLibrary.TAG_TR0;
+import static com.otcdlink.chiron.integration.drill.SketchLibrary.TAG_TR1;
 import static com.otcdlink.chiron.mockster.Mockster.exactly;
 import static com.otcdlink.chiron.mockster.Mockster.withCapture;
+import static com.otcdlink.chiron.mockster.Mockster.withNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class DownendStory {
 
   @Test
-  public void connectDownendAndEcho() throws Exception {
-    LOGGER.info( "*** Test starts here ***" ) ;
+  public void doubleStart() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
-        .forDownendConnector()
-            .automaticLifecycle( NONE )
-            .done()
+        .forDownendConnector().done()
         .fakeUpend().done()
         .build()
     ) {
+      assertThatThrownBy( () ->
+          drill.forSimpleDownend().applyDirectly( DownendConnector::start, false )
+      )   .isInstanceOf( IllegalStateException.class ) ;
+    }
+  }
+
+  @Test
+  public void doubleStop() throws Exception {
+    try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
+        .forDownendConnector().automaticLifecycle( START ).done()
+        .fakeUpend().done()
+        .build()
+    ) {
+      final ConnectorDrill.ForFakeUpend forFakeUpend = drill.forFakeUpend() ;
       final ForSimpleDownend forSimpleDownend = drill.forSimpleDownend() ;
-      final ForSimpleDownend.ChangeAsConstant change = forSimpleDownend.changesAsConstant() ;
-
-      forSimpleDownend.start() ;
-      forSimpleDownend.changeWatcherMock().stateChanged( change.connecting ) ;
-      forSimpleDownend.changeWatcherMock().stateChanged( change.connected ) ;
-      LOGGER.info( "*** Connected, now echoing ***" ) ;
-
-      forSimpleDownend.upwardDuty().requestEcho( TAG_TR0, "Hello" ) ;
-      drill.forFakeUpend().halfDuplex().texting().assertThatNext().hasTextContaining( "Hello" ) ;
-      drill.forFakeUpend().halfDuplex().texting().emitWithDutyCall().echoResponse( TAG_TR1, "Yo!" ) ;
-      forSimpleDownend.downwardDutyMock().echoResponse( TAG_TR1, "Yo!" ) ;
-      LOGGER.info( "*** Echoed, now stopping ***" ) ;
+      final ForSimpleDownend.ChangeAsConstant change = forSimpleDownend.changeAsConstant() ;
 
       forSimpleDownend.stop() ;
       forSimpleDownend.changeWatcherMock().stateChanged( change.stopping ) ;
-      drill.forFakeUpend().halfDuplex().closing().next() ;
       forSimpleDownend.changeWatcherMock().stateChanged( change.stopped ) ;
-      LOGGER.info( "*** Stopped, let cleanup happen ***" ) ;
+      forFakeUpend.duplex().closing().next() ;
+
+      drill.forSimpleDownend().applyDirectly( DownendConnector::stop, false ) ; // Does nothing.
+    }
+  }
+
+  @Test
+  public void brokenCommand() throws Exception {
+    try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
+        .forDownendConnector().done()
+        .fakeUpend().done()
+        .build()
+    ) {
+      final ForSimpleDownend forSimpleDownend = drill.forSimpleDownend();
+
+      final UpwardEchoCommand< Command.Tag > brokenEchoCommand =
+          SketchLibrary.upwardBrokenEchoCommand( SketchLibrary.TAG_TR0 ) ;
+      forSimpleDownend.applyDirectly( connector -> connector.send( brokenEchoCommand ), false ) ;
+    }
+  }
+
+  @Test
+  public void brokenCommandInCommandTransceiver() throws Exception {
+    try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
+        .forCommandTransceiver().done()
+        .fakeUpend().done()
+        .build()
+    ) {
+      final ConnectorDrill.ForCommandTransceiver forDownend = drill.forCommandTransceiver() ;
+      final ConnectorDrill.ForCommandTransceiver.ChangeAsConstant change =
+          forDownend.changeAsConstant() ;
+
+      final UpwardEchoCommand< Tracker > brokenEchoCommand =
+          SketchLibrary.upwardBrokenEchoCommand( forDownend.trackerMock() ) ;
+      forDownend.applyDirectly( connector -> connector.send( brokenEchoCommand ), false ) ;
+      forDownend.changeWatcherMock().inFlightStatusChange( change.commandInFlightStatusInFlight ) ;
+      // TODO signal the problem, which appeared during migration to ConnectorDrill.
+    }
+  }
+
+  @Test
+  public void ping() throws Exception {
+    try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
+        .withTimeBoundary( TimeBoundary.newBuilder()
+            .pingInterval( 1 )
+            .pongTimeoutNever()
+            .reconnectImmediately()
+            .pingTimeoutNever()
+            .sessionInactivityForever()
+            .build()
+        )
+        .forDownendConnector().done()
+        .fakeUpend().done()
+        .build()
+    ) {
+      drill.processNextTaskCapture( EXECUTE_PING ) ;
+      drill.forFakeUpend().duplex().ponging().next() ;
+    }
+  }
+
+  @Test
+  public void pingTimeoutCausesDisconnection() throws Exception {
+    try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
+        .withTimeBoundary( TimeBoundary.newBuilder()
+            .pingInterval( 1 )
+            .pongTimeoutOnDownend( 1 )
+            .reconnectImmediately()
+            .pingTimeoutNever()
+            .sessionInactivityForever()
+            .build()
+        )
+        .forDownendConnector().automaticLifecycle( START ).done()
+        .fakeUpend().done()
+        .build()
+    ) {
+      final ForSimpleDownend forDownend = drill.forSimpleDownend() ;
+      final ForSimpleDownend.ChangeAsConstant change = forDownend.changeAsConstant() ;
+      final ConnectorDrill.ForFakeUpend forFakeUpend = drill.forFakeUpend() ;
+
+      drill.processNextTaskCapture( EXECUTE_PING ) ;
+      forFakeUpend.duplex().ponging().next() ;
+      drill.processNextTaskCapture( EXECUTE_PONG_TIMEOUT ) ;
+      forDownend.changeWatcherMock().stateChanged( change.connecting ) ;
+
+      /** Automatic stop doesn't expect to be {@link DownendConnector.State#CONNECTING}. */
+      forDownend.applyDirectly( DownendConnector::stop, true ) ;
+      forDownend.changeWatcherMock().stateChanged( change.stopping ) ;
+      forDownend.changeWatcherMock().stateChanged( change.stopped ) ;
+
     }
   }
 
 
   @Test
-  public void connectCommandTransceiverAndEcho() throws Exception {
-    LOGGER.info( "*** Test starts here ***" ) ;
+  public void echo() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
-        .forCommandTransceiver()
+        .forDownendConnector().done()
+        .fakeUpend().done()
+        .build()
+    ) {
+      drill.play( SketchLibrary.ECHO_ROUNDTRIP ) ;
+    }
+  }
+
+  @Test
+  public void signonAndEcho() throws Exception {
+    try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
+        .forDownendConnector().done()
+        .fakeUpend().withAuthentication( ConnectorDrill.Authentication.ONE_FACTOR ).done()
+        .build()
+    ) {
+      drill.play( SketchLibrary.ECHO_ROUNDTRIP ) ;
+    }
+  }
+
+
+  @Test
+  public void echoWithCommandTransceiver() throws Exception {
+    try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
+        .forCommandTransceiver().done()
+        .fakeUpend().done()
+        .build()
+    ) {
+      drill.play( SketchLibrary.ECHO_ROUNDTRIP ) ;
+    }
+  }
+
+  @Test
+  public void trackerSegregation() throws Exception {
+    try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
+        .withMocksterTimeout( 1, TimeUnit.HOURS )
+        .forCommandTransceiver().done()
+        .fakeUpend().done()
+        .build()
+    ) {
+      final Tracker trackerMock1 = drill.forCommandTransceiver().trackerMock() ;
+      final Tracker trackerMock2 = drill.forCommandTransceiver().newTrackerMock() ;
+      final CommandTransceiver.ChangeWatcher changeWatcherMock =
+          drill.forCommandTransceiver().changeWatcherMock() ;
+
+      drill.forCommandTransceiver().upwardDuty().requestEcho( trackerMock1, "One" ) ;
+      changeWatcherMock.inFlightStatusChange( CommandInFlightStatus.IN_FLIGHT ) ;
+      drill.forCommandTransceiver().upwardDuty().requestEcho( trackerMock2, "Two" ) ;
+
+      drill.forFakeUpend().duplex().texting().next() ;
+      drill.forFakeUpend().duplex().texting().emitWithDutyCall().echoResponse( TAG_TR0, "111" ) ;
+      final Tracker trackerCapture1 ;
+      drill.forCommandTransceiver().downwardDutyMock().echoResponse(
+          trackerCapture1 = withCapture(), exactly( "111" ) ) ;
+      assertThat( extractTracker( trackerCapture1 ) ).isSameAs( trackerMock1 ) ;
+      trackerMock1.afterResponseHandled() ;
+
+      drill.forFakeUpend().duplex().texting().next() ;
+      drill.forFakeUpend().duplex().texting().emitWithDutyCall().echoResponse( TAG_TR1, "222" ) ;
+      final Tracker trackerCapture2 ;
+      drill.forCommandTransceiver().downwardDutyMock().echoResponse(
+          trackerCapture2 = withCapture(), exactly( "222" ) ) ;
+      assertThat( extractTracker( trackerCapture2 ) ).isSameAs( trackerMock2 ) ;
+
+      changeWatcherMock.inFlightStatusChange( CommandInFlightStatus.QUIET ) ;
+      trackerMock2.afterResponseHandled() ;
+    }
+  }
+
+  @Test
+  public void signonAndEchoWithCommandTransceiver() throws Exception {
+    try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
+        .forCommandTransceiver().done()
+        .fakeUpend().withAuthentication( ConnectorDrill.Authentication.ONE_FACTOR ).done()
+        .build()
+    ) {
+      drill.play( SketchLibrary.ECHO_ROUNDTRIP ) ;
+    }
+  }
+
+  @Test
+  public void badCredentialThenCancel() throws Exception {
+    try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
+        .withTimeBoundary( SketchLibrary.PASSIVE_TIME_BOUNDARY )
+        .forDownendConnector()
             .automaticLifecycle( NONE )
+            .done()
+        .fakeUpend()
+            .withAuthentication( ConnectorDrill.Authentication.ONE_FACTOR )
+            .done()
+        .build()
+    ) {
+      final ForSimpleDownend forDownend = drill.forSimpleDownend() ;
+      final DownendConnector.ChangeWatcher changeWatcherMock = forDownend.changeWatcherMock() ;
+      final ForSimpleDownend.ChangeAsConstant change = forDownend.changeAsConstant() ;
+      final ConnectorDrill.ForFakeUpend forFakeUpend = drill.forFakeUpend() ;
+
+      forDownend.start() ;
+
+      changeWatcherMock.stateChanged( change.connecting ) ;
+
+      final Consumer< Credential > credentialConsumer1 ;
+      forDownend.signonMaterializerMock().readCredential( credentialConsumer1 = withCapture() ) ;
+
+      changeWatcherMock.stateChanged( change.connected ) ;
+
+      forDownend.signonMaterializerMock().setProgressMessage( withNull() ) ;
+
+      drill.runOutOfVerifierThread( () ->
+          credentialConsumer1.accept( SketchLibrary.BAD_CREDENTIAL ) ) ;
+
+      forDownend.signonMaterializerMock().setProgressMessage( "Signing in …" ) ;
+      forFakeUpend.duplex().texting().assertThatNext().hasTextContaining( "PRIMARY_SIGNON" ) ;
+
+      forFakeUpend.duplex().texting().emitPhase(
+          SessionLifecycle.SignonFailed.create( SketchLibrary.INVALID_CREDENTIAL ) ) ;
+
+      forDownend.signonMaterializerMock().setProblemMessage(
+          SketchLibrary.INVALID_CREDENTIAL ) ;
+
+      final Consumer< Credential > credentialConsumer2 ;
+      forDownend.signonMaterializerMock().readCredential( credentialConsumer2 = withCapture() ) ;
+
+      drill.runOutOfVerifierThread( () -> credentialConsumer2.accept( null ) ) ;
+
+      forDownend.signonMaterializerMock().done() ;
+
+      forDownend.stop() ;
+
+      changeWatcherMock.noSignon() ;
+
+      changeWatcherMock.stateChanged( change.stopping ) ;
+
+      changeWatcherMock.stateChanged( change.stopped ) ;
+
+      forFakeUpend.duplex().closing().next() ;
+    }
+  }
+
+  @Test
+  public void signonFailsUnrecoverably() throws Exception {
+    try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
+        .withTimeBoundary( SketchLibrary.PASSIVE_TIME_BOUNDARY )
+        .forDownendConnector()
+            .automaticLifecycle( NONE )
+            .done()
+        .fakeUpend()
+            .withAuthentication( ConnectorDrill.Authentication.ONE_FACTOR )
+            .done()
+        .build()
+    ) {
+      final ForSimpleDownend forDownend = drill.forSimpleDownend() ;
+      final DownendConnector.ChangeWatcher changeWatcherMock = forDownend.changeWatcherMock() ;
+      final ForSimpleDownend.ChangeAsConstant change = forDownend.changeAsConstant() ;
+      final ConnectorDrill.ForFakeUpend forFakeUpend = drill.forFakeUpend() ;
+
+      forDownend.start() ;
+
+      changeWatcherMock.stateChanged( change.connecting ) ;
+
+      final Consumer< Credential > credentialConsumer1 ;
+      forDownend.signonMaterializerMock().readCredential( credentialConsumer1 = withCapture() ) ;
+
+      changeWatcherMock.stateChanged( change.connected ) ;
+
+      forDownend.signonMaterializerMock().setProgressMessage( withNull() ) ;
+
+      drill.runOutOfVerifierThread( () ->
+          credentialConsumer1.accept( SketchLibrary.BAD_CREDENTIAL ) ) ;
+
+      forDownend.signonMaterializerMock().setProgressMessage( "Signing in …" ) ;
+
+      forFakeUpend.duplex().texting().next() ;
+
+      forFakeUpend.duplex().texting().emitPhase(
+          SessionLifecycle.SignonFailed.create( SketchLibrary.UNEXPECTED_FAILURE ) ) ;
+
+      forDownend.signonMaterializerMock().setProblemMessage( SketchLibrary.UNEXPECTED_FAILURE ) ;
+
+      final Runnable cancellationSignaller ;
+      forDownend.signonMaterializerMock().waitForCancellation(
+          cancellationSignaller = withCapture() ) ;
+
+      drill.runOutOfVerifierThread( cancellationSignaller ) ;
+
+      changeWatcherMock.noSignon() ;
+
+      forDownend.stop() ;
+
+      changeWatcherMock.stateChanged( change.stopping ) ;
+
+      changeWatcherMock.stateChanged( change.stopped ) ;
+
+      forFakeUpend.duplex().closing().next() ;
+    }
+  }
+
+  @Test
+  public void commandInterceptor() throws Exception {
+
+    try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
+        .withTimeBoundary( SketchLibrary.PASSIVE_TIME_BOUNDARY )
+        .forDownendConnector()
+            .withCommandInterceptor( Interceptor.commandInterceptor( LOGGER ) )
             .done()
         .fakeUpend().done()
         .build()
     ) {
-      final ConnectorDrill.ForCommandTransceiver forCommandTransceiver =
-          drill.forCommandTransceiver() ;
-      final ConnectorDrill.ForCommandTransceiver.ChangeAsConstant change =
-          forCommandTransceiver.changesAsConstants() ;
+      drill.forSimpleDownend().upwardDuty().requestEcho( TAG_TR0, MAGIC_PLEASE_INTERCEPT ) ;
+      drill.forSimpleDownend().downwardDutyMock().echoResponse( TAG_TR0, MAGIC_INTERCEPTED ) ;
 
-      forCommandTransceiver.start() ;
-      forCommandTransceiver.changeWatcherMock().stateChanged( change.connecting ) ;
-      forCommandTransceiver.changeWatcherMock().stateChanged( change.connected ) ;
-      LOGGER.info( "*** Connected, now echoing ***" ) ;
-
-      forCommandTransceiver.upwardDuty().requestEcho(
-          forCommandTransceiver.trackerMock(), "Hey" ) ;
-      forCommandTransceiver.changeWatcherMock().inFlightStatusChange(
-          change.commandInFlightStatusInFlight ) ;
-      drill.forFakeUpend().halfDuplex().texting().assertThatNext().hasTextContaining( "Hey" ) ;
-
-      drill.forFakeUpend().halfDuplex().texting().emitWithDutyCall().echoResponse( TAG_TR0, "Uh" ) ;
-      final Tracker capturedTracker ;
-      forCommandTransceiver.downwardDutyMock()
-          .echoResponse( capturedTracker = withCapture(), exactly( "Uh" ) ) ;
-      assertThat( extractTracker( capturedTracker ) )
-          .isSameAs( forCommandTransceiver.trackerMock() ) ;
-      forCommandTransceiver.changeWatcherMock().inFlightStatusChange(
-          change.commandInFlightStatusQuiet ) ;
-      forCommandTransceiver.trackerMock().afterResponseHandled() ;
-
-      LOGGER.info( "*** Echoed, now stopping ***" ) ;
-      forCommandTransceiver.stop() ;
-
-      forCommandTransceiver.changeWatcherMock().stateChanged( change.stopping ) ;
-      drill.forFakeUpend().halfDuplex().closing().next() ;
-      forCommandTransceiver.changeWatcherMock().stateChanged( change.stopped ) ;
-      LOGGER.info( "*** Stopped, let cleanup happen ***" ) ;
+      drill.play( SketchLibrary.ECHO_ROUNDTRIP ) ;
     }
   }
+
 
 
 // =======
 // Fixture
 // =======
 
+  @SuppressWarnings( "unused" )
   private static final Logger LOGGER = LoggerFactory.getLogger( DownendStory.class ) ;
 
-  private static final Command.Tag TAG_TR0 = new Command.Tag( TrackerCurator.TAG_PREFIX + 0 ) ;
-  private static final Command.Tag TAG_TR1 = new Command.Tag( TrackerCurator.TAG_PREFIX + 1 ) ;
-
+  @Rule
+  public final NettyLeakDetectorRule nettyLeakDetectorRule = new NettyLeakDetectorRule() ;
 
   private static Tracker extractTracker( final Tracker enhanced ) {
     try {
@@ -114,9 +395,9 @@ public class DownendStory {
           TrackerCurator.class.getName() + "$TrackerEnhancer" ) ;
       final Field privateTracker = enhancedTrackerClass.getDeclaredField( "tracker" ) ;
       privateTracker.setAccessible( true ) ;
-      return ( Tracker ) privateTracker.get( enhanced );
+      return ( Tracker ) privateTracker.get( enhanced ) ;
     } catch( ClassNotFoundException | NoSuchFieldException | IllegalAccessException e ) {
-      throw new RuntimeException( e );
+      throw new RuntimeException( e ) ;
     }
   }
 }

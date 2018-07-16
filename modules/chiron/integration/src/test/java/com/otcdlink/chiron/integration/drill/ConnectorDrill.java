@@ -8,13 +8,14 @@ import com.otcdlink.chiron.command.CommandConsumer;
 import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.downend.CommandInFlightStatus;
 import com.otcdlink.chiron.downend.CommandTransceiver;
+import com.otcdlink.chiron.downend.Downend;
 import com.otcdlink.chiron.downend.DownendConnector;
 import com.otcdlink.chiron.downend.SignonMaterializer;
 import com.otcdlink.chiron.downend.Tracker;
 import com.otcdlink.chiron.downend.babyupend.BabyUpend;
 import com.otcdlink.chiron.fixture.tcp.http.ConnectProxy;
 import com.otcdlink.chiron.fixture.tcp.http.HttpProxy;
-import com.otcdlink.chiron.integration.drill.fakeend.HalfDuplex;
+import com.otcdlink.chiron.integration.drill.fakeend.FullDuplex;
 import com.otcdlink.chiron.integration.echo.EchoDownwardDuty;
 import com.otcdlink.chiron.integration.echo.EchoUpwardDuty;
 import com.otcdlink.chiron.middle.PhoneNumber;
@@ -22,6 +23,7 @@ import com.otcdlink.chiron.middle.session.SecondaryCode;
 import com.otcdlink.chiron.middle.session.SecondaryToken;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
 import com.otcdlink.chiron.middle.session.SessionLifecycle;
+import com.otcdlink.chiron.middle.tier.TimeBoundary;
 import com.otcdlink.chiron.mockster.Mockster;
 import com.otcdlink.chiron.toolbox.Credential;
 import com.otcdlink.chiron.toolbox.clock.UpdateableClock;
@@ -43,6 +45,8 @@ import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -64,8 +68,6 @@ public interface ConnectorDrill extends AutoCloseable {
 
   InternetAddressPack internetAddressPack() ;
 
-  interface EventLoopOwner { }
-
   /**
    * Methods here must support asynchronicity because implementation may trigger
    * an Operative call on a Mock, with corresponding Verification happening later.
@@ -76,16 +78,16 @@ public interface ConnectorDrill extends AutoCloseable {
     CompletableFuture< Void > stop() ;
   }
 
-  interface AnyEndHalfDuplex {
+  interface AnyEndFullDuplex {
 
     /**
      * @throws FeatureUnavailableException if using
      *     {@link DrillBuilder.ForUpendConnector} not created with
      *     {@link DrillBuilder.ForUpendConnector#withAuthentication(Authentication)}.
      */
-    HalfDuplex< SessionLifecycle.Phase, SessionLifecycle.Phase > phasing() ;
+    FullDuplex< SessionLifecycle.Phase, SessionLifecycle.Phase > phasing() ;
 
-    HalfDuplex< CloseWebSocketFrame, CloseWebSocketFrame > closing() ;
+    FullDuplex< CloseWebSocketFrame, CloseWebSocketFrame > closing() ;
 
   }
 
@@ -121,6 +123,8 @@ public interface ConnectorDrill extends AutoCloseable {
         .filter( authentication -> authentication.authenticating )
         .collect(ImmutableSet.toImmutableSet()
     ) ;
+
+    public static ImmutableSet< Authentication > ALL_VALUES = ImmutableSet.copyOf( values() ) ;
   }
 
   /**
@@ -138,7 +142,47 @@ public interface ConnectorDrill extends AutoCloseable {
 
   void restartHttpProxy() ;
 
+  void changeTimeBoundary( TimeBoundary.ForAll timeBoundary ) ;
 
+
+// ==========
+// Event loop
+// ==========
+
+  interface EventLoopOwner { }
+
+  void processNextTaskCapture(
+      Function< Downend.ScheduledInternally, TaskExecution > validityChecker
+  ) ;
+
+  void dumpTaskCapture() ;
+
+  enum TaskExecution {
+    EXECUTE, SKIP, UNEXPECTED
+  }
+
+  Function< Downend.ScheduledInternally, TaskExecution > SKIP_PING = expect(
+      Downend.ScheduledInternally.Ping.class, TaskExecution.SKIP ) ;
+
+  Function< Downend.ScheduledInternally, TaskExecution > EXECUTE_PING = expect(
+      Downend.ScheduledInternally.Ping.class, TaskExecution.EXECUTE ) ;
+
+  Function< Downend.ScheduledInternally, TaskExecution > EXECUTE_PONG_TIMEOUT = expect(
+      Downend.ScheduledInternally.PongTimeout.class, TaskExecution.EXECUTE ) ;
+
+  Function< Downend.ScheduledInternally, TaskExecution > EXECUTE_RECONNECT = expect(
+      Downend.ScheduledInternally.Reconnect.class, TaskExecution.EXECUTE ) ;
+
+  Function< Downend.ScheduledInternally, TaskExecution > SKIP_RECONNECT = expect(
+      Downend.ScheduledInternally.Reconnect.class, TaskExecution.SKIP ) ;
+
+  static Function< Downend.ScheduledInternally, TaskExecution > expect(
+      final Class< ? extends Downend.ScheduledInternally > skip,
+      final TaskExecution taskExecution
+  ) {
+    return task -> skip.isAssignableFrom( task.getClass() ) ?
+        taskExecution : TaskExecution.UNEXPECTED ;
+  }
 
 // =======
 // Downend
@@ -191,13 +235,39 @@ public interface ConnectorDrill extends AutoCloseable {
     DownendConnector.ChangeWatcher changeWatcherMock() ;
 
     /**
-     * Creates a fresh instance with same configuration as defined in
-     * {@link DrillBuilder.ForDownendConnector}, but unstarted.
-     * There will be a new {@link DownendConnector.ChangeWatcher} and a new {@link CommandConsumer}.
+     * The usual deecapsulation method for extreme cases.
      */
+    void applyDirectly(
+        Consumer<
+            DownendConnector<
+                Command.Tag,
+                EchoDownwardDuty< Command.Tag >,
+                EchoUpwardDuty< Command.Tag >
+            >
+        > consumer,
+        boolean runInNonVerifierThread
+    ) ;
+
+    < T > T applyDirectly(
+        Function<
+            DownendConnector<
+                Command.Tag,
+                EchoDownwardDuty< Command.Tag >,
+                EchoUpwardDuty< Command.Tag >
+            >,
+            T
+        > transformer
+    ) ;
+
+
+      /**
+       * Creates a fresh instance with same configuration as defined in
+       * {@link DrillBuilder.ForDownendConnector}, but unstarted.
+       * There will be a new {@link DownendConnector.ChangeWatcher} and a new {@link CommandConsumer}.
+       */
     ForSimpleDownend clone() ;
 
-    ChangeAsConstant changesAsConstant() ;
+    ChangeAsConstant changeAsConstant() ;
 
     class ChangeAsConstant {
       public final DownendConnector.Change stopped ;
@@ -224,6 +294,7 @@ public interface ConnectorDrill extends AutoCloseable {
   }
 
   interface ForCommandTransceiver extends ForDownend< Tracker > {
+
     /**
      * @return an instance of the mock created by underlying {@link Mockster}.
      *
@@ -232,9 +303,40 @@ public interface ConnectorDrill extends AutoCloseable {
      */
     Tracker trackerMock() ;
 
+
+    /**
+     * Useful when single, pre-built {@link #trackerMock()} is not enough.
+     *
+     * @return an fresh instance of the mock created by underlying {@link Mockster}.
+     *
+     * @throws FeatureUnavailableException if not created with
+     *     {@link DrillBuilder#forCommandTransceiver()}.
+     */
+    Tracker newTrackerMock() ;
+
     CommandTransceiver.ChangeWatcher changeWatcherMock() ;
 
-    ChangeAsConstant changesAsConstants() ;
+    void applyDirectly(
+        Consumer<
+            CommandTransceiver<
+                EchoDownwardDuty< Tracker >,
+                EchoUpwardDuty< Tracker >
+            >
+        > consumer,
+        boolean runInNonVerifierThread
+    ) ;
+
+    < T > T applyDirectly(
+        Function<
+            CommandTransceiver<
+                EchoDownwardDuty< Tracker >,
+                EchoUpwardDuty< Tracker >
+            >,
+            T
+        > transformer
+    ) ;
+
+    ChangeAsConstant changeAsConstant() ;
 
     class ChangeAsConstant extends ForSimpleDownend.ChangeAsConstant {
 
@@ -270,14 +372,14 @@ public interface ConnectorDrill extends AutoCloseable {
   }
 
   interface ForFakeDownend extends AnyEndLifecycle {
-    DownendHalfDuplex halfDuplex() ;
+    DownendDuplex duplex() ;
     void connect() ;
     NettyHttpClient.CompleteResponse httpRequest( Hypermessage.Request request ) ;
   }
 
-  interface DownendHalfDuplex extends AnyEndHalfDuplex {
-    HalfDuplex< PongWebSocketFrame, PingWebSocketFrame > pinging() ;
-    HalfDuplex.ForTextWebSocket< EchoUpwardDuty< Command.Tag > > texting() ;
+  interface DownendDuplex extends AnyEndFullDuplex {
+    FullDuplex< PongWebSocketFrame, PingWebSocketFrame > pinging() ;
+    FullDuplex.ForTextWebSocket< EchoUpwardDuty< Command.Tag > > texting() ;
   }
 
 
@@ -287,9 +389,14 @@ public interface ConnectorDrill extends AutoCloseable {
 
   interface ForUpend extends AnyEndLifecycle {
     enum Kind {
-      REAL, FAKE
+      REAL,
+      FAKE,
+      ;
+      public static ImmutableSet< Kind > ALL_VALUES = ImmutableSet.copyOf( values() ) ;
     }
   }
+
+  ForUpend.Kind upendKind() ;
 
   /**
    * @throws FeatureUnavailableException if not created with
@@ -307,6 +414,7 @@ public interface ConnectorDrill extends AutoCloseable {
     EchoUpwardDuty< Designator > upwardDutyMock() ;
     EchoDownwardDuty< Designator > downwardDuty() ;
     OutwardSessionSupervisor< Channel, InetAddress > sessionSupervisorMock() ;
+    void changeTimeBoundary( TimeBoundary.ForAll timeBoundary ) ;
 
     enum HttpRequestRelayerKind {
       NONE( null ), ALWAYS_OK( happyCommandRecognizer() ), ;
@@ -336,14 +444,14 @@ public interface ConnectorDrill extends AutoCloseable {
   }
 
   interface ForFakeUpend extends ForUpend {
-    UpendHalfDuplex halfDuplex() ;
+    UpendDuplex duplex() ;
   }
 
-  interface UpendHalfDuplex extends AnyEndHalfDuplex {
+  interface UpendDuplex extends AnyEndFullDuplex {
 
-    HalfDuplex< PingWebSocketFrame, PongWebSocketFrame > ponging() ;
+    FullDuplex< PingWebSocketFrame, PongWebSocketFrame > ponging() ;
 
-    HalfDuplex.ForTextWebSocket< EchoDownwardDuty< Command.Tag > > texting() ;
+    FullDuplex.ForTextWebSocket< EchoDownwardDuty< Command.Tag > > texting() ;
   }
 
 // ================
@@ -351,11 +459,12 @@ public interface ConnectorDrill extends AutoCloseable {
 // ================
 
   /**
-   * Used in {@link ForCommandTransceiver#changesAsConstants()}.
+   * Used in {@link ForCommandTransceiver#changeAsConstant()}.
    */
   Credential GOOD_CREDENTIAL = new Credential( "Login", "Password" ) ;
 
   SessionIdentifier SESSION_IDENTIFIER = new SessionIdentifier( "5e55i0n" ) ;
+  SessionIdentifier SESSION_IDENTIFIER_2 = new SessionIdentifier( "5e55i0n222" ) ;
 
   SignableUser SIGNABLE_USER = new SignableUser() {
     @Override
@@ -384,31 +493,31 @@ public interface ConnectorDrill extends AutoCloseable {
    * A Sketch is a reusable part of a Story. A Story is an integration test.
    */
   interface Sketch {
-    ForUpend.Kind upendKindRequirement() ;
+    ImmutableSet< ForUpend.Kind > upendKindRequirements() ;
     ImmutableSet< ForDownend.Kind > downendKindRequirements() ;
     ImmutableSet< ConnectorDrill.Authentication > authenticationRequirements() ;
     void run( ConnectorDrill drill ) throws Exception ;
   }
 
   abstract class Default implements Sketch {
-    private final ForUpend.Kind upendKindRequirement ;
+    private final ImmutableSet< ForUpend.Kind > upendKindRequirements ;
     private final ImmutableSet< ForDownend.Kind > downendKindRequirements ;
     private final ImmutableSet< ConnectorDrill.Authentication > authenticationRequirements ;
 
     public Default(
-        final ForUpend.Kind upendKindRequirement,
+        final ForUpend.Kind upendKindRequirements,
         final ImmutableSet< ForDownend.Kind > downendKindRequirements,
         final ImmutableSet< Authentication > authenticationRequirements
     ) {
-      this.upendKindRequirement = checkNotNull( upendKindRequirement ) ;
+      this.upendKindRequirements = ImmutableSet.of( upendKindRequirements ) ;
       this.downendKindRequirements = checkNotNull( downendKindRequirements ) ;
       this.authenticationRequirements = checkNotNull( authenticationRequirements ) ;
       checkArgument( ! authenticationRequirements.isEmpty() ) ;
     }
 
     @Override
-    public final ForUpend.Kind upendKindRequirement() {
-      return upendKindRequirement ;
+    public final ImmutableSet< ForUpend.Kind > upendKindRequirements() {
+      return upendKindRequirements ;
     }
 
     @Override

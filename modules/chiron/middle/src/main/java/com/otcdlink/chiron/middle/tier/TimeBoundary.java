@@ -143,6 +143,9 @@ public interface TimeBoundary {
       default PingTimeoutStep reconnectDelayOrDouble( final int delayMs ) {
         return reconnectDelay( delayMs, delayMs * 2 ) ;
       }
+      default PingTimeoutStep reconnectDelay( int sameBoundMsForLowerAndHigher ) {
+        return reconnectDelay( sameBoundMsForLowerAndHigher, sameBoundMsForLowerAndHigher ) ;
+      }
       PingTimeoutStep reconnectDelay( int delayLowerBoundMs, final int delayHigherBoundMs ) ;
     }
 

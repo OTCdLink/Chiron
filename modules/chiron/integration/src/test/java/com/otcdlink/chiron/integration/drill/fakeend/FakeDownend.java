@@ -35,7 +35,7 @@ public class FakeDownend extends NettySocketClient {
   private static final Logger LOGGER = LoggerFactory.getLogger( FakeDownend.class ) ;
 
   private final InetSocketAddress remoteAddress ;
-  public final DownendHalfDuplexPack downendHalfDuplexPack ;
+  public final DownendDuplexPack downendDuplexPack;
   private final Thread.UncaughtExceptionHandler uncaughtExceptionHandler ;
 
   private Channel channel ;
@@ -50,7 +50,7 @@ public class FakeDownend extends NettySocketClient {
     webSocketClientHandler = new WebSocketClientHandler(
         WebSocketClientHandshakerFactory.newHandshaker(
             checkNotNull( uri ), WebSocketVersion.V13, null, false, new DefaultHttpHeaders() ) ) ;
-    downendHalfDuplexPack = new DownendHalfDuplexPack( this::writeToChannel ) ;
+    downendDuplexPack = new DownendDuplexPack( this::writeToChannel ) ;
     this.uncaughtExceptionHandler = checkNotNull( uncaughtExceptionHandler ) ;
   }
 
@@ -86,7 +86,7 @@ public class FakeDownend extends NettySocketClient {
       channel.close().syncUninterruptibly() ;
     }
     channel = null ;
-    downendHalfDuplexPack.shutdown() ;
+    downendDuplexPack.shutdown() ;
   }
 
   private class WebSocketClientHandler extends SimpleChannelInboundHandler< Object > {
@@ -144,17 +144,17 @@ public class FakeDownend extends NettySocketClient {
       if( frame instanceof TextWebSocketFrame ) {
         final TextWebSocketFrame textFrame = ( TextWebSocketFrame ) frame ;
         LOGGER.info( "WebSocket Client received message: " + textFrame.text() ) ;
-        downendHalfDuplexPack.textWebSocketFrameHalfDuplex.receive(
+        downendDuplexPack.textWebSocketFrameDuplex.receive(
             channelHandlerContext, textFrame ) ;
       } else if( frame instanceof PongWebSocketFrame ) {
         LOGGER.info( "WebSocket Client received pong" ) ;
         final PongWebSocketFrame pongWebSocketFrame = ( PongWebSocketFrame ) frame ;
-        downendHalfDuplexPack.pingPongWebSocketFrameHalfDuplex
+        downendDuplexPack.pingPongWebSocketFrameDuplex
             .receive( channelHandlerContext, pongWebSocketFrame ) ;
       } else if( frame instanceof CloseWebSocketFrame ) {
         LOGGER.info( "WebSocket Client received closing" ) ;
         final CloseWebSocketFrame closeWebSocketFrame = ( CloseWebSocketFrame ) frame ;
-        downendHalfDuplexPack.closeWebSocketFrameHalfDuplex.receive(
+        downendDuplexPack.closeWebSocketFrameDuplex.receive(
             channelHandlerContext, closeWebSocketFrame ) ;
         channel.close() ;
       }

@@ -306,6 +306,9 @@ public class CommandTransceiver< DOWNWARD_DUTY, UPWARD_DUTY >
     }
   }
 
+  /**
+   * Clean deencapsulation of {@link TrackerCurator#scavengeTimeouts()}.
+   */
   public static abstract class ScavengeActivator {
 
     protected final TrackerCurator trackerCurator ;

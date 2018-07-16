@@ -1,0 +1,1 @@
+See the [introductory article](https://groups.google.com/d/msg/techos/n0KVG_u-ltI/H489Xk95CQAJ) (in French).

@@ -32,6 +32,13 @@
 			<version>${project.version}</version>				
 		</dependency>
     
+		<dependency>
+			<groupId>${project.parent.groupId}</groupId>
+			<artifactId>Chiron-mockster</artifactId>
+			<version>${project.version}</version>
+      <scope>test</scope>
+		</dependency>
+
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-transport</artifactId>

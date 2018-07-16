@@ -3,7 +3,6 @@ package com.otcdlink.chiron.mockster;
 import com.google.common.collect.ImmutableList;
 import com.google.common.reflect.TypeToken;
 import com.google.common.util.concurrent.Uninterruptibles;
-import com.otcdlink.chiron.testing.NameAwareRunner;
 import com.otcdlink.chiron.toolbox.StringWrapper;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 import com.otcdlink.chiron.toolbox.concurrent.ExecutorTools;
@@ -11,7 +10,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.ComparisonFailure;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +30,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SuppressWarnings( "CodeBlock2Expr" )
-@RunWith( NameAwareRunner.class )
 public class MocksterTest {
 
   @Test
@@ -223,15 +220,15 @@ public class MocksterTest {
   }
 
   @Test
-  public void nextInvocationIsNonBlockingOperativeSucceeds() {
-    applyNextInvocationIsNonBlockingOperative( true ) ;
+  public void outOfVerifierThreadSucceeds() {
+    applyInVerifierThread( true ) ;
   }
 
   @Test
-  public void nextInvocationIsNonBlockingOperativeMissing() {
+  public void outOfVerifierThreadMissing() {
     assertThatThrownBy( () -> {
       try {
-        applyNextInvocationIsNonBlockingOperative( false ) ;
+        applyInVerifierThread( false ) ;
       } catch( Exception e ) {
         LOGGER.info( "Got: ", e ) ;
         throw e ;
@@ -240,7 +237,7 @@ public class MocksterTest {
         .isInstanceOf( InvocationTimeoutError.class ) ;
   }
 
-  private void applyNextInvocationIsNonBlockingOperative( final boolean doIt ) {
+  private void applyInVerifierThread( final boolean doIt ) {
     try( final Mockster mockster = new Mockster() ) {
       final SomeComponent.Subsystem subsystem = mockster.mock( SomeComponent.Subsystem.class ) ;
       final SomeComponent.ValueSink valueSink = mockster.mock( SomeComponent.ValueSink.class ) ;
@@ -253,8 +250,13 @@ public class MocksterTest {
       final SomeComponent.ValueConsumer valueConsumer ;
       subsystem.requestValue( valueConsumer = withCapture() ) ;
 
-      Mockster.nextInvocationIsNonBlockingOperative( doIt ) ;
-      valueConsumer.consumeValue( value ) ;
+      final Runnable runnable = () -> valueConsumer.consumeValue( value ) ;
+      if( doIt ) {
+        mockster.runOutOfVerifierThread( runnable ) ;
+      } else {
+        runnable.run() ;
+      }
+
 
       /** Because of {@link #nextInvocationIsNonBlockingOperative} was set to {@code true},
        * the statement above caused an Operative call to
@@ -273,7 +275,7 @@ public class MocksterTest {
 
   @Before
   public void setUp() {
-    LOGGER.info( "*** Running " + NameAwareRunner.getTestShortName() + " ***" ) ;
+    LOGGER.info( "*** Running test ***" ) ;
   }
 
   @After
@@ -281,7 +283,7 @@ public class MocksterTest {
     for( final Stimulator< ? > stimulator : stimulators ) {
       stimulator.shutdown() ;
     }
-    LOGGER.info( "*** Done with " + NameAwareRunner.getTestShortName() + " ***" ) ;
+    LOGGER.info( "*** Done with test ***" ) ;
   }
 
   private final List< Stimulator > stimulators = new ArrayList<>() ;

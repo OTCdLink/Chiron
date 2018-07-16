@@ -2,6 +2,7 @@ package com.otcdlink.chiron.mockster;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.reflect.TypeToken;
+import com.otcdlink.chiron.toolbox.concurrent.ExecutorTools;
 import junit.framework.AssertionFailedError;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.util.Throwables;
@@ -12,6 +13,9 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -69,6 +73,7 @@ public final class Mockster implements AutoCloseable {
   private static final Logger LOGGER = LoggerFactory.getLogger( Mockster.class ) ;
 
   public static final int DEFAULT_TIMEOUT_MS = 1000 ;
+  public static final ThreadFactory COUNTING_DAEMON_THREAD_FACTORY = ExecutorTools.newCountingDaemonThreadFactory( Mockster.class.getSimpleName() + "-side-executor" );
   private final long invocationTimeoutMs ;
 
   public Mockster() {
@@ -92,6 +97,25 @@ public final class Mockster implements AutoCloseable {
       popFromThreadLocalStack() ;
       LOGGER.info( "Closed " + this + "." ) ;
     }
+  }
+
+// ======================
+// Out of Verifier thread
+// ======================
+
+  private final ExecutorService sideExecutor =
+      Executors.newSingleThreadExecutor( COUNTING_DAEMON_THREAD_FACTORY ) ;
+
+  public void runOutOfVerifierThread( final Runnable runnable ) {
+    sideExecutor.submit( runnable ) ;
+  }
+
+  public void runTaskOutOfVerifierThread( final Task task ) throws Throwable {
+    sideExecutor.submit( () -> { task.run() ; return null ; } ) ;
+  }
+
+  public interface Task {
+    void run() throws Exception ;
   }
 
 // ===============
@@ -145,11 +169,6 @@ public final class Mockster implements AutoCloseable {
 
   public static void nextThrowable( final Throwable throwable ) {
     currentMockster().nextThrowable = throwable ;
-  }
-
-  @Deprecated
-  public static void nextInvocationIsNonBlockingOperative() {
-    nextInvocationIsNonBlockingOperative( true ) ;
   }
 
   @Deprecated
@@ -333,7 +352,7 @@ public final class Mockster implements AutoCloseable {
   }
 
   @SuppressWarnings( "unused" )
-  public void verifyNothingHappened() {
+  public void ensureAllVerificationsComplete() {
     try {
       coreVerifier.checkNoPendingInvocation() ;
     } catch( Exception e ) {

@@ -9,10 +9,10 @@
     <version>dev-SNAPSHOT</version>
   </parent>
 
-  <artifactId>Chiron-mockster</artifactId>
+  <artifactId>Chiron-jupiter-experiment</artifactId>
   <name>${project.artifactId}</name>
   <packaging>jar</packaging>
-  <description>Yet another mocking framework</description>
+  <description>Play with JUnit 5 aka Jupiter</description>
 
 
   <dependencies>
@@ -23,10 +23,10 @@
       <version>${project.version}</version>
     </dependency>
 
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>compile</scope>
+    <dependency> 
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.2.0</version>
     </dependency>
 
     <dependency>

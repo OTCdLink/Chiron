@@ -174,4 +174,8 @@ public class SessionDownendTier
     claim.sessionValid() ;
   }
 
+  public void clearSessionIdentifier() {
+    sessionIdentifier = null ;
+  }
+
 }

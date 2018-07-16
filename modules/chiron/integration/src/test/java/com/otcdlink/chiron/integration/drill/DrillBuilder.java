@@ -35,7 +35,7 @@ public final class DrillBuilder {
       false,
       false,
       false,
-      null,
+      WebsocketFrameSizer.tightSizer( 8192 ),
       null,
       Mockster.DEFAULT_TIMEOUT_MS,
       TimeUnit.MILLISECONDS,
@@ -94,6 +94,20 @@ public final class DrillBuilder {
   }
 
   public DrillBuilder withTimeBoundary( final TimeBoundary.ForAll timeBoundary ) {
+    return new DrillBuilder(
+        tls,
+        proxy,
+        portForwarder,
+        webSocketFrameSizer,
+        timeBoundary,
+        mocksterTimeoutDuration,
+        mocksterTimeoutUnit,
+        forDownend,
+        forUpend
+    ) ;
+  }
+
+  public DrillBuilder withWebsocketFrameSizer( final WebsocketFrameSizer webSocketFrameSizer ) {
     return new DrillBuilder(
         tls,
         proxy,
@@ -274,21 +288,23 @@ public final class DrillBuilder {
 
   public static class ForUpend extends ForAnyEnd {
     final ConnectorDrill.ForUpend.Kind kind ;
+    final ConnectorDrill.Authentication authentication ;
 
     protected ForUpend(
         final DrillBuilder drillBuilder,
         final ConnectorDrill.ForUpend.Kind kind,
-        final ConnectorDrill.AutomaticLifecycle automaticLifecycle
+        final ConnectorDrill.AutomaticLifecycle automaticLifecycle,
+        final ConnectorDrill.Authentication authentication
     ) {
       super( drillBuilder, automaticLifecycle ) ;
       this.kind = checkNotNull( kind ) ;
+      this.authentication = checkNotNull( authentication ) ;
     }
 
   }
 
   public static class ForUpendConnector extends ForUpend {
 
-    final ConnectorDrill.Authentication authentication ;
     final CommandInterceptor commandInterceptor ;
     final ConnectorDrill.ForUpendConnector.HttpRequestRelayerKind httpRequestRelayerKind ;
 
@@ -311,8 +327,7 @@ public final class DrillBuilder {
         final CommandInterceptor commandInterceptor,
         final ConnectorDrill.ForUpendConnector.HttpRequestRelayerKind httpRequestRelayerKind
     ) {
-      super( drillBuilder, kind, automaticLifecycle ) ;
-      this.authentication = authentication ;
+      super( drillBuilder, kind, automaticLifecycle, authentication ) ;
       this.commandInterceptor = commandInterceptor ;
       this.httpRequestRelayerKind = checkNotNull( httpRequestRelayerKind ) ;
     }
@@ -390,12 +405,34 @@ public final class DrillBuilder {
   public static class ForFakeUpend extends ForUpend {
 
     public ForFakeUpend( final DrillBuilder drillBuilder ) {
-      super(
+      this(
           drillBuilder,
-          ConnectorDrill.ForUpend.Kind.FAKE,
-          ConnectorDrill.AutomaticLifecycle.BOTH
+          ConnectorDrill.AutomaticLifecycle.BOTH,
+          ConnectorDrill.Authentication.NONE
       ) ;
     }
+
+    public ForFakeUpend(
+        DrillBuilder drillBuilder,
+        ConnectorDrill.AutomaticLifecycle automaticLifecycle,
+        ConnectorDrill.Authentication authentication
+
+    ) {
+      super( drillBuilder, ConnectorDrill.ForUpend.Kind.FAKE, automaticLifecycle, authentication ) ;
+    }
+
+    public ForFakeUpend automaticLifecycle(
+        final ConnectorDrill.AutomaticLifecycle automaticLifecycle
+    ) {
+      return new ForFakeUpend( drillBuilder, automaticLifecycle, authentication ) ;
+    }
+
+    public ForFakeUpend withAuthentication(
+        final ConnectorDrill.Authentication authentication
+    ) {
+      return new ForFakeUpend( drillBuilder, automaticLifecycle, authentication ) ;
+    }
+
 
     public DrillBuilder done() {
       return new DrillBuilder(

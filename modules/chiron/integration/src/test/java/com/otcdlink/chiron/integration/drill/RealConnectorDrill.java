@@ -1,6 +1,8 @@
 package com.otcdlink.chiron.integration.drill;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.reflect.TypeToken;
 import com.otcdlink.chiron.ExtendedChange;
 import com.otcdlink.chiron.command.Command;
@@ -16,6 +18,7 @@ import com.otcdlink.chiron.downend.Tracker;
 import com.otcdlink.chiron.fixture.tcp.TcpTransitServer;
 import com.otcdlink.chiron.fixture.tcp.http.ConnectProxy;
 import com.otcdlink.chiron.fixture.tcp.http.HttpProxy;
+import com.otcdlink.chiron.integration.drill.eventloop.PassivatedEventLoopGroup;
 import com.otcdlink.chiron.integration.drill.fakeend.FakeDownend;
 import com.otcdlink.chiron.integration.drill.fakeend.FakeUpend;
 import com.otcdlink.chiron.integration.echo.EchoCodecFixture;
@@ -25,9 +28,9 @@ import com.otcdlink.chiron.integration.echo.EchoUpwardCommandCrafter;
 import com.otcdlink.chiron.integration.echo.EchoUpwardDuty;
 import com.otcdlink.chiron.middle.AutosignerFixture;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
+import com.otcdlink.chiron.middle.tier.CommandInterceptor;
 import com.otcdlink.chiron.middle.tier.ConnectionDescriptor;
 import com.otcdlink.chiron.middle.tier.TimeBoundary;
-import com.otcdlink.chiron.middle.tier.WebsocketFrameSizer;
 import com.otcdlink.chiron.mockster.Mockster;
 import com.otcdlink.chiron.toolbox.CollectingException;
 import com.otcdlink.chiron.toolbox.TcpPortBooker;
@@ -39,6 +42,7 @@ import com.otcdlink.chiron.toolbox.netty.Hypermessage;
 import com.otcdlink.chiron.toolbox.netty.NettyHttpClient;
 import com.otcdlink.chiron.toolbox.netty.NettyTools;
 import com.otcdlink.chiron.toolbox.security.SslEngineFactory;
+import com.otcdlink.chiron.toolbox.text.Plural;
 import com.otcdlink.chiron.upend.TimeKit;
 import com.otcdlink.chiron.upend.UpendConnector;
 import com.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
@@ -55,12 +59,15 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.otcdlink.chiron.conductor.ConductorTools.fullWireEncode;
@@ -79,15 +86,16 @@ public class RealConnectorDrill implements ConnectorDrill {
       ExecutorTools.singleThreadedExecutorServiceFactory( getClass().getSimpleName() + "-admin" )
           .create()
   ;
-  private final ExecutorService operativeExecutorService =
-      ExecutorTools.singleThreadedExecutorServiceFactory(
-          getClass().getSimpleName() + "-operative" ).create() ;
 
-  private final NioEventLoopGroup sharedEventLoopGroup = new NioEventLoopGroup(
-      1, ExecutorTools.newThreadFactory( "drill" ) ) ;
+  final BlockingQueue< PassivatedEventLoopGroup.TaskCapture > taskCaptureQueue =
+      new LinkedBlockingQueue<>() ;
+
+
+  private final NioEventLoopGroup sharedEventLoopGroup =
+      new PassivatedEventLoopGroup( ExecutorTools.newThreadFactory( "drill" ), taskCaptureQueue::add ) ;
+//      new NioEventLoopGroup( 1, ExecutorTools.newThreadFactory( "drill" ) ) ;
   private final TimeKit< UpdateableClock > timeKit = TimeKit.instrumentedTimeKit( Stamp.FLOOR ) ;
   private final InternetAddressPack internetAddressPack ;
-  private final ConnectionDescriptor connectionDescriptor ;
   private final Mockster mockster ;
 
   private final CollectingException.Collector exceptionCollector =
@@ -111,8 +119,13 @@ public class RealConnectorDrill implements ConnectorDrill {
 
   private final ConnectProxy connectProxy ;
 
-  private final ForSimpleDownend.ChangeAsConstant simpleDownendConnectoerChangeAsConstant ;
-  private final ForCommandTransceiver.ChangeAsConstant commandTransceiverChangeAsContant ;
+//  private final ForSimpleDownend.ChangeAsConstant simpleDownendConnectoerChangeAsConstant ;
+//  private final ForCommandTransceiver.ChangeAsConstant commandTransceiverChangeAsContant ;
+
+  /**
+   * @see #changeTimeBoundary(TimeBoundary.ForAll)
+   */
+  private TimeBoundary.ForAll timeBoundary ;
 
   RealConnectorDrill( final DrillBuilder drillBuilder ) throws CollectingException {
     this.drillBuilder = checkNotNull( drillBuilder ) ;
@@ -142,11 +155,8 @@ public class RealConnectorDrill implements ConnectorDrill {
       this.connectProxy = null ;
     }
 
-    connectionDescriptor = new ConnectionDescriptor(
-        "someVersion",
-        authentication().authenticating,
-        initialTimeBoundary()
-    ) ;
+    timeBoundary = drillBuilder.timeBoundary == null ?
+        TimeBoundary.NOPE : drillBuilder.timeBoundary ;
 
     switch( drillBuilder.forUpend.kind ) {
       case REAL :
@@ -181,8 +191,8 @@ public class RealConnectorDrill implements ConnectorDrill {
         throw new IllegalArgumentException( "Unsupported: " + drillBuilder.forDownend.kind ) ;
     }
 
-    simpleDownendConnectoerChangeAsConstant = newDownendConnectorChangeAsConstant() ;
-    commandTransceiverChangeAsContant = newCommandTransceiverChangeAsConstant() ;
+//    simpleDownendConnectoerChangeAsConstant = newDownendConnectorChangeAsConstant() ;
+//    commandTransceiverChangeAsContant = newCommandTransceiverChangeAsConstant() ;
 
     startEverything() ;
   }
@@ -194,17 +204,19 @@ public class RealConnectorDrill implements ConnectorDrill {
    */
   private void startEverything() throws CollectingException {
 
+    LOGGER.info( "Starting everything in " + this + " ..." );
+
     final boolean startUpend = drillBuilder.forUpend.automaticLifecycle.start ;
     final boolean startDownend = drillBuilder.forDownend.automaticLifecycle.start ;
     final boolean realUpend = forUpendConnector != null ;
     final boolean realDownend = forSimpleDownend != null || forCommandTransceiver != null ;
-    final boolean complexStart = realUpend && startUpend && realDownend && startDownend ;
+    final boolean complexStart = startUpend && realDownend && startDownend ;
 
     if( connectProxy != null ) {
       connectProxy.start().join() ;
     }
 
-    if( forFakeUpend != null && startUpend ) {
+    if( forFakeUpend != null && startUpend && ! complexStart ) {
       // No mock will be waiting so we can be synchronous.
       // Moreover Downend may expect Upend to be available past this point.
       forFakeUpend.start().join() ;
@@ -220,7 +232,7 @@ public class RealConnectorDrill implements ConnectorDrill {
       runAsynchronouslyInAdministrativeExecutor(
           ( ( DefaultForSimpleDownend ) forSimpleDownend ).connector::start ) ;
       final ForSimpleDownend.ChangeAsConstant changeAsConstant =
-          forSimpleDownend.changesAsConstant() ;
+          forSimpleDownend.changeAsConstant() ;
       forSimpleDownend.changeWatcherMock().stateChanged( changeAsConstant.connecting ) ;
       forSimpleDownend.changeWatcherMock().stateChanged( changeAsConstant.connected ) ;
     }
@@ -238,16 +250,21 @@ public class RealConnectorDrill implements ConnectorDrill {
     }
 
     if( complexStart ) {
-      exceptionCollector.execute( () -> play( SketchLibrary.START_AUTHENTICATED ) ) ;
+      if( realUpend ) {
+        exceptionCollector.execute( () -> play( SketchLibrary.START_AUTHENTICATED ) ) ;
+      } else {
+        exceptionCollector.execute( () -> play( SketchLibrary.START_WITH_FAKE_UPEND ) ) ;
+      }
     }
 
     exceptionCollector.throwIfAny( "Could not start" ) ;
 
+    LOGGER.info( "Started everything from " + this + "." );
   }
 
   @Override
   public void runOutOfVerifierThread( Runnable runnable ) {
-    operativeExecutorService.submit( runnable ) ;
+    mockster.runOutOfVerifierThread( runnable ) ;
   }
 
 // ==============
@@ -269,6 +286,52 @@ public class RealConnectorDrill implements ConnectorDrill {
   public TimeKit< UpdateableClock > timeKit() {
     return timeKit ;
   }
+
+  @Override
+  public void processNextTaskCapture(
+      Function< Downend.ScheduledInternally, TaskExecution > validityChecker
+  ) {
+    try {
+      final PassivatedEventLoopGroup.TaskCapture taskCapture = taskCaptureQueue.take() ;
+      if( taskCapture.runnable instanceof Downend.ScheduledInternally ) {
+        final TaskExecution taskExecution = validityChecker.apply(
+            ( Downend.ScheduledInternally ) taskCapture.runnable ) ;
+        switch( taskExecution ) {
+
+          case EXECUTE :
+            LOGGER.info( "Obtained " + taskCapture + ", executing ..." ) ;
+            taskCapture.submitNow() ;
+            return ;
+          case SKIP:
+            LOGGER.info( "Skipping " + taskCapture + "." ) ;
+            return ;
+          default :
+            break ;
+        }
+      }
+      throw new IllegalStateException( "Unexpected: " + taskCapture ) ;
+    } catch( InterruptedException e ) {
+      throw new RuntimeException( e ) ;
+    }
+  }
+
+  @Override
+  public void dumpTaskCapture() {
+    final ImmutableList< PassivatedEventLoopGroup.TaskCapture > taskCaptures =
+        taskCaptureQueue.stream().collect( ImmutableList.toImmutableList() ) ;
+    final String taskCaptureClassName =
+        PassivatedEventLoopGroup.TaskCapture.class.getSimpleName() ;
+    if( taskCaptures.isEmpty() ) {
+      LOGGER.info( "No " + taskCaptureClassName + " to dump." ) ;
+    } else {
+      LOGGER.info( "Dumping " + taskCaptures.size() + " " +
+          Plural.s( taskCaptureClassName, taskCaptures.size() ) ) ;
+      taskCaptures.forEach( taskCapture ->
+          LOGGER.info( taskCapture + ":" + Joiner.on( "\n  " )
+              .join( taskCapture.creationPoint() ) ) ) ;
+    }
+  }
+
   @Override
   public ForSimpleDownend forSimpleDownend() {
     return checkFeatureAvailable( forSimpleDownend, DownendConnector.class.getSimpleName() ) ;
@@ -307,8 +370,23 @@ public class RealConnectorDrill implements ConnectorDrill {
   }
 
   @Override
+  public void changeTimeBoundary( final TimeBoundary.ForAll timeBoundary ) {
+    this.timeBoundary = checkNotNull( timeBoundary ) ;
+    forUpendConnector().changeTimeBoundary( timeBoundary ) ;
+  }
+
+  private ConnectionDescriptor connectionDescriptor() {
+    return new ConnectionDescriptor(
+        "someVersion",
+        authentication().authenticating,
+        timeBoundary()
+    ) ;
+  }
+
+  @Override
   public void play( final Sketch sketch ) throws Exception {
-    checkFeatureAvailable( sketch.upendKindRequirement(), drillBuilder.forUpend.kind ) ;
+    checkFeatureAvailable( sketch.upendKindRequirements().contains( upendKind() ),
+        upendKind() + " not in " + sketch.upendKindRequirements() ) ;
     checkFeatureAvailable( sketch.downendKindRequirements().contains( downendKind() ),
         downendKind() + " not in " + sketch.downendKindRequirements() ) ;
     checkFeatureAvailable( sketch.authenticationRequirements().contains( authentication() ),
@@ -320,7 +398,7 @@ public class RealConnectorDrill implements ConnectorDrill {
   @Override
   public void close() throws CollectingException {
 
-    LOGGER.info( "Closing " + this + " ..." ) ;
+    LOGGER.info( "Closing everything in " + this + " ..." ) ;
 
     final boolean stopUpend = drillBuilder.forUpend.automaticLifecycle.stop ;
     final boolean stopDownend = drillBuilder.forDownend.automaticLifecycle.stop ;
@@ -328,14 +406,21 @@ public class RealConnectorDrill implements ConnectorDrill {
     final boolean realDownend = forSimpleDownend != null || forCommandTransceiver != null ;
     final boolean complexStop = realUpend && stopUpend && realDownend && stopDownend ;
 
+
     if( forSimpleDownend != null && stopDownend && ! complexStop ) {
-      runAsynchronouslyInAdministrativeExecutor( () ->
-          ( ( DefaultForSimpleDownend ) forSimpleDownend ).connector.stop().join() ) ;
+      final ConnectorDrill.ForSimpleDownend.ChangeAsConstant changeAsConstant =
+          forSimpleDownend().changeAsConstant() ;
+      forSimpleDownend().stop() ;
+      forSimpleDownend().changeWatcherMock().stateChanged( changeAsConstant.stopping ) ;
+      forSimpleDownend().changeWatcherMock().stateChanged( changeAsConstant.stopped ) ;
     }
 
     if( forCommandTransceiver != null && stopDownend && ! complexStop ) {
-      runAsynchronouslyInAdministrativeExecutor( () ->
-          ( ( DefaultForCommandTransceiver ) forCommandTransceiver ).connector.stop().join() ) ;
+      final ConnectorDrill.ForSimpleDownend.ChangeAsConstant changeAsConstant =
+          forCommandTransceiver().changeAsConstant() ;
+      forCommandTransceiver().stop() ;
+      forCommandTransceiver().changeWatcherMock().stateChanged( changeAsConstant.stopping ) ;
+      forCommandTransceiver().changeWatcherMock().stateChanged( changeAsConstant.stopped ) ;
     }
 
     if( forFakeDownend != null && stopDownend ) {
@@ -343,7 +428,10 @@ public class RealConnectorDrill implements ConnectorDrill {
     }
 
     if( forFakeUpend != null && stopUpend ) {
-      runSynchronouslyInAdministrativeExecutor( forFakeUpend::stop ) ;
+      if( realDownend && stopDownend ) {
+        forFakeUpend().duplex().closing().next() ;
+      }
+      forFakeUpend().stop() ;
     }
 
     if( forUpendConnector != null && stopUpend && ! complexStop ) {
@@ -362,14 +450,13 @@ public class RealConnectorDrill implements ConnectorDrill {
     sharedEventLoopGroup.shutdownGracefully( 0, 0, TimeUnit.MILLISECONDS ).syncUninterruptibly() ;
 
     administrativeExecutorService.shutdown() ;
-    operativeExecutorService.shutdown() ;
 
     exceptionCollector
         .execute( mockster::close )
         .throwIfAny( "Some failure occured during the lifecycle of " + this )
     ;
 
-    LOGGER.info( "Done closing " + this + "." ) ;
+    LOGGER.info( "Closed everything in " + this + "." ) ;
 
   }
 
@@ -377,6 +464,12 @@ public class RealConnectorDrill implements ConnectorDrill {
 // =====
 // Upend
 // =====
+
+  @Override
+  public ForUpend.Kind upendKind() {
+    return drillBuilder.forUpend.kind ;
+  }
+
 
   private final class DefaultForUpendConnector implements ForUpendConnector {
 
@@ -398,21 +491,26 @@ public class RealConnectorDrill implements ConnectorDrill {
       final Designator.Factory designatorFactory = forUpendConnector.authentication.authenticating ?
           timeKit.designatorFactory : new SessionlessDesignatorFactory() ;
 
+      final CommandInterceptor.Factory commandInterceptorFactoryMaybe =
+          forUpendConnector.commandInterceptor == null ?
+          null :
+          CommandInterceptor.Factory.always( forUpendConnector.commandInterceptor )
+      ;
       final UpendConnector.Setup< EchoUpwardDuty< Designator > > setup = new UpendConnector.Setup<>(
           eventLoopGroup,
           internetAddressPack.upendListeningSocketAddress(),
           sslEngineFactoryForServer(),
           internetAddressPack.upendWebSocketUriPath(),
-          connectionDescriptor.upendVersion,
+          connectionDescriptor().upendVersion,
           forUpendConnector.authentication.authenticating ? sessionSupervisorMock : null,
           command -> command.callReceiver( upwardDutyMock ),
           designatorFactory,
           new EchoCodecFixture.PartialUpendDecoder(),
           forUpendConnector.httpRequestRelayerKind.httpRequestRelayer,
           null,
-          null,
-          initialTimeBoundary(),
-          WEBSOCKET_FRAME_SIZER
+          commandInterceptorFactoryMaybe,
+          timeBoundary(),
+          drillBuilder.webSocketFrameSizer
       ) ;
       upendConnector = new UpendConnector<>( setup ) ;
       downwardDuty =
@@ -443,6 +541,11 @@ public class RealConnectorDrill implements ConnectorDrill {
     public OutwardSessionSupervisor< Channel, InetAddress > sessionSupervisorMock() {
       return checkFeatureAvailable( sessionSupervisorMock,
           OutwardSessionSupervisor.class.getSimpleName() ) ;
+    }
+
+    @Override
+    public void changeTimeBoundary( TimeBoundary.ForAll timeBoundary ) {
+      upendConnector.timeBoundary( timeBoundary ) ;
     }
 
     /**
@@ -478,7 +581,7 @@ public class RealConnectorDrill implements ConnectorDrill {
           internetAddressPack.upendListeningHostAddress(),
           internetAddressPack.upendListeningPort(),
           sslEngineFactoryForServer(),
-          connectionDescriptor,
+          connectionDescriptor(),
           uncaughtExceptionHandler
       ) ;
     }
@@ -494,8 +597,8 @@ public class RealConnectorDrill implements ConnectorDrill {
     }
 
     @Override
-    public UpendHalfDuplex halfDuplex() {
-      return fakeUpend.upendHalfDuplexPack ;
+    public UpendDuplex duplex() {
+      return fakeUpend.upendDuplexPack ;
     }
   }
 
@@ -551,6 +654,20 @@ public class RealConnectorDrill implements ConnectorDrill {
       return echoDownwardDutyMock ;
     }
 
+    public final void applyDirectly(
+        final Consumer< CONNECTOR > connectorConsumer,
+        final  boolean executeInOperativeThread
+    ) {
+      if( executeInOperativeThread ) {
+        runOutOfVerifierThread( () -> connectorConsumer.accept( connector() ) ) ;
+      } else {
+        connectorConsumer.accept( connector() ) ;
+      }
+    }
+
+    public final < T > T applyDirectly( final Function< CONNECTOR, T > connectorTransformer ) {
+      return connectorTransformer.apply( connector() ) ;
+    }
   }
 
   private final class DefaultForSimpleDownend
@@ -572,7 +689,7 @@ public class RealConnectorDrill implements ConnectorDrill {
         Command.Tag,
         EchoDownwardDuty< Command.Tag >,
         EchoUpwardDuty< Command.Tag >
-        > connector ;
+    > connector ;
 
     private final EchoUpwardCommandCrafter< Command.Tag > upwardCommandCrafter ;
 
@@ -581,20 +698,28 @@ public class RealConnectorDrill implements ConnectorDrill {
       changeWatcherMock = mockster.mock( DownendConnector.ChangeWatcher.class ) ;
       downwardDutyMock = mockster.mock( new TypeToken< EchoDownwardDuty< Command.Tag > >() {} ) ;
 
+      final DrillBuilder.ForDownendConnector builderForDownendConnector =
+          ( DrillBuilder.ForDownendConnector ) drillBuilder.forDownend ;
+      final CommandInterceptor.Factory commandInterceptorFactory =
+          builderForDownendConnector.commandInterceptor == null ?
+          null :
+          CommandInterceptor.Factory.always( builderForDownendConnector.commandInterceptor )
+      ;
+
       final DownendConnector.Setup< Command.Tag, EchoDownwardDuty< Command.Tag > > setup =
           new DownendConnector.Setup<>(
               this.eventLoopGroup,
               internetAddressPack.upendWebSocketUrlWithHttpScheme(),
               internetAddressPack.internetProxyAccess(),
               sslEngineFactoryForClient(),
-              initialTimeBoundary(),
+              timeBoundary(),
               signonMaterializerMock,
               changeWatcherMock,
               new EchoCodecFixture.TagCodec(),
               new EchoCodecFixture.PartialDownendDecoder<>(),
               command -> command.callReceiver( echoDownwardDutyMock ),
-              null,
-              WEBSOCKET_FRAME_SIZER
+              commandInterceptorFactory,
+              drillBuilder.webSocketFrameSizer
           )
       ;
       this.connector = new DownendConnector<>( setup ) ;
@@ -608,7 +733,7 @@ public class RealConnectorDrill implements ConnectorDrill {
         EchoDownwardDuty< Command.Tag >,
         EchoUpwardDuty< Command.Tag >
         > connector() {
-      return connector ;
+  return connector ;
     }
 
     @Override
@@ -632,18 +757,18 @@ public class RealConnectorDrill implements ConnectorDrill {
     }
 
     @Override
-    public ChangeAsConstant changesAsConstant() {
-      return simpleDownendConnectoerChangeAsConstant ;
+    public ChangeAsConstant changeAsConstant() {
+      return newCommandTransceiverChangeAsConstant() ;
     }
   }
 
   private final class DefaultForCommandTransceiver
       extends AbstractForDownend<
-      CommandTransceiver<
-          EchoDownwardDuty< Tracker >,
-          EchoUpwardDuty< Tracker >
+          CommandTransceiver<
+              EchoDownwardDuty< Tracker >,
+              EchoUpwardDuty< Tracker >
           >,
-      Tracker
+          Tracker
       >
       implements ForCommandTransceiver
   {
@@ -668,13 +793,13 @@ public class RealConnectorDrill implements ConnectorDrill {
           internetAddressPack.upendWebSocketUrlWithHttpScheme(),
           internetAddressPack.internetProxyAccess(),
           sslEngineFactoryForClient(),
-          initialTimeBoundary(),
+          timeBoundary(),
           signonMaterializerMock,
           changeWatcherMock,
           new EchoCodecFixture.PartialDownendDecoder<>(),
           command -> command.callReceiver( echoDownwardDutyMock ),
           null,
-          WEBSOCKET_FRAME_SIZER
+          drillBuilder.webSocketFrameSizer
       ) ;
 
       connector = new CommandTransceiver<>( commandTransceiverSetup ) ;
@@ -707,13 +832,18 @@ public class RealConnectorDrill implements ConnectorDrill {
     }
 
     @Override
+    public Tracker newTrackerMock() {
+      return mockster.mock( Tracker.class ) ;
+    }
+
+    @Override
     public CommandTransceiver.ChangeWatcher changeWatcherMock() {
       return changeWatcherMock ;
     }
 
     @Override
-    public ChangeAsConstant changesAsConstants() {
-      return commandTransceiverChangeAsContant ;
+    public ChangeAsConstant changeAsConstant() {
+      return newCommandTransceiverChangeAsConstant() ;
     }
   }
 
@@ -736,8 +866,8 @@ public class RealConnectorDrill implements ConnectorDrill {
     }
 
     @Override
-    public DownendHalfDuplex halfDuplex() {
-      return fakeDownend.downendHalfDuplexPack ;
+    public DownendDuplex duplex() {
+      return fakeDownend.downendDuplexPack ;
     }
 
     @Override
@@ -791,11 +921,11 @@ public class RealConnectorDrill implements ConnectorDrill {
 
   }
 
-  private ForSimpleDownend.ChangeAsConstant newDownendConnectorChangeAsConstant() {
+  public ForSimpleDownend.ChangeAsConstant newDownendConnectorChangeAsConstant() {
     return new ForSimpleDownend.ChangeAsConstant(
         new DownendConnector.Change<>( DownendConnector.State.STOPPED ),
         new DownendConnector.Change<>( DownendConnector.State.CONNECTING ),
-        new DownendConnector.Change.SuccessfulConnection( connectionDescriptor ),
+        new DownendConnector.Change.SuccessfulConnection( connectionDescriptor() ),
         new DownendConnector.Change<>( DownendConnector.State.STOPPING ),
         new DownendConnector.Change.SuccessfulSignon(
             internetAddressPack.upendWebSocketUrlWithHttpScheme(),
@@ -804,7 +934,7 @@ public class RealConnectorDrill implements ConnectorDrill {
     ) ;
   }
 
-  private ForCommandTransceiver.ChangeAsConstant newCommandTransceiverChangeAsConstant() {
+  public ForCommandTransceiver.ChangeAsConstant newCommandTransceiverChangeAsConstant() {
     try {
       final Constructor< ExtendedChange > extendedChangeConstructor =
           ExtendedChange.class.getDeclaredConstructor( ExtendedChange.ExtendedKind.class ) ;
@@ -815,6 +945,8 @@ public class RealConnectorDrill implements ConnectorDrill {
               .getDeclaredConstructor( CommandInFlightStatus.class )
           ;
       commandInFlightStatusChangeConstructor.setAccessible( true ) ;
+      final ForSimpleDownend.ChangeAsConstant simpleDownendConnectoerChangeAsConstant =
+          newDownendConnectorChangeAsConstant() ;
       return new ForCommandTransceiver.ChangeAsConstant(
           simpleDownendConnectoerChangeAsConstant.stopped,
           simpleDownendConnectoerChangeAsConstant.connecting,
@@ -861,7 +993,12 @@ public class RealConnectorDrill implements ConnectorDrill {
   @Override
   public Authentication authentication() {
     final DrillBuilder.ForUpendConnector forUpendConnector = drillBuilderForUpendConnectorOrNull() ;
-    return forUpendConnector == null ? Authentication.NONE : forUpendConnector.authentication ;
+    final DrillBuilder.ForFakeUpend forFakeUpend = drillBuilderForFakeUpendOrNull() ;
+    if( forUpendConnector == null ) {
+      return forFakeUpend.authentication ;
+    } else {
+      return forUpendConnector.authentication ;
+    }
   }
 
   private DrillBuilder.ForUpendConnector drillBuilderForUpendConnector() {
@@ -878,6 +1015,11 @@ public class RealConnectorDrill implements ConnectorDrill {
         ( ( DrillBuilder.ForUpendConnector ) drillBuilder.forUpend ) : null ;
   }
 
+  private DrillBuilder.ForFakeUpend drillBuilderForFakeUpendOrNull() {
+    return drillBuilder.forUpend instanceof DrillBuilder.ForFakeUpend ?
+        ( ( DrillBuilder.ForFakeUpend ) drillBuilder.forUpend ) : null ;
+  }
+
   /**
    * TODO move to {@link DrillBuilder}.
    */
@@ -890,8 +1032,8 @@ public class RealConnectorDrill implements ConnectorDrill {
 
 
 
-  private TimeBoundary.ForAll initialTimeBoundary() {
-    return drillBuilder.timeBoundary == null ? TimeBoundary.NOPE : drillBuilder.timeBoundary ;
+  private TimeBoundary.ForAll timeBoundary() {
+    return timeBoundary ;
   }
 
   private SslEngineFactory.ForClient sslEngineFactoryForClient() {
@@ -909,8 +1051,8 @@ public class RealConnectorDrill implements ConnectorDrill {
   protected final Lazy< SslEngineFactory.ForServer > SSL_ENGINE_FACTORY_FOR_SERVER =
       new Lazy<>( AutosignerFixture::sslEngineFactoryForServer ) ;
 
-  private static final WebsocketFrameSizer WEBSOCKET_FRAME_SIZER =
-      WebsocketFrameSizer.tightSizer( 8192 ) ;
+//  private static final WebsocketFrameSizer WEBSOCKET_FRAME_SIZER =
+//      WebsocketFrameSizer.tightSizer( 8192 ) ;
 
   static {
     NettyTools.forceNettyClassesToLoad() ;

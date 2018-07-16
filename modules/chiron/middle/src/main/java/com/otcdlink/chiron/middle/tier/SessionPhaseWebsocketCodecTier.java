@@ -46,6 +46,29 @@ public abstract class SessionPhaseWebsocketCodecTier
       final WebSocketFrame webSocketFrame
   ) throws Exception {
     webSocketFrame.touch( "Deserializing inbound message " + webSocketFrame ) ;
+    final SessionLifecycle.Phase phase = deserializePhaseFrom( coating, webSocketFrame ) ;
+
+    if( phase != null ) {
+      forwardInbound(
+          channelHandlerContext,
+          decorateMaybe( phase )
+      ) ;
+    } else if( webSocketFrame instanceof CloseWebSocketFrame ) {
+      inboundCloseFrame( channelHandlerContext ) ;
+      webSocketFrame.release() ;
+    } else {
+      channelHandlerContext.fireChannelRead( webSocketFrame ) ;
+    }
+
+  }
+
+  /**
+   * Made public for tests.
+   */
+  public static SessionLifecycle.Phase deserializePhaseFrom(
+      final BytebufTools.Coating coating,
+      final WebSocketFrame webSocketFrame
+  ) throws com.otcdlink.chiron.codec.DecodeException {
     final BytebufCoat coat = coating.coat( webSocketFrame.content() ) ;
 
     final SessionLifecycle.Phase phase ;
@@ -62,19 +85,7 @@ public abstract class SessionPhaseWebsocketCodecTier
     } finally {
       coating.recycle() ;
     }
-
-    if( phase != null ) {
-      forwardInbound(
-          channelHandlerContext,
-          decorateMaybe( phase )
-      ) ;
-    } else if( webSocketFrame instanceof CloseWebSocketFrame ) {
-      inboundCloseFrame( channelHandlerContext ) ;
-      webSocketFrame.release() ;
-    } else {
-      channelHandlerContext.fireChannelRead( webSocketFrame ) ;
-    }
-
+    return phase ;
   }
 
   protected abstract void inboundCloseFrame( final ChannelHandlerContext channelHandlerContext ) ;
@@ -95,8 +106,7 @@ public abstract class SessionPhaseWebsocketCodecTier
     final ByteBuf byteBuf = channelHandlerContext.alloc().buffer() ;
     final BytebufCoat coat = coating.coat( byteBuf ) ;
     try {
-      coat.writeAsciiUnsafe( PHASE_MAGIC ) ;
-      SessionLifecycle.serialize( coat, phase ) ;
+      serializePhaseTo( phase, coat ) ;
     } finally {
       coating.recycle() ;
     }
@@ -105,5 +115,13 @@ public abstract class SessionPhaseWebsocketCodecTier
         new TextWebSocketFrame( byteBuf ),
         promise
     ) ;
+  }
+
+  public static void serializePhaseTo(
+      final SessionLifecycle.Phase phase,
+      final BytebufCoat coat
+  ) {
+    coat.writeAsciiUnsafe( PHASE_MAGIC ) ;
+    SessionLifecycle.serialize( coat, phase ) ;
   }
 }

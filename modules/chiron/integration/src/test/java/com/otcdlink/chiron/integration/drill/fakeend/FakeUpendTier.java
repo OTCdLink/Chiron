@@ -48,14 +48,14 @@ class FakeUpendTier extends SimpleChannelInboundHandler< Object > {
 
   private final ChannelGroup channelGroup ;
 
-  private final UpendHalfDuplexPack receiverPack ;
+  private final UpendFullDuplexPack receiverPack ;
 
   public FakeUpendTier(
       final Thread.UncaughtExceptionHandler uncaughtExceptionHandler,
       final boolean ssl,
       final ConnectionDescriptor connectionDescriptor,
       final ChannelGroup channelGroup,
-      final UpendHalfDuplexPack receiverPack
+      final UpendFullDuplexPack receiverPack
   ) {
     super( true ) ;
     this.uncaughtExceptionHandler = checkNotNull( uncaughtExceptionHandler ) ;
@@ -149,21 +149,20 @@ class FakeUpendTier extends SimpleChannelInboundHandler< Object > {
   ) {
     if( frame instanceof CloseWebSocketFrame ) {
       final CloseWebSocketFrame closeWebSocketFrame = ( CloseWebSocketFrame ) frame ;
-      receiverPack.closeWebSocketFrameHalfDuplex.receive( context, closeWebSocketFrame ) ;
+      receiverPack.closeWebSocketFrameDuplex.receive( context, closeWebSocketFrame ) ;
       LOGGER.debug( "Handled " + closeWebSocketFrame ) ;
       return ;
     }
     if( frame instanceof PingWebSocketFrame ) {
       final PingWebSocketFrame pingWebSocketFrame = ( PingWebSocketFrame ) frame ;
-      receiverPack.pingPongWebSocketFrameHalfDuplex.receive(
+      receiverPack.pingPongWebSocketFrameDuplex.receive(
           context, pingWebSocketFrame ) ;
       LOGGER.debug( "Handled " + frame ) ;
       return ;
     }
 
     if( frame instanceof TextWebSocketFrame ) {
-      receiverPack.textWebSocketFrameHalfDuplex.receive(
-          context, ( TextWebSocketFrame ) frame ) ;
+      receiverPack.textWebSocketFrameDuplex.receive( context, frame ) ;
       LOGGER.debug( "Handled " + frame + " \"" + ( ( TextWebSocketFrame ) frame ).text() + "\"" ) ;
       return ;
     }

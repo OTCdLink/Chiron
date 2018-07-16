@@ -144,6 +144,9 @@ public abstract class Command< ENDPOINT_SPECIFIC, CALLABLE_RECEIVER > {
    * the {@link #endpointSpecific}. The Upend sends downward exactly one {@link Command}
    * with the same {@link Tag} so the Downend knows that originating Upward Command
    * has been fully processed. The Downward Command might indicate a failure.
+   *
+   * <h1>Naming</h1>
+   * "Sticker" would be cooler, and then would become a top-level class.
    */
   public static final class Tag extends StringWrapper< Tag > {
 

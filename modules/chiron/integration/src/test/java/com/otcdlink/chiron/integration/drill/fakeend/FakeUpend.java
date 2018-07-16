@@ -36,7 +36,7 @@ public class FakeUpend extends NettySocketServer {
   private final SslEngineFactory.ForServer sslEngineFactory ;
   public static final String WEBSOCKET_PATH = "/websocket" ;
   private final ConnectionDescriptor connectionDescriptor ;
-  public final UpendHalfDuplexPack upendHalfDuplexPack;
+  public UpendFullDuplexPack upendDuplexPack ;
   private final Thread.UncaughtExceptionHandler uncaughtExceptionHandler ;
 
   /**
@@ -60,8 +60,11 @@ public class FakeUpend extends NettySocketServer {
     this.sslEngineFactory = sslEngineFactory ;
     this.connectionDescriptor = checkNotNull( connectionDescriptor ) ;
     this.uncaughtExceptionHandler = checkNotNull( uncaughtExceptionHandler ) ;
-    this.upendHalfDuplexPack = new UpendHalfDuplexPack( this::writeToUniqueChannel ) ;
+    newUpendDuplexPack() ;
+  }
 
+  private void newUpendDuplexPack() {
+    this.upendDuplexPack = new UpendFullDuplexPack( this::writeToUniqueChannel ) ;
   }
 
   @Override
@@ -76,7 +79,7 @@ public class FakeUpend extends NettySocketServer {
         sslEngineFactory != null,
         connectionDescriptor,
         channelGroup(),
-        upendHalfDuplexPack
+        upendDuplexPack
     ) ) ;
     initiatorChannel.closeFuture().addListener( future -> uniqueInitiatorChannel.set( null ) ) ;
     uniqueInitiatorChannel.updateAndGet( c -> c == null ? initiatorChannel : null ) ;
@@ -88,7 +91,8 @@ public class FakeUpend extends NettySocketServer {
 
   @Override
   protected void customPreStop() {
-    upendHalfDuplexPack.shutdown() ;
+    upendDuplexPack.shutdown() ;
+    newUpendDuplexPack() ;
   }
 
   // ==============

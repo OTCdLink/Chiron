@@ -1,8 +1,9 @@
 package com.otcdlink.chiron.toolbox;
 
 import com.google.common.reflect.TypeToken;
+import mockit.Expectations;
+import mockit.Injectable;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.CharBuffer;
@@ -14,19 +15,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class DelegatorTest {
 
   @Test
-  public void calling() throws IOException {
+  public void calling( @Injectable final Readable delegate ) throws IOException {
     final Delegator< Readable > delegator = Delegator.create( Readable.class ) ;
     final Readable proxiedReadable = delegator.getProxy() ;
 
     final CharBuffer charBuffer = CharBuffer.allocate( 1 ) ;
-    final Readable delegate = Mockito.mock( Readable.class ) ;
-    Mockito.when( delegate.read( charBuffer ) ).thenReturn( 1 ) ;
+    new Expectations() {{
+      delegate.read( charBuffer ) ;
+      result = 1 ;
+    }} ;
 
     delegator.setDelegate( delegate ) ;
     final int read = proxiedReadable.read( charBuffer ) ;
 
     assertThat( read ).isEqualTo( 1 ) ;
-    Mockito.verify( delegate ).read( charBuffer ) ;
 
   }
 
@@ -47,10 +49,10 @@ public class DelegatorTest {
   }
 
   @Test( expected = IllegalStateException.class )
-  public void cannotSetDelegateTwice() throws IOException {
+  public void cannotSetDelegateTwice( @Injectable final Readable delegate ) throws IOException {
     final Delegator< Readable > delegator = Delegator.create( Readable.class ) ;
-    delegator.setDelegate( Mockito.mock( Readable.class ) ) ;
-    delegator.setDelegate( Mockito.mock( Readable.class ) ) ;
+    delegator.setDelegate( delegate ) ;
+    delegator.setDelegate( delegate ) ;
   }
 
 }
