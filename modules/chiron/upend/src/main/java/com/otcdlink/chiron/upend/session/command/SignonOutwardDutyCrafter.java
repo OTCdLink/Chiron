@@ -4,27 +4,29 @@ import com.otcdlink.chiron.command.Command;
 import com.otcdlink.chiron.command.CommandConsumer;
 import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
+import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.session.SignonDecision;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
-import com.otcdlink.chiron.upend.session.SignableUser;
 import com.otcdlink.chiron.upend.session.SignonOutwardDuty;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class SignonOutwardDutyCrafter implements SignonOutwardDuty {
+public class SignonOutwardDutyCrafter< SESSION_PRIMER >
+    implements SignonOutwardDuty< SESSION_PRIMER >
+{
 
   private final CommandConsumer<
-      Command< Designator, SignonOutwardDuty>
+      Command< Designator, SignonOutwardDuty< SESSION_PRIMER > >
   > commandConsumer ;
 
   public SignonOutwardDutyCrafter(
-      final CommandConsumer< Command< Designator, SignonOutwardDuty> > commandConsumer
+      final CommandConsumer< Command< Designator, SignonOutwardDuty< SESSION_PRIMER > > > commandConsumer
   ) {
     this.commandConsumer = checkNotNull( commandConsumer ) ;
   }
 
   private void consume(
-      final Command< Designator, SignonOutwardDuty > command
+      final Command< Designator, SignonOutwardDuty< SESSION_PRIMER > > command
   ) {
     commandConsumer.accept( command ) ;
   }
@@ -34,7 +36,7 @@ public class SignonOutwardDutyCrafter implements SignonOutwardDuty {
       final Designator designator, 
       final SignonDecision< SignableUser > signonDecision 
   ) {
-    consume( new SignonOutwardDutyPrimarySignonAttempted( designator, signonDecision ) ) ;
+    consume( new SignonOutwardDutyPrimarySignonAttempted<>( designator, signonDecision ) ) ;
   }
 
   @Override
@@ -42,7 +44,7 @@ public class SignonOutwardDutyCrafter implements SignonOutwardDuty {
       final Designator designator,
       final SignonFailureNotice signonFailureNotice
   ) {
-    consume( new SignonOutwardDutySecondarySignonAttempted( designator, signonFailureNotice ) ) ;
+    consume( new SignonOutwardDutySecondarySignonAttempted<>( designator, signonFailureNotice ) ) ;
   }
 
   @Override
@@ -51,7 +53,7 @@ public class SignonOutwardDutyCrafter implements SignonOutwardDuty {
       final SessionIdentifier sessionIdentifier,
       final SignonFailureNotice signonFailureNotice
   ) {
-    consume( new SignonOutwardDutySessionCreationFailed(
+    consume( new SignonOutwardDutySessionCreationFailed<>(
         designator, sessionIdentifier, signonFailureNotice ) ) ;
   }
 
@@ -59,10 +61,11 @@ public class SignonOutwardDutyCrafter implements SignonOutwardDuty {
   public void sessionCreated(
       final Designator designator,
       final SessionIdentifier sessionIdentifier,
-      final String login
+      final String login,
+      final SESSION_PRIMER sessionPrimer
   ) {
-    consume( new SignonOutwardDutySessionCreated(
-        designator, sessionIdentifier, login ) ) ;
+    consume( new SignonOutwardDutySessionCreated<>(
+        designator, sessionIdentifier, sessionPrimer, login ) ) ;
   }
 
   @Override
@@ -70,6 +73,6 @@ public class SignonOutwardDutyCrafter implements SignonOutwardDuty {
       final Designator designator, 
       final SessionIdentifier sessionIdentifier 
   ) {
-    consume( new SignonOutwardDutyTerminateSession( designator, sessionIdentifier ) ) ;
+    consume( new SignonOutwardDutyTerminateSession<>( designator, sessionIdentifier ) ) ;
   }
 }

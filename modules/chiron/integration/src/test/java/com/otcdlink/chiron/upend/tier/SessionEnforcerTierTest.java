@@ -29,7 +29,7 @@ public class SessionEnforcerTierTest {
 
   @Test
   public void simpleSignonAndOff(
-      @Injectable final OutwardSessionSupervisor< Channel, SocketAddress > sessionSupervisor,
+      @Injectable final OutwardSessionSupervisor< Channel, SocketAddress, Void > sessionSupervisor,
       @Injectable final UpendConnector.ChannelRegistrar channelRegistrar
   ) throws Exception {
     final EmbeddedChannel embeddedChannel = createChannel( sessionSupervisor,channelRegistrar ) ;
@@ -42,7 +42,7 @@ public class SessionEnforcerTierTest {
 
   @Test
   public void resignon(
-      @Injectable final OutwardSessionSupervisor< Channel, SocketAddress > sessionSupervisor,
+      @Injectable final OutwardSessionSupervisor< Channel, SocketAddress, Void > sessionSupervisor,
       @Injectable final UpendConnector.ChannelRegistrar channelRegistrar
   ) throws Exception {
     final EmbeddedChannel embeddedChannelOld = createChannel( sessionSupervisor,channelRegistrar ) ;
@@ -77,7 +77,7 @@ public class SessionEnforcerTierTest {
 
   @Test
   public void secondarySignonAndOff(
-      @Injectable final OutwardSessionSupervisor< Channel, SocketAddress > sessionSupervisor,
+      @Injectable final OutwardSessionSupervisor< Channel, SocketAddress, Void > sessionSupervisor,
       @Injectable final UpendConnector.ChannelRegistrar channelRegistrar
   ) throws Exception {
     final EmbeddedChannel embeddedChannel = createChannel( sessionSupervisor, channelRegistrar ) ;
@@ -94,7 +94,7 @@ public class SessionEnforcerTierTest {
         ReactiveSessionFixture.SECONDARY_TOKEN_1 + "-" + ReactiveSessionFixture.SECONDARY_CODE_1 + " pair." ) ;
 
 
-    final Monolist< SessionSupervisor.SecondarySignonAttemptCallback >
+    final Monolist< SessionSupervisor.SecondarySignonAttemptCallback< Void > >
         secondarySignonAttemptCallbackCapture = new Monolist<>() ;
 
     new Expectations() {{
@@ -114,7 +114,8 @@ public class SessionEnforcerTierTest {
         ReactiveSessionFixture.USER_X_SECONDARY_SIGNON_GOOD_WITH_MODIFY_CHANNEL_ROLE + "." ) ;
 
 
-    secondarySignonAttemptCallbackCapture.get().sessionAttributed( ReactiveSessionFixture.SESSION_1 ) ;
+    secondarySignonAttemptCallbackCapture.get().sessionAttributed(
+        ReactiveSessionFixture.SESSION_1, null ) ;
 
     assertThat( ( ( SessionLifecycle.Phase ) embeddedChannel.readOutbound() ) )
         .isEqualTo( SessionLifecycle.SessionValid.create( ReactiveSessionFixture.SESSION_1 ) ) ;
@@ -129,7 +130,7 @@ public class SessionEnforcerTierTest {
 
   @Test
   public void connectionLossCausesNotification(
-      @Injectable final OutwardSessionSupervisor< Channel, SocketAddress > sessionSupervisor,
+      @Injectable final OutwardSessionSupervisor< Channel, SocketAddress, Void > sessionSupervisor,
       @Injectable final UpendConnector.ChannelRegistrar channelRegistrar
   ) throws Exception {
 
@@ -153,9 +154,9 @@ public class SessionEnforcerTierTest {
 // Factored test code
 // ==================
 
-  private static PrimarySignonAttemptCallback attemptPrimarySignon(
+  private static PrimarySignonAttemptCallback< Void > attemptPrimarySignon(
       final EmbeddedChannel embeddedChannel,
-      final OutwardSessionSupervisor< Channel, SocketAddress > sessionSupervisor
+      final OutwardSessionSupervisor< Channel, SocketAddress, Void > sessionSupervisor
   ) {
     final Monolist< PrimarySignonAttemptCallback >
         primarySignonAttemptCallbackCapture = new Monolist<>() ;
@@ -182,9 +183,9 @@ public class SessionEnforcerTierTest {
   private static void successfulPrimarySignon(
       final EmbeddedChannel embeddedChannel,
       final UpendConnector.ChannelRegistrar channelRegistrar,
-      final OutwardSessionSupervisor< Channel, SocketAddress > sessionSupervisor
+      final OutwardSessionSupervisor< Channel, SocketAddress, Void > sessionSupervisor
   ) {
-    final PrimarySignonAttemptCallback primarySignonAttemptCallback =
+    final PrimarySignonAttemptCallback< Void > primarySignonAttemptCallback =
         attemptPrimarySignon( embeddedChannel, sessionSupervisor ) ;
 
     new Expectations() {{
@@ -192,7 +193,7 @@ public class SessionEnforcerTierTest {
     }} ;
 
     primarySignonAttemptCallback.sessionAttributed(
-        ReactiveSessionFixture.SESSION_1 ) ;
+        ReactiveSessionFixture.SESSION_1, null ) ;
 
     /** Since we mocked {@link UpendConnector.ChannelRegistrar} we must set the
      * attribute by hand. */
@@ -209,7 +210,7 @@ public class SessionEnforcerTierTest {
 
   private static void signoff(
       final EmbeddedChannel embeddedChannel,
-      final OutwardSessionSupervisor< Channel, SocketAddress > sessionSupervisor,
+      final OutwardSessionSupervisor< Channel, SocketAddress, Void > sessionSupervisor,
       final UpendConnector.ChannelRegistrar channelRegistrar
   ) {
     new Expectations() {{
@@ -244,7 +245,7 @@ public class SessionEnforcerTierTest {
   private static final String CHANNEL_CLASSNAME = Channel.class.getSimpleName() ;
 
   private static EmbeddedChannel createChannel(
-      final OutwardSessionSupervisor< Channel, SocketAddress > sessionSupervisor,
+      final OutwardSessionSupervisor< Channel, SocketAddress, Void > sessionSupervisor,
       final UpendConnector.ChannelRegistrar channelRegistrar
   ) {
     return new EmbeddedChannel(

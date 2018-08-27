@@ -16,13 +16,13 @@ public final class BytebufTools {
 
   static final byte EXISTENCE_MARKER = '*' ;
 
-  static final byte FIELD_END_MARKER = ' ' ;
+  public static final byte FIELD_END_MARKER = ' ' ;
 
   static final String BOOLEAN_TRUE = "T" ;
 
   static final String BOOLEAN_FALSE = "F" ;
 
-  static final ByteProcessor FIND_FIELD_END_MARKER =
+  public static final ByteProcessor FIND_FIELD_END_MARKER =
       new ByteProcessor.IndexOfProcessor( FIELD_END_MARKER ) ;
 
 

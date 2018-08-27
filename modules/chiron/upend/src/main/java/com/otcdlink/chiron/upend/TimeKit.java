@@ -36,6 +36,10 @@ public class TimeKit< CLOCK extends Clock> {
     return instrumentedTimeKit( initialClockValue.getMillis() ) ;
   }
 
+  public static TimeKit< UpdateableClock > instrumentedTimeKit() {
+    return instrumentedTimeKit( Stamp.FLOOR ) ;
+  }
+
   public static TimeKit< UpdateableClock > instrumentedTimeKit( final long initialClockValue ) {
     final UpdateableClock updateableClock = new PulseModulator( initialClockValue ) ;
     return new TimeKit<>(

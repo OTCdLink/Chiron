@@ -43,7 +43,8 @@ public class LabDaemon {
 
   private final UpendConnector<
       LabUpwardDuty< Designator >,
-      LabDownwardDuty< Designator >
+      LabDownwardDuty< Designator >,
+      Void
   > upendConnector ;
 
   private final HostPort hostPort ;
@@ -60,7 +61,7 @@ public class LabDaemon {
 
     final TimeKit timeKit = TimeKit.fromSystemClock() ;
 
-    final OutwardSessionSupervisor< Channel, InetAddress > outwardSessionSupervisor =
+    final OutwardSessionSupervisor< Channel, InetAddress, Void > outwardSessionSupervisor =
         new DefaultSessionSupervisor<>(
             timeKit,
             new DefaultSessionIdentifierGenerator(),

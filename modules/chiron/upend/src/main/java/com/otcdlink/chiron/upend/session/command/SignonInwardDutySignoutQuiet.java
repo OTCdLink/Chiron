@@ -15,6 +15,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @Command.Description( name = "signoutQuiet" )
 public class SignonInwardDutySignoutQuiet
     extends Command< Designator, SignonInwardDuty>
+    implements SignonCommand
 {
   private final SessionIdentifier sessionIdentifier ;
   public SignonInwardDutySignoutQuiet(

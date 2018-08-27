@@ -71,7 +71,7 @@ public abstract class StaticContentTest {
     }
     final HttpRequestRelayer httpRequestRelayer = httpDispatcher.notFound().build() ;
 
-    upendConnector = new UpendConnector<>( new UpendConnector.Setup< Void >(
+    upendConnector = new UpendConnector<>( new UpendConnector.Setup< Void, Void >(
         eventLoopGroup,
         serverAddress,
         null,

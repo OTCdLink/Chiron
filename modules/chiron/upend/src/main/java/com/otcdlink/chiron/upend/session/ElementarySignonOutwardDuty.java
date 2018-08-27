@@ -2,6 +2,7 @@ package com.otcdlink.chiron.upend.session;
 
 import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.middle.PhoneNumber;
+import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.session.SignonDecision;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
 

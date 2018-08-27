@@ -6,26 +6,30 @@ import com.otcdlink.chiron.upend.session.SignonOutwardDuty;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class SignonOutwardDutySessionCreated
-    extends TransientCommand< SignonOutwardDuty >
+public class SignonOutwardDutySessionCreated< SESSION_PRIMER >
+    extends TransientCommand< SignonOutwardDuty< SESSION_PRIMER > >
+    implements SignonCommand
 {
 
   private final SessionIdentifier sessionIdentifier ;
+  private final SESSION_PRIMER sessionPrimer ;
   private final String login ;
 
   public SignonOutwardDutySessionCreated(
       final Designator designatorInternal,
       final SessionIdentifier sessionIdentifier,
+      final SESSION_PRIMER sessionPrimer,
       final String login
   ) {
     super( designatorInternal ) ;
     this.sessionIdentifier = checkNotNull( sessionIdentifier ) ;
     this.login = checkNotNull( login ) ;
+    this.sessionPrimer = sessionPrimer ;
   }
 
   @Override
-  public void callReceiver( final SignonOutwardDuty duty ) {
-    duty.sessionCreated( endpointSpecific, sessionIdentifier, login ) ;
+  public void callReceiver( final SignonOutwardDuty< SESSION_PRIMER > duty ) {
+    duty.sessionCreated( endpointSpecific, sessionIdentifier, login, sessionPrimer ) ;
   }
 
 }

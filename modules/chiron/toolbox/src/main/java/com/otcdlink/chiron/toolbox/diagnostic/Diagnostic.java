@@ -8,7 +8,6 @@ import com.otcdlink.chiron.toolbox.text.TextWrapTools;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -26,8 +25,8 @@ public interface Diagnostic {
   /**
    * Prints with reasonable defaults.
    */
-  default void print( final Writer writer ) throws IOException {
-    print( writer, 0, "  ", " = ", 80, WrapStyle.NONE, LineBreak.DEFAULT ) ;
+  default void print( final Appendable appendable ) throws IOException {
+    print( appendable, 0, "  ", " = ", 80, WrapStyle.NONE, LineBreak.DEFAULT ) ;
   }
 
   String name() ;

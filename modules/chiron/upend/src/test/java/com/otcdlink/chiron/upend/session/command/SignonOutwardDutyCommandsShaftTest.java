@@ -5,13 +5,13 @@ import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.designator.DesignatorForger;
 import com.otcdlink.chiron.middle.PhoneNumber;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
+import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.session.SignonDecision;
 import com.otcdlink.chiron.middle.session.SignonFailure;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
 import com.otcdlink.chiron.middle.shaft.CrafterShaft;
 import com.otcdlink.chiron.middle.shaft.MethodCallVerifier;
 import com.otcdlink.chiron.middle.shaft.MethodCaller;
-import com.otcdlink.chiron.upend.session.SignableUser;
 import com.otcdlink.chiron.upend.session.SignonOutwardDuty;
 import org.junit.Test;
 
@@ -19,8 +19,10 @@ public class SignonOutwardDutyCommandsShaftTest {
 
   @Test
   public void transientMethodsWithCrafterShaft() throws Exception {
-    new CrafterShaft<>( SignonOutwardDutyCrafter::new, DESIGNATOR )
-        .submit( TRANSIENT_METHODS_CALLER, VERIFIER ) ;
+    new CrafterShaft< Designator, SignonOutwardDuty< Dummy > >(
+        SignonOutwardDutyCrafter::new,
+        DESIGNATOR
+    ).submit( TRANSIENT_METHODS_CALLER, VERIFIER ) ;
   }
 
 
@@ -28,10 +30,10 @@ public class SignonOutwardDutyCommandsShaftTest {
 // Method callers
 // ==============
 
-  private static final MethodCaller< SignonOutwardDuty > TRANSIENT_METHODS_CALLER =
-      new MethodCaller.Default< SignonOutwardDuty >() {
+  private static final MethodCaller< SignonOutwardDuty< Dummy > > TRANSIENT_METHODS_CALLER =
+      new MethodCaller.Default< SignonOutwardDuty< Dummy > >() {
         @Override
-        public void callMethods( final SignonOutwardDuty signonOutwardDuty ) {
+        public void callMethods( final SignonOutwardDuty< Dummy > signonOutwardDuty ) {
           signonOutwardDuty.primarySignonAttempted(
               DESIGNATOR,
               new SignonDecision<>( SIGNABLE_USER )
@@ -43,7 +45,8 @@ public class SignonOutwardDutyCommandsShaftTest {
           signonOutwardDuty.sessionCreated(
               DESIGNATOR,
               new SessionIdentifier( "535510n" ),
-              "TheLogin"
+              "TheLogin",
+              Dummy.INSTANCE
           ) ;
           signonOutwardDuty.terminateSession(
               DESIGNATOR,
@@ -79,5 +82,10 @@ public class SignonOutwardDutyCommandsShaftTest {
     }
   } ;
 
+
+  private static class Dummy {
+    private Dummy() { }
+    public static final Dummy INSTANCE = new Dummy() ;
+  }
 
 }

@@ -5,6 +5,7 @@ import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.middle.session.SecondaryCode;
 import com.otcdlink.chiron.middle.session.SecondaryToken;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
+import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.session.SignonFailure;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
 import io.netty.channel.ChannelPipeline;
@@ -29,7 +30,7 @@ import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
  *
  *
  */
-public interface SessionSupervisor<CHANNEL, ADDRESS > {
+public interface SessionSupervisor< CHANNEL, ADDRESS, SESSION_PRIMER > {
 
   /**
    * Asks to associate given {@link CHANNEL} to an already-existing session.
@@ -60,12 +61,16 @@ public interface SessionSupervisor<CHANNEL, ADDRESS > {
       String password,
       CHANNEL channel,
       ADDRESS remoteAddress,
-      PrimarySignonAttemptCallback callback
+      PrimarySignonAttemptCallback< SESSION_PRIMER > callback
   ) ;
 
-  interface SignonAttemptCallback {
+  interface SignonAttemptCallback< SESSION_PRIMER > {
 
-    void sessionAttributed( SessionIdentifier sessionIdentifier ) ;
+    /**
+     *
+     * @param sessionPrimer may be null when reusing a session.
+     */
+    void sessionAttributed( SessionIdentifier sessionIdentifier, SESSION_PRIMER sessionPrimer ) ;
 
     /**
      * @param signonFailureNotice a non-{@code null} value meaning the Signon failed.
@@ -77,11 +82,13 @@ public interface SessionSupervisor<CHANNEL, ADDRESS > {
 
   }
 
-  interface PrimarySignonAttemptCallback extends SignonAttemptCallback {
+  interface PrimarySignonAttemptCallback< SESSION_PRIMER >
+      extends SignonAttemptCallback< SESSION_PRIMER >
+  {
 
     /**
      * @param signonFailureNotice can't be {@code null}; in case of success, the method to call
-     *     should be {@link SignonAttemptCallback#sessionAttributed(SessionIdentifier)}).
+     *     should be {@link SignonAttemptCallback#sessionAttributed(SessionIdentifier, Object)}).
      *     Can't be {@link SignonFailure#MISSING_SECONDARY_CODE}; in this case the method to call
      *     should be
      *     {@link PrimarySignonAttemptCallback#needSecondarySignon(SignableUser, SecondaryToken)}).
@@ -109,7 +116,9 @@ public interface SessionSupervisor<CHANNEL, ADDRESS > {
       SecondarySignonAttemptCallback callback
   ) ;
 
-  interface SecondarySignonAttemptCallback extends SignonAttemptCallback { }
+  interface SecondarySignonAttemptCallback< SESSION_PRIMER >
+      extends SignonAttemptCallback< SESSION_PRIMER >
+  { }
 
   /**
    * {@link CHANNEL} must call this method when detecting a disconnection or a timeout

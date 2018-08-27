@@ -5,8 +5,9 @@ import com.otcdlink.chiron.middle.session.SessionIdentifier;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
 import com.otcdlink.chiron.upend.session.SignonOutwardDuty;
 
-public class SignonOutwardDutySessionCreationFailed
-    extends TransientCommand<SignonOutwardDuty>
+public class SignonOutwardDutySessionCreationFailed< SESSION_PRIMER >
+    extends TransientCommand<SignonOutwardDuty< SESSION_PRIMER > >
+    implements SignonCommand
 {
 
   private final SessionIdentifier sessionIdentifier ;
@@ -23,7 +24,7 @@ public class SignonOutwardDutySessionCreationFailed
   }
 
   @Override
-  public void callReceiver( final SignonOutwardDuty duty ) {
+  public void callReceiver( final SignonOutwardDuty< SESSION_PRIMER > duty ) {
     duty.sessionCreationFailed( endpointSpecific, sessionIdentifier, signonFailureNotice ) ;
   }
 

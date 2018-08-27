@@ -2,9 +2,9 @@ package com.otcdlink.chiron.upend.session.implementation;
 
 import com.google.common.base.Joiner;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
+import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 import com.otcdlink.chiron.toolbox.collection.KeyHolder;
-import com.otcdlink.chiron.upend.session.SignableUser;
 import org.joda.time.DateTime;
 
 import static com.google.common.base.Preconditions.checkArgument;

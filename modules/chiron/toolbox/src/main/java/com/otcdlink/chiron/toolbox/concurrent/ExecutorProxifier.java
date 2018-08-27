@@ -51,8 +51,8 @@ public class ExecutorProxifier {
     ;
   }
 
-  public Object proxy() {
-    return proxy ;
+  public < PROXY > PROXY proxy() {
+    return ( PROXY ) proxy ;
   }
 
   public static ExecutorProxifier proxify(

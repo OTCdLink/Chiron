@@ -77,7 +77,7 @@ public interface SignonInwardDuty {
    * Persisted.
    * This command may fail at least because of {@link SignonFailure#SESSION_ALREADY_EXISTS}.
    *
-   * @see SignonOutwardDuty#sessionCreated(Designator, SessionIdentifier, String)
+   * @see SignonOutwardDuty#sessionCreated(Designator, SessionIdentifier, String, Object)
    */
   void registerSession(
       Designator designatorInternal,

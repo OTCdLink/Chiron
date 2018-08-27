@@ -147,7 +147,7 @@ public enum SketchLibrary implements ConnectorDrill.Sketch {
 
       forDownend.signonMaterializerMock().setProgressMessage( "Signing in …" ) ;
 
-      final SessionSupervisor.PrimarySignonAttemptCallback primarySignonAttemptCallback ;
+      final SessionSupervisor.PrimarySignonAttemptCallback< DummySessionPrimer > primarySignonAttemptCallback ;
       forUpendConnector.sessionSupervisorMock().attemptPrimarySignon(
           exactly( ConnectorDrill.GOOD_CREDENTIAL.getLogin() ),
           exactly( ConnectorDrill.GOOD_CREDENTIAL.getPassword() ),
@@ -166,7 +166,8 @@ public enum SketchLibrary implements ConnectorDrill.Sketch {
         drill.runOutOfVerifierThread( () -> secondaryCodeConsumer.accept( SECONDARY_CODE ) ) ;
         forDownend.signonMaterializerMock().setProgressMessage( "Signing in …" ) ;
 
-        final SessionSupervisor.SecondarySignonAttemptCallback secondarySignonAttemptCallback ;
+        final SessionSupervisor.SecondarySignonAttemptCallback< DummySessionPrimer >
+            secondarySignonAttemptCallback ;
         forUpendConnector.sessionSupervisorMock().attemptSecondarySignon(
             any(),
             any(),
@@ -174,11 +175,11 @@ public enum SketchLibrary implements ConnectorDrill.Sketch {
             exactly( SECONDARY_CODE ),
             secondarySignonAttemptCallback = withCapture()
         ) ;
-        drill.runOutOfVerifierThread( () ->
-            secondarySignonAttemptCallback.sessionAttributed( SESSION_IDENTIFIER ) ) ;
+        drill.runOutOfVerifierThread( () -> secondarySignonAttemptCallback.sessionAttributed(
+            SESSION_IDENTIFIER, DummySessionPrimer.INSTANCE ) ) ;
       } else {
-        drill.runOutOfVerifierThread( () ->
-            primarySignonAttemptCallback.sessionAttributed( SESSION_IDENTIFIER ) ) ;
+        drill.runOutOfVerifierThread( () -> primarySignonAttemptCallback.sessionAttributed(
+            SESSION_IDENTIFIER, DummySessionPrimer.INSTANCE ) ) ;
       }
 
       forDownend.signonMaterializerMock().done() ;
@@ -377,6 +378,12 @@ public enum SketchLibrary implements ConnectorDrill.Sketch {
     }
   }
 
+  public static class DummySessionPrimer {
+    private DummySessionPrimer() { }
+    public static final DummySessionPrimer INSTANCE = new DummySessionPrimer() ;
+  }
+
+
 
 // ======
 // Boring
@@ -444,6 +451,7 @@ public enum SketchLibrary implements ConnectorDrill.Sketch {
     return LoggerFactory.getLogger(
         sketchLibrary.getClass().getName() + "." + sketchLibrary.name() ) ;
   }
+
 
 
 }

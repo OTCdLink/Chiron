@@ -18,6 +18,7 @@ import com.otcdlink.chiron.downend.Tracker;
 import com.otcdlink.chiron.fixture.tcp.TcpTransitServer;
 import com.otcdlink.chiron.fixture.tcp.http.ConnectProxy;
 import com.otcdlink.chiron.fixture.tcp.http.HttpProxy;
+import com.otcdlink.chiron.integration.drill.SketchLibrary.DummySessionPrimer;
 import com.otcdlink.chiron.integration.drill.eventloop.PassivatedEventLoopGroup;
 import com.otcdlink.chiron.integration.drill.fakeend.FakeDownend;
 import com.otcdlink.chiron.integration.drill.fakeend.FakeUpend;
@@ -473,14 +474,21 @@ public class RealConnectorDrill implements ConnectorDrill {
 
   private final class DefaultForUpendConnector implements ForUpendConnector {
 
-    private final UpendConnector< EchoUpwardDuty< Designator >, EchoDownwardDuty< Designator > >
-        upendConnector ;
+    private final UpendConnector<
+        EchoUpwardDuty< Designator >,
+        EchoDownwardDuty< Designator >,
+        DummySessionPrimer
+    > upendConnector ;
 
     private final EchoUpwardDuty< Designator > upwardDutyMock = mockster.mock(
         new TypeToken< EchoUpwardDuty< Designator > >() { } ) ;
 
-    private final OutwardSessionSupervisor< Channel, InetAddress > sessionSupervisorMock =
-        mockster.mock( new TypeToken< OutwardSessionSupervisor< Channel, InetAddress > >() {} ) ;
+    private final OutwardSessionSupervisor< Channel, InetAddress, DummySessionPrimer >
+        sessionSupervisorMock = mockster.mock(
+            new TypeToken< OutwardSessionSupervisor< Channel, InetAddress, DummySessionPrimer > >()
+                {}
+        )
+    ;
 
     private final EchoDownwardDuty< Designator > downwardDuty ;
 
@@ -496,22 +504,24 @@ public class RealConnectorDrill implements ConnectorDrill {
           null :
           CommandInterceptor.Factory.always( forUpendConnector.commandInterceptor )
       ;
-      final UpendConnector.Setup< EchoUpwardDuty< Designator > > setup = new UpendConnector.Setup<>(
-          eventLoopGroup,
-          internetAddressPack.upendListeningSocketAddress(),
-          sslEngineFactoryForServer(),
-          internetAddressPack.upendWebSocketUriPath(),
-          connectionDescriptor().upendVersion,
-          forUpendConnector.authentication.authenticating ? sessionSupervisorMock : null,
-          command -> command.callReceiver( upwardDutyMock ),
-          designatorFactory,
-          new EchoCodecFixture.PartialUpendDecoder(),
-          forUpendConnector.httpRequestRelayerKind.httpRequestRelayer,
-          null,
-          commandInterceptorFactoryMaybe,
-          timeBoundary(),
-          drillBuilder.webSocketFrameSizer
-      ) ;
+      final UpendConnector.Setup< EchoUpwardDuty< Designator >, DummySessionPrimer > setup =
+          new UpendConnector.Setup<>(
+              eventLoopGroup,
+              internetAddressPack.upendListeningSocketAddress(),
+              sslEngineFactoryForServer(),
+              internetAddressPack.upendWebSocketUriPath(),
+              connectionDescriptor().upendVersion,
+              forUpendConnector.authentication.authenticating ? sessionSupervisorMock : null,
+              command -> command.callReceiver( upwardDutyMock ),
+              designatorFactory,
+              new EchoCodecFixture.PartialUpendDecoder(),
+              forUpendConnector.httpRequestRelayerKind.httpRequestRelayer,
+              null,
+              commandInterceptorFactoryMaybe,
+              timeBoundary(),
+              drillBuilder.webSocketFrameSizer
+          )
+      ;
       upendConnector = new UpendConnector<>( setup ) ;
       downwardDuty =
           new EchoDownwardCommandCrafter<>( upendConnector::sendDownward ) ;
@@ -538,7 +548,8 @@ public class RealConnectorDrill implements ConnectorDrill {
     }
 
     @Override
-    public OutwardSessionSupervisor< Channel, InetAddress > sessionSupervisorMock() {
+    public OutwardSessionSupervisor< Channel, InetAddress, DummySessionPrimer >
+    sessionSupervisorMock() {
       return checkFeatureAvailable( sessionSupervisorMock,
           OutwardSessionSupervisor.class.getSimpleName() ) ;
     }

@@ -7,6 +7,7 @@ import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.middle.session.SecondaryCode;
 import com.otcdlink.chiron.middle.session.SecondaryToken;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
+import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.session.SignonDecision;
 import com.otcdlink.chiron.middle.session.SignonFailure;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
@@ -17,7 +18,6 @@ import com.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
 import com.otcdlink.chiron.upend.session.SecondaryAuthenticator;
 import com.otcdlink.chiron.upend.session.SessionIdentifierGenerator;
 import com.otcdlink.chiron.upend.session.SessionSupervisor;
-import com.otcdlink.chiron.upend.session.SignableUser;
 import com.otcdlink.chiron.upend.session.SignonAttempt;
 import com.otcdlink.chiron.upend.session.SignonInwardDuty;
 import com.otcdlink.chiron.upend.session.twilio.AuthenticationFailure;
@@ -138,9 +138,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
                   ----------
 </pre>
  */
-public class DefaultSessionSupervisor< CHANNEL, ADDRESS >
+public class DefaultSessionSupervisor< CHANNEL, ADDRESS, SESSION_PRIMER >
     implements
-    OutwardSessionSupervisor< CHANNEL, ADDRESS >
+    OutwardSessionSupervisor< CHANNEL, ADDRESS, SESSION_PRIMER >
 {
   private static final Logger LOGGER = LoggerFactory.getLogger( DefaultSessionSupervisor.class ) ;
 
@@ -231,9 +231,12 @@ public class DefaultSessionSupervisor< CHANNEL, ADDRESS >
           new SessionCreationDesignator< CHANNEL, ADDRESS >(
               sessionRegistrationStamp,
               channel,
-              new SignonAttemptCallback() {
+              new SignonAttemptCallback< SESSION_PRIMER >() {
                 @Override
-                public void sessionAttributed( final SessionIdentifier sessionIdentifier ) {
+                public void sessionAttributed(
+                    final SessionIdentifier sessionIdentifier,
+                    final SESSION_PRIMER sessionPrimer
+                ) {
                   callback.reuseOutcome( null ) ;
                 }
 
@@ -267,7 +270,7 @@ public class DefaultSessionSupervisor< CHANNEL, ADDRESS >
       final String password,
       final CHANNEL channel,
       final ADDRESS remoteAddress,
-      final PrimarySignonAttemptCallback callback
+      final PrimarySignonAttemptCallback< SESSION_PRIMER > callback
   ) {
     final Designator designatorInternal =
         new PrimarySignonAttemptDesignator<>(
@@ -720,7 +723,8 @@ public class DefaultSessionSupervisor< CHANNEL, ADDRESS >
   public void sessionCreated(
       final Designator designatorInternal,
       final SessionIdentifier sessionIdentifier,
-      final String login
+      final String login,
+      final SESSION_PRIMER sessionPrimer
   ) {
     /** Checking we have a {@link SessionCreationDesignator} because during a Replay
      * we have plain {@link Designator}s. This is very crappy.
@@ -733,7 +737,8 @@ public class DefaultSessionSupervisor< CHANNEL, ADDRESS >
           designator.channel,
           sessionIdentifier,
           designator.signonAttemptCallback,
-          designator.sessionReuse
+          designator.sessionReuse,
+          sessionPrimer
       ) ;
     }
   }
@@ -741,8 +746,9 @@ public class DefaultSessionSupervisor< CHANNEL, ADDRESS >
   private void sessionCreated(
       final CHANNEL channel,
       final SessionIdentifier sessionIdentifier,
-      final SignonAttemptCallback signonAttemptCallback,
-      final boolean reuse
+      final SignonAttemptCallback< SESSION_PRIMER > signonAttemptCallback,
+      final boolean reuse,
+      final SESSION_PRIMER sessionPrimer
   ) {
     final DateTime now = clock.getCurrentDateTime() ;
     final SignonFailureNotice signonFailureNotice = sessionBook.activate(
@@ -752,7 +758,7 @@ public class DefaultSessionSupervisor< CHANNEL, ADDRESS >
         reuse
     ).signonFailureNotice ;
     if( signonFailureNotice == null ) {
-      signonAttemptCallback.sessionAttributed( sessionIdentifier ) ;
+      signonAttemptCallback.sessionAttributed( sessionIdentifier, sessionPrimer ) ;
     } else {
       LOGGER.info( "Session attribution failed for " + sessionIdentifier + ", got " +
           signonFailureNotice + "." +

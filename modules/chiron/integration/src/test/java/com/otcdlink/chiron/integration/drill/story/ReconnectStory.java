@@ -8,6 +8,7 @@ import com.otcdlink.chiron.downend.TrackerCurator;
 import com.otcdlink.chiron.fixture.NettyLeakDetectorRule;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill;
 import com.otcdlink.chiron.integration.drill.SketchLibrary;
+import com.otcdlink.chiron.integration.drill.SketchLibrary.DummySessionPrimer;
 import com.otcdlink.chiron.integration.drill.fakeend.FakeUpend;
 import com.otcdlink.chiron.middle.session.SessionLifecycle;
 import com.otcdlink.chiron.middle.tier.ConnectionDescriptor;
@@ -130,7 +131,8 @@ public class ReconnectStory {
       drill.runOutOfVerifierThread( () -> credentialConsumer.accept( GOOD_CREDENTIAL ) ) ;
       forDownend.signonMaterializerMock().setProgressMessage( any() ) ;
 
-      final SessionSupervisor.PrimarySignonAttemptCallback primarySignonAttemptCallback ;
+      final SessionSupervisor.PrimarySignonAttemptCallback< DummySessionPrimer >
+          primarySignonAttemptCallback ;
       forUpend.sessionSupervisorMock().attemptPrimarySignon(
           exactly( GOOD_CREDENTIAL.getLogin() ),
           exactly( GOOD_CREDENTIAL.getPassword() ),
@@ -139,7 +141,7 @@ public class ReconnectStory {
           primarySignonAttemptCallback = withCapture()
       ) ;
 
-      primarySignonAttemptCallback.sessionAttributed( SESSION_IDENTIFIER ) ;
+      primarySignonAttemptCallback.sessionAttributed( SESSION_IDENTIFIER, null ) ;
       forDownend.signonMaterializerMock().done() ;
       forDownend.changeWatcherMock().stateChanged( change.signedIn ) ;
     }
@@ -543,7 +545,8 @@ public class ReconnectStory {
 
       forDownend.signonMaterializerMock().setProgressMessage( "Signing in …" ) ;
 
-      final SessionSupervisor.PrimarySignonAttemptCallback primarySignonAttemptCallback ;
+      final SessionSupervisor.PrimarySignonAttemptCallback< DummySessionPrimer >
+          primarySignonAttemptCallback ;
       forUpend.sessionSupervisorMock().attemptPrimarySignon(
           exactly( ConnectorDrill.GOOD_CREDENTIAL.getLogin() ),
           exactly( ConnectorDrill.GOOD_CREDENTIAL.getPassword() ),
@@ -552,7 +555,7 @@ public class ReconnectStory {
           primarySignonAttemptCallback = withCapture()
       ) ;
       drill.runOutOfVerifierThread( () ->
-          primarySignonAttemptCallback.sessionAttributed( SESSION_IDENTIFIER ) ) ;
+          primarySignonAttemptCallback.sessionAttributed( SESSION_IDENTIFIER, null ) ) ;
 
       forDownend.signonMaterializerMock().done() ;
 

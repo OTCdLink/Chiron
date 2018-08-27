@@ -257,6 +257,24 @@ public final class ImmutableKeyHolderMap<
     return builder.build() ;
   }
 
+  public ImmutableKeyHolderMap< KEY, VALUE > replace( final VALUE value ) {
+    checkArgument( delegate.containsKey( value.key() ) ) ;
+    boolean found = false ;
+    final Builder< KEY, VALUE > builder = ImmutableKeyHolderMap.builder() ;
+    for( final Map.Entry< KEY, VALUE > entry : delegate.entrySet() ) {
+      if( entry.getKey().equals( value.key() ) ) {
+        found = true ;
+        builder.put( value ) ;
+      } else {
+        builder.put( entry.getValue() ) ;
+      }
+    }
+    if( ! found ) {
+      throw new IllegalArgumentException( "No match for " + value.key() ) ;
+    }
+    return builder.build() ;
+  }
+
   @Override
   public String toString() {
     return getClass().getSimpleName() + "{" + Joiner.on( ", " ).join( values() ) + "}" ;

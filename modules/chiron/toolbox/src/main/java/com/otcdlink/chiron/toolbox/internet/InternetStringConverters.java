@@ -42,10 +42,10 @@ public final class InternetStringConverters {
       }
   ;
 
-  public static final Converter< String, EmailAddress > EMAIL_ADDRESS =
-      new Converter<String, EmailAddress>() {
+  public static final Converter< EmailAddress, String > EMAIL_ADDRESS =
+      new Converter< EmailAddress, String >() {
         @Override
-        protected EmailAddress doForward( final @Nonnull String string ) {
+        protected EmailAddress doBackward( final @Nonnull String string ) {
           try {
             return new EmailAddress( string ) ;
           } catch( EmailAddressFormatException e ) {
@@ -54,7 +54,7 @@ public final class InternetStringConverters {
         }
 
         @Override
-        protected String doBackward( final @Nonnull EmailAddress emailAddress ) {
+        protected String doForward( final @Nonnull EmailAddress emailAddress ) {
           return emailAddress.asString() ;
         }
       }

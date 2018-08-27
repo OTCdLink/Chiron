@@ -6,8 +6,9 @@ import com.otcdlink.chiron.upend.session.SignonOutwardDuty;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class SignonOutwardDutyTerminateSession
-    extends TransientCommand< SignonOutwardDuty >
+public class SignonOutwardDutyTerminateSession< SESSION_PRIMER >
+    extends TransientCommand< SignonOutwardDuty< SESSION_PRIMER > >
+    implements SignonCommand
 {
 
   private final SessionIdentifier sessionIdentifier ;
@@ -21,7 +22,7 @@ public class SignonOutwardDutyTerminateSession
   }
 
   @Override
-  public void callReceiver( final SignonOutwardDuty duty ) {
+  public void callReceiver( final SignonOutwardDuty< SESSION_PRIMER > duty ) {
     duty.terminateSession( endpointSpecific, sessionIdentifier ) ;
   }
 

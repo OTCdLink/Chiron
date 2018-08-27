@@ -9,7 +9,7 @@ import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.upend.session.SignonInwardDuty;
 
 public final class SignonInwardDutyResolver
-    implements CommandBodyDecoder< Designator, SignonInwardDuty>
+    implements CommandBodyDecoder< Designator, SignonInwardDuty >
 {
   private SignonInwardDutyResolver() { }
 

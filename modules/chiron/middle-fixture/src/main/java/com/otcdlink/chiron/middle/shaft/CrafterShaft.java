@@ -24,7 +24,7 @@ public class CrafterShaft< ENDPOINT_SPECIFIC, DUTY > implements MethodCallShaft<
 
   public CrafterShaft(
       final Function<
-          CommandConsumer<Command<ENDPOINT_SPECIFIC, DUTY>>,
+          CommandConsumer< Command< ENDPOINT_SPECIFIC, DUTY > >,
           DUTY
       > commandCrafterFactory,
       final ENDPOINT_SPECIFIC endpointSpecific

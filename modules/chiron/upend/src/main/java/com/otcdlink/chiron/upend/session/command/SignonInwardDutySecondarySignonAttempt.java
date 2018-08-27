@@ -5,7 +5,9 @@ import com.otcdlink.chiron.upend.session.SignonInwardDuty;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class SignonInwardDutySecondarySignonAttempt extends TransientCommand<SignonInwardDuty>
+public class SignonInwardDutySecondarySignonAttempt
+    extends TransientCommand< SignonInwardDuty >
+    implements SignonCommand
 {
 
   private final String login ;

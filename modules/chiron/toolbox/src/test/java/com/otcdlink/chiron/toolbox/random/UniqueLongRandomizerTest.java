@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import static com.otcdlink.chiron.toolbox.random.UniqueLongRandomizer.MONOTONIC;
 import static com.otcdlink.chiron.toolbox.random.UniqueLongRandomizer.Pseudorandom.nextPowerOfTwoMinus1;
 import static com.otcdlink.chiron.toolbox.random.UniqueLongRandomizer.Xorshift.BEST_CEILING_OF_RANDOM;
 import static com.otcdlink.chiron.toolbox.random.UniqueLongRandomizer.newBuilder;
@@ -20,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class UniqueLongRandomizerTest {
 
   @Test
-  public void monotonic() {
+  public void monotonicDeprecated() {
     final Monotonic randomizer0 = new Monotonic( 0 ) ;
     assertThat( randomizer0.currentLongValue() ).isEqualTo( 0 ) ;
     final Monotonic randomizer1 = randomizer0.next() ;
@@ -34,13 +35,26 @@ public class UniqueLongRandomizerTest {
         .limit( 3 )
         .boxed()
         .collect( ImmutableList.toImmutableList() )
-        ;
+    ;
     assertThat( generated ).containsExactly( 0L, 1L, 2L ) ;
   }
 
   @Test
   public void xoroshiro() {
     run( Xoroshiro::createNew, 1_000, 10, nextPowerOfTwoMinus1( 64_000 ), 1_000, true, true ) ;
+  }
+
+  @Test
+  public void quickXoroshiroDemoWithDefaults() {
+    final Xoroshiro xoroshiro = UniqueLongRandomizer.newBuilder()
+        .floor( 1111 )
+        .andReasonableDefaults()
+        .build()
+    ;
+    xoroshiro.asRandomizerStream()
+        .limit( 6 )
+        .forEach( g -> LOGGER.info( "Generator is now " + g + "." ) )
+    ;
   }
 
   @Test
@@ -56,7 +70,7 @@ public class UniqueLongRandomizerTest {
         .collisionThreshold( 100 )
         .seed( 0 )
         .build()
-        ;
+    ;
     assertThat( xoroshiro.floor ).isEqualTo( 10 ) ;
     assertThat( xoroshiro.ceilingOfRandom ).isEqualTo( 1023 ) ;
     assertThat( xoroshiro.collisionThreshold ).isEqualTo( 100 ) ;
@@ -68,7 +82,7 @@ public class UniqueLongRandomizerTest {
         .floor( 10 )
         .andReasonableDefaults()
         .build()
-        ;
+    ;
     assertThat( xoroshiro.floor ).isEqualTo( 10 ) ;
     assertThat( xoroshiro.ceilingOfRandom ).isEqualTo( 524287 ) ;
     assertThat( xoroshiro.collisionThreshold ).isEqualTo( 1000 ) ;
@@ -81,10 +95,61 @@ public class UniqueLongRandomizerTest {
         .ceilingOfRandom( 7 )
         .collisionThreshold( 100 )
         .build()
-        ;
+    ;
     ImmutableList< Long > randomValues = randomizer
         .asLongStream().limit( 10 ).boxed().collect( ImmutableList.toImmutableList() ) ;
     assertThat( randomValues ).containsExactly( 3L, 1L, 4L, 7L, 6L, 5L, 2L, 8L, 9L, 10L ) ;
+  }
+
+  @Test
+  public void monotonicBySetup() {
+    final Xoroshiro randomizer = newBuilder()
+        .floor( 0 )
+        .ceilingOfRandom( 0 )
+        .collisionThreshold( 1 )
+        .build()
+    ;
+    ImmutableList< Long > randomValues = randomizer
+        .asLongStream().limit( 10 ).boxed().collect( ImmutableList.toImmutableList() ) ;
+    assertThat( randomValues ).containsExactly( 0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L ) ;
+  }
+
+  @Test
+  public void monotonicWithFloor() {
+    final Xoroshiro randomizer = newBuilder()
+        .floor( 127 )
+        .ceilingOfRandom( 127 )
+        .collisionThreshold( 1 )
+        .build()
+    ;
+    ImmutableList< Long > randomValues = randomizer
+        .asLongStream().limit( 8 ).boxed().collect( ImmutableList.toImmutableList() ) ;
+    assertThat( randomValues ).containsExactly( 128L, 129L, 130L, 131L, 132L, 133L, 134L, 135L ) ;
+  }
+
+  @Test
+  public void monotonicAsConstant() {
+    final Xoroshiro randomizer = MONOTONIC ;
+    ImmutableList< Long > randomValues = randomizer
+        .asLongStream().limit( 10 ).boxed().collect( ImmutableList.toImmutableList() ) ;
+    assertThat( randomValues ).containsExactly( 0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L ) ;
+  }
+
+  /**
+   * Useful for tests asserting on {@link UniqueLongRandomizer#MONOTONIC},
+   * expecting well-known values.
+   */
+  @Test
+  public void monotonicContainsKnownState() {
+    assertThat( MONOTONIC.floor ).isEqualTo( 0 ) ;
+    assertThat( MONOTONIC.ceilingOfRandom ).isEqualTo( 0 ) ;
+    assertThat( MONOTONIC.collisionThreshold ).isEqualTo( 1 ) ;
+    assertThat( MONOTONIC.generation ).isEqualTo( 0 ) ;
+    assertThat( MONOTONIC.pseudorandomIterationCount ).isEqualTo( 0 ) ;
+    assertThat( MONOTONIC.currentLongValue() ).isEqualTo( 0 ) ;
+    assertThat( MONOTONIC.state0 ).isEqualTo( -1 ) ;
+    assertThat( MONOTONIC.state1 ).isEqualTo( -1 ) ;
+    assertThat( MONOTONIC.reservationSize() ).isNull() ;
   }
 
   @Test
@@ -101,7 +166,7 @@ public class UniqueLongRandomizerTest {
             .limit( 1 )
             .reduce( ( left, right ) -> right )
             .getAsLong()
-            ;
+        ;
       }
     }
     long long0 = new FromSeed().generate( 0 ) ;
@@ -117,7 +182,9 @@ public class UniqueLongRandomizerTest {
         .collisionThreshold( 100 )
         .build()
         .next().next().next()
-        ;
+    ;
+
+    LOGGER.info( "Created xoroshiro1: " + xoroshiro1 + "."  );
 
     final Xoroshiro xoroshiro2 = newBuilder()
         .floor( xoroshiro1.floor )
@@ -127,11 +194,15 @@ public class UniqueLongRandomizerTest {
         .state0( xoroshiro1.state0 )
         .state1( xoroshiro1.state1 )
         .pseudorandomIterationCount( xoroshiro1.pseudorandomIterationCount )
-        .nextMonotonicValue( xoroshiro1.nextMonotonicValueMaybe() )
+        .currentLongValue( xoroshiro1.currentLongValue() )
         .addReservations( xoroshiro1.reservationsAsStream() )
         .build()
-        ;
+    ;
 
+    LOGGER.info( "Created xoroshiro2: " + xoroshiro2 + "."  ) ;
+
+    assertThat( xoroshiro1.currentLongValue() )
+        .isEqualTo( xoroshiro2.currentLongValue() ) ;
     assertThat( xoroshiro1.next().currentLongValue() )
         .isEqualTo( xoroshiro2.next().currentLongValue() ) ;
     assertThat( xoroshiro1.next().next().currentLongValue() )
@@ -143,6 +214,13 @@ public class UniqueLongRandomizerTest {
     assertThat( reservationsAsList( xoroshiro2 ) ).hasSize( 4 ) ;
   }
 
+  @Test
+  public void nextPowerOfTwoMinusOne() {
+    assertThat( nextPowerOfTwoMinus1( 1 ) ).isEqualTo( 1 ) ;
+    assertThat( nextPowerOfTwoMinus1( 2 ) ).isEqualTo( 3 ) ;
+    assertThat( nextPowerOfTwoMinus1( 3 ) ).isEqualTo( 3 ) ;
+    assertThat( nextPowerOfTwoMinus1( 5 ) ).isEqualTo( 7 ) ;
+  }
 
   @Ignore( "May take a long" )
   @Test
@@ -219,8 +297,8 @@ public class UniqueLongRandomizerTest {
 
   private static final Initiator< Xorshift > NEW_XORSHIFT =
       ( floor, ceilingOfRandom, collisionThreshold, seed ) ->
-          Xorshift.createNew( floor, ceilingOfRandom, collisionThreshold )
-      ;
+      Xorshift.createNew( floor, ceilingOfRandom, collisionThreshold )
+  ;
 
   private static < RANDOMIZER extends UniqueLongRandomizer.Pseudorandom< RANDOMIZER > > void run(
       final Initiator< RANDOMIZER > initiator,
@@ -252,9 +330,9 @@ public class UniqueLongRandomizerTest {
         }
         messageAboutCeilingHit =
             "Ceiling of random of " + keyRandomizer.ceilingOfRandom +
-                " reached after " + keyRandomizer.generation + " generations, " +
-                "with a collision threshold of " + keyRandomizer.collisionThreshold +
-                ". " + messageAboutPrevious
+            " reached after " + keyRandomizer.generation + " generations, " +
+            "with a collision threshold of " + keyRandomizer.collisionThreshold +
+            ". " + messageAboutPrevious
         ;
         LOGGER.info( "Ceiling of random was hit!" ) ;
         ceilingOfRandomReached = true ;
@@ -276,7 +354,7 @@ public class UniqueLongRandomizerTest {
     if( generationCount > 10 &&
         ceilingOfRandomReached &&
         ! messageAboutCeilingHit.isEmpty()
-        ) {
+    ) {
       LOGGER.info( messageAboutCeilingHit ) ;
     }
     LOGGER.info( "Randomizer used a ceiling of random of " + keyRandomizer.ceilingOfRandom + ", " +

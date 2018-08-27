@@ -14,6 +14,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @Command.Description( name = "resetSignonFailures" )
 public class SignonInwardDutyResetSignonFailures
     extends Command< Designator, SignonInwardDuty>
+    implements SignonCommand
 {
   private final String login ;
 

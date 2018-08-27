@@ -1,5 +1,6 @@
 package com.otcdlink.chiron.toolbox.text;
 
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
@@ -78,6 +79,17 @@ public final class TextTools {
 
     final String lines[] = string.split( "(" + lf + "|" + cr + ")+", -1 ) ;
     return ImmutableList.copyOf( lines ) ;
+  }
+
+  public static String decorateWithLineNumbers( final String text ) {
+    final Iterable< String > lines = Splitter.on( "\n" ).split( text ) ;
+    final StringBuilder stringBuilder = new StringBuilder() ;
+    int lineNumber = 1 ;
+    for( final String line : lines ) {
+      stringBuilder.append( String.format( "%03d ", lineNumber ++ ) )
+          .append( line ).append( "\n" ) ;
+    }
+    return stringBuilder.toString() ;
   }
 
 // ===============================

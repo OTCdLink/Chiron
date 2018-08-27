@@ -10,7 +10,7 @@ import com.otcdlink.chiron.middle.session.SignonFailureNotice;
  * This interface is typically implemented by a {@link SessionSupervisor} through
  * {@link OutwardSessionSupervisor}.
  */
-public interface SignonOutwardDuty extends ElementarySignonOutwardDuty {
+public interface SignonOutwardDuty< SESSION_PRIMER > extends ElementarySignonOutwardDuty {
 
 
   /**
@@ -19,7 +19,8 @@ public interface SignonOutwardDuty extends ElementarySignonOutwardDuty {
   void sessionCreated(
       Designator designatorInternal,
       SessionIdentifier sessionIdentifier,
-      String login
+      String login,
+      SESSION_PRIMER sessionPrimer
   ) ;
 
   /**

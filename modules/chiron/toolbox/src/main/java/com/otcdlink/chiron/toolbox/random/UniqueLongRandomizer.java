@@ -1,6 +1,9 @@
 package com.otcdlink.chiron.toolbox.random;
 
+import com.otcdlink.chiron.toolbox.ToStringTools;
+
 import java.util.BitSet;
+import java.util.Objects;
 import java.util.function.LongFunction;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
@@ -12,6 +15,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * Generates a sequence of pseudo-random positive numbers, with number appearing only once
  * (within the [0-{@value Long#MAX_VALUE}] range), and this sequence being repeatable
  * with another {@link UniqueLongRandomizer} built with exactly the same parameters.
+ * Those parameters are publicly accessible.
  *
  * <h1>Immutability</h1>
  * Immutability is the outstanding feature of the {@link UniqueLongRandomizer}.
@@ -60,7 +64,7 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
       private long state0 ;
       private long state1 ;
       private int pseudorandomIterationCount ;
-      private long nextMonotonicValue ;
+      private long currentLongValue ;
       private BitSet reservation ;
 
       @Override
@@ -124,11 +128,10 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
       }
 
       @Override
-      public Builder.ReservationStep nextMonotonicValue( final Long next ) {
-        this.nextMonotonicValue = next == null ? -1 : next ;
+      public Builder.ReservationStep currentLongValue( final long current ) {
+        this.currentLongValue = current;
         return this ;
       }
-
       @Override
       public Builder.ReservationStep addReservation( final int key ) {
         if( reservation == null ) {
@@ -139,27 +142,19 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
       }
 
       @Override
-      public Builder.ReservationStep addReservations( final IntStream intStream ) {
-        if( intStream != null ) {
-          intStream.forEach( this::addReservation ) ;
-        }
-        return this ;
-      }
-
-      @Override
       public UniqueLongRandomizer.Xoroshiro build() {
         if( exported ) {
           return new Xoroshiro(
-              true,
-              floor,
-              ceilingOfRandom,
-              collisionThreshold,
-              generation,
-              state0,
-              state1,
-              pseudorandomIterationCount,
-              reservation,
-              nextMonotonicValue
+            true,
+            floor,
+            ceilingOfRandom,
+            collisionThreshold,
+            generation,
+            state0,
+            state1,
+            pseudorandomIterationCount,
+            reservation,
+            currentLongValue
           ) ;
         } else {
           return Xoroshiro.createNew( floor, ceilingOfRandom, collisionThreshold, seed ) ;
@@ -207,15 +202,17 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
     }
 
     interface NextMonotonicValueStep {
-      default ReservationStep noNextMonotonicValue() {
-        return nextMonotonicValue( null ) ;
-      }
-      ReservationStep nextMonotonicValue( Long next ) ;
+      ReservationStep currentLongValue( long current ) ;
     }
 
     interface ReservationStep extends BuildStep {
       ReservationStep addReservation( int key ) ;
-      ReservationStep addReservations( IntStream intStream ) ;
+      default ReservationStep addReservations( final IntStream intStream ) {
+        if( intStream != null ) {
+          intStream.forEach( this::addReservation ) ;
+        }
+        return this ;
+      }
     }
 
     interface BuildStep {
@@ -223,6 +220,7 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
     }
 
   }
+
 
 // ========
 // Abstract
@@ -248,7 +246,7 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
     ) {
       checkArgument( floor >= 0 ) ;
       this.floor = floor ;
-      checkArgument( ceilingOfRandom > floor ) ;
+      checkArgument( ceilingOfRandom >= floor ) ;
       this.ceilingOfRandom = ceilingOfRandom ;
       this.generation = generation ;
     }
@@ -260,6 +258,30 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
 // Monotonic
 // =========
 
+  /**
+   * Only for tests.
+   * We don't create this field with a {@link Builder}, which brings intricate values
+   * for {@link Pseudorandom#state0} and {@link Pseudorandom#state1} because of seed derivation.
+   */
+  UniqueLongRandomizer.Xoroshiro MONOTONIC = new Xoroshiro(
+      true,
+      0,
+      0,
+      1,
+      0,
+      -1,
+      -1,
+      0,
+      null,
+      0
+  ) ;
+
+  /**
+   * This class only shows how to derive {@link AbstractUniqueLongRandomizer} to plug
+   * other behaviors.
+   *
+   * @see UniqueLongRandomizer#MONOTONIC
+   */
   class Monotonic extends AbstractUniqueLongRandomizer< Monotonic > {
 
     public Monotonic( int floor ) {
@@ -279,6 +301,11 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
     public Monotonic next() {
       return new Monotonic( floor, ceilingOfRandom, generation + 1 ) ;
     }
+
+    @Override
+    public String toString() {
+      return ToStringTools.getNiceClassName( this ) + "{" + generation + "}" ;
+    }
   }
 
 
@@ -293,6 +320,18 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
    * filled before switching to the monotonic growth. The main invariant of this class is that,
    * given initial values ({@link #floor}, {@link #ceilingOfRandom}, {@link #generation}, and other
    * subclass-specific values like a random seed), the generated sequence will always be the same.
+   *
+   * <h1>State externalisation</h1>
+   * <p>
+   * There is no such thing as a "State" or "Configuration" object because a {@link Pseudorandom}
+   * (practically: a {@link Xoroshiro}) object makes all its state publicly visible.
+   *
+   * <h1>Algorithm</h1>
+   * <p>
+   * This class is designed around {@link Xoroshiro}, which should be the default for production.
+   * Subclassing is for testing other PRNG algorithms.
+   *
+   * <h1>Performance</h1>
    * <p>
    * This class is designed around {@link Xoroshiro}, which should be the default for production.
    * Subclassing is for testing other PRNG algorithms.
@@ -304,7 +343,7 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
    *
    */
   abstract class Pseudorandom< RANDOMIZER extends Pseudorandom< RANDOMIZER > >
-      extends AbstractUniqueLongRandomizer< RANDOMIZER >
+      extends UniqueLongRandomizer.AbstractUniqueLongRandomizer< RANDOMIZER >
   {
 
     protected interface Instantiator< RANDOMIZER extends Pseudorandom > {
@@ -354,6 +393,9 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
     /**
      *
      * @param ceilingOfRandom must be a power of 2 minus 1 so we can mask the hash conveniently.
+     *     If this value is equal to {@link #floor} then the generator is monotonic,
+     *     and {@link #collisionThreshold} is ignored.
+     *
      * @param state0 refers to Xoroshiro's original Java implementation.
      * @param state1 refers to Xoroshiro's original Java implementation.
      */
@@ -367,7 +409,7 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
         final long state1,
         final int pseudorandomIterationCount,
         final BitSet reservation,
-        final long nextMonotonicValue
+        final long currentLongValue
     ) {
       super( floor, ceilingOfRandom, generation ) ;
       checkArgument( collisionThreshold > 0 ) ;
@@ -375,21 +417,24 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
           "Must be a power of 2: " + ceilingOfRandom + " + 1" ) ;
       this.collisionThreshold = collisionThreshold ;
       if( importing ) {
-        this.currentLongValue = nextMonotonicValue ;
+        this.currentLongValue = currentLongValue ;
         this.pseudorandomIterationCount = pseudorandomIterationCount ;
         this.reservation = reservation ;
+        if( reservation != null && currentLongValue <= ceilingOfRandom ) {
+          reservation.set( ( int ) currentLongValue ) ;
+        }
         this.state0 = state0 ;
         this.state1 = state1 ;
       } else {
         if( reservation == null ) {
-          checkArgument( nextMonotonicValue > ceilingOfRandom ) ;
+          checkArgument( currentLongValue > ceilingOfRandom ) ;
           this.state0 = -1 ;
           this.state1 = -1 ;
-          this.currentLongValue = nextMonotonicValue ;
+          this.currentLongValue = currentLongValue ;
           this.pseudorandomIterationCount = pseudorandomIterationCount ;
           this.reservation = null ;
         } else {
-          checkArgument( nextMonotonicValue == -1 ) ;
+          checkArgument( currentLongValue == -1 ) ;
           int newAttempt = 0 ;
           long newState0 = state0 ;
           long newState1 = state1 ;
@@ -504,7 +549,7 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
         shifted = shifted >>> 1 ;
         power = power | ( power << 1 ) ;
       }
-      return power ;
+      return power >>> 1 ;
     }
 
     /**
@@ -514,6 +559,53 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
       return number > 0 && ( ( number & ( number - 1 ) ) == 0 ) ;
     }
 
+
+    @Override
+    public boolean equals( final Object other ) {
+      if( this == other ) {
+        return true ;
+      }
+      if( other == null || getClass() != other.getClass() ) {
+        return false ;
+      }
+      final Pseudorandom< ? > that = ( Pseudorandom< ? > ) other ;
+      return
+          state0 == that.state0 &&
+          state1 == that.state1 &&
+          collisionThreshold == that.collisionThreshold &&
+          pseudorandomIterationCount == that.pseudorandomIterationCount &&
+          currentLongValue == that.currentLongValue &&
+          Objects.equals( reservation, that.reservation )
+      ;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(
+          state0,
+          state1,
+          reservation,
+          collisionThreshold,
+          pseudorandomIterationCount,
+          currentLongValue
+      ) ;
+    }
+
+    @Override
+    public String toString() {
+      return getClass().getSimpleName() + "{" +
+          "floor=" + floor + ";" +
+          "ceilingOfRandom=" + ceilingOfRandom + ";" +
+          "collisionThreshold=" + collisionThreshold + ";" +
+          "generation=" + generation + ";" +
+          "state0=" + state0 + ";" +
+          "state1=" + state1 + ";" +
+          "reservation=" + reservation + ";" +
+          "pseudorandomIterationCount=" + pseudorandomIterationCount + ";" +
+          "currentLongValue=" + currentLongValue +
+          '}'
+      ;
+    }
   }
 
 // ========
@@ -637,7 +729,7 @@ public interface UniqueLongRandomizer< RANDOMIZER extends UniqueLongRandomizer >
      * A value of 524287, which implies a {@link #reservationSize()} of 64kb at most.
      * With {@link #REASONABLE_COLLISION_THRESHOLD} this can produce about 520,637 random values.
      */
-    public static final int REASONABLE_CEILING_OF_RANDOM = nextPowerOfTwoMinus1( 250_000 ) ;
+    public static final int REASONABLE_CEILING_OF_RANDOM = nextPowerOfTwoMinus1( 520_000 ) ;
 
     /**
      * Values above this one don't give much better results along with

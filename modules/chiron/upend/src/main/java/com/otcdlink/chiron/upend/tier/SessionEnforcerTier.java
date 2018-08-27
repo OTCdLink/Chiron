@@ -4,6 +4,7 @@ import com.otcdlink.chiron.middle.ChannelTools;
 import com.otcdlink.chiron.middle.session.SecondaryToken;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
 import com.otcdlink.chiron.middle.session.SessionLifecycle;
+import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 import com.otcdlink.chiron.toolbox.netty.NettyTools;
@@ -11,7 +12,6 @@ import com.otcdlink.chiron.upend.UpendConnector;
 import com.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
 import com.otcdlink.chiron.upend.session.SessionSupervisor;
 import com.otcdlink.chiron.upend.session.SessionSupervisor.ChannelCloser;
-import com.otcdlink.chiron.upend.session.SignableUser;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -35,13 +35,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *     for which {@link Channel#remoteAddress()} returns a special flavor of
  *     {@link java.net.SocketAddress}. For normal use, should be {@link java.net.InetAddress}.
  */
-public class SessionEnforcerTier< ADDRESS >
+public class SessionEnforcerTier< ADDRESS, SESSION_PRIMER >
     extends ChannelInboundHandlerAdapter
 {
 
   private static final Logger LOGGER = LoggerFactory.getLogger( SessionEnforcerTier.class ) ;
 
-  private final OutwardSessionSupervisor< Channel, ADDRESS > sessionSupervisor ;
+  private final OutwardSessionSupervisor< Channel, ADDRESS, SESSION_PRIMER > sessionSupervisor ;
 
   private final UpendConnector.ChannelRegistrar channelRegistrar ;
 
@@ -52,7 +52,7 @@ public class SessionEnforcerTier< ADDRESS >
    * Default constructor, supposes {@link ADDRESS} to be {@code InetSocketAddress}.
    */
   public SessionEnforcerTier(
-      final OutwardSessionSupervisor< Channel, ADDRESS > sessionSupervisor,
+      final OutwardSessionSupervisor< Channel, ADDRESS, SESSION_PRIMER > sessionSupervisor,
       final UpendConnector.ChannelRegistrar channelRegistrar
   ) {
     this(
@@ -66,7 +66,7 @@ public class SessionEnforcerTier< ADDRESS >
    * For tests only.
    */
   SessionEnforcerTier(
-      final OutwardSessionSupervisor< Channel, ADDRESS > sessionSupervisor,
+      final OutwardSessionSupervisor< Channel, ADDRESS, SESSION_PRIMER > sessionSupervisor,
       final UpendConnector.ChannelRegistrar channelRegistrar,
       final Function< Channel, ADDRESS > addressExtractor
   ) {
@@ -181,7 +181,7 @@ public class SessionEnforcerTier< ADDRESS >
     final SessionSupervisor.ReuseCallback reuseCallback = signonFailureNotice -> {
           if( signonFailureNotice == null ) {
             new SignonCallback( channelHandlerContext ).sessionAttributed(
-            sessionIdentifier ) ;
+                sessionIdentifier, null ) ;
           } else {
             new SignonCallback( channelHandlerContext ).signonResult( signonFailureNotice ) ;
           }
@@ -231,10 +231,10 @@ public class SessionEnforcerTier< ADDRESS >
     channelHandlerContext.close() ;
   }
 
-  private class SignonCallback
+  private class SignonCallback< SESSIONPRIMER >
       implements
-      SessionSupervisor.PrimarySignonAttemptCallback,
-      SessionSupervisor.SecondarySignonAttemptCallback
+      SessionSupervisor.PrimarySignonAttemptCallback< SESSIONPRIMER >,
+      SessionSupervisor.SecondarySignonAttemptCallback< SESSIONPRIMER >
   {
     /**
      * Documentation says the {@link ChannelHandlerContext} remains the same between calls to
@@ -250,7 +250,8 @@ public class SessionEnforcerTier< ADDRESS >
 
     @Override
     public void sessionAttributed(
-        final SessionIdentifier sessionIdentifier
+        final SessionIdentifier sessionIdentifier,
+        final SESSIONPRIMER sessionPrimer
     ) {
       checkNotNull( sessionIdentifier ) ;
       LOGGER.debug( "Associated " + sessionIdentifier + " to " +
@@ -310,10 +311,21 @@ public class SessionEnforcerTier< ADDRESS >
     }
   }
 
-  private static void sendDownward(
+  private void sendDownward(
       final ChannelHandlerContext channelHandlerContext,
       final SessionLifecycle.Phase signonPhase
   ) {
+    sendDownward( channelHandlerContext, null, signonPhase ) ;
+  }
+
+  private void sendDownward(
+      final ChannelHandlerContext channelHandlerContext,
+      final SESSION_PRIMER sessionPrimer,
+      final SessionLifecycle.Phase signonPhase
+  ) {
+    if( sessionPrimer != null ) {
+      channelHandlerContext.write( sessionPrimer ) ;
+    }
     channelHandlerContext.writeAndFlush( signonPhase )/*.addListener( future -> {
       if( ! future.isSuccess() ) {
         LOGGER.error( "Failed to send " + signonPhase + " in " + channelHandlerContext + ".",

@@ -44,6 +44,7 @@
     <module>lab-downend</module>
     <module>lab-integration</module>
     <module>jupiter-experiment</module>
+    <module>wire</module>
   </modules>
 
 

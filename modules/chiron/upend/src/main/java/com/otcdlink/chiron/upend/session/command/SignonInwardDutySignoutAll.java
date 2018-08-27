@@ -12,6 +12,7 @@ import java.io.IOException;
 @Command.Description( name = "signoutAll" )
 public class SignonInwardDutySignoutAll
     extends Command< Designator, SignonInwardDuty>
+    implements SignonCommand
 {
 
   public SignonInwardDutySignoutAll( final Designator designatorInternal ) {

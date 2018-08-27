@@ -15,6 +15,7 @@ import com.otcdlink.chiron.downend.Tracker;
 import com.otcdlink.chiron.downend.babyupend.BabyUpend;
 import com.otcdlink.chiron.fixture.tcp.http.ConnectProxy;
 import com.otcdlink.chiron.fixture.tcp.http.HttpProxy;
+import com.otcdlink.chiron.integration.drill.SketchLibrary.DummySessionPrimer;
 import com.otcdlink.chiron.integration.drill.fakeend.FullDuplex;
 import com.otcdlink.chiron.integration.echo.EchoDownwardDuty;
 import com.otcdlink.chiron.integration.echo.EchoUpwardDuty;
@@ -23,6 +24,7 @@ import com.otcdlink.chiron.middle.session.SecondaryCode;
 import com.otcdlink.chiron.middle.session.SecondaryToken;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
 import com.otcdlink.chiron.middle.session.SessionLifecycle;
+import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.tier.TimeBoundary;
 import com.otcdlink.chiron.mockster.Mockster;
 import com.otcdlink.chiron.toolbox.Credential;
@@ -34,7 +36,6 @@ import com.otcdlink.chiron.upend.UpendConnector;
 import com.otcdlink.chiron.upend.http.dispatch.HttpRequestRelayer;
 import com.otcdlink.chiron.upend.http.dispatch.UsualHttpCommands;
 import com.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
-import com.otcdlink.chiron.upend.session.SignableUser;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpUtil;
@@ -413,7 +414,7 @@ public interface ConnectorDrill extends AutoCloseable {
   interface ForUpendConnector extends AnyEndLifecycle, EventLoopOwner {
     EchoUpwardDuty< Designator > upwardDutyMock() ;
     EchoDownwardDuty< Designator > downwardDuty() ;
-    OutwardSessionSupervisor< Channel, InetAddress > sessionSupervisorMock() ;
+    OutwardSessionSupervisor< Channel, InetAddress, DummySessionPrimer > sessionSupervisorMock() ;
     void changeTimeBoundary( TimeBoundary.ForAll timeBoundary ) ;
 
     enum HttpRequestRelayerKind {

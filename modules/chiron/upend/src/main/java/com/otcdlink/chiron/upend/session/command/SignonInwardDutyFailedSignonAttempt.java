@@ -14,7 +14,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 @Command.Description( name="failedSignonAttempt" )
 public class SignonInwardDutyFailedSignonAttempt
-    extends Command< Designator, SignonInwardDuty>
+    extends Command< Designator, SignonInwardDuty >
+    implements SignonCommand
 {
 
   private final String login ;

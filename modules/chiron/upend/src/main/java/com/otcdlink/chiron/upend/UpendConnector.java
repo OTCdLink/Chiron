@@ -97,7 +97,8 @@ import static com.otcdlink.chiron.upend.UpendConnector.State.STOPPING;
  */
 public class UpendConnector<
     UPWARD_DUTY,
-    DOWNWARD_DUTY
+    DOWNWARD_DUTY,
+    SESSION_PRIMER
 > {
   private static final Logger LOGGER = LoggerFactory.getLogger( UpendConnector.class ) ;
 
@@ -109,7 +110,7 @@ public class UpendConnector<
    * with a special {@link Setup} flavors that exposes higher-level contracts and generates
    * appropriate {@link ChannelHandler}s.
    */
-  public static class Setup< UPWARD_DUTY > {
+  public static class Setup< UPWARD_DUTY, SESSION_PRIMER > {
 
     public final EventLoopGroup eventLoopGroup ;
 
@@ -119,7 +120,7 @@ public class UpendConnector<
 
     public final URL websocketUrl ;
 
-    public final OutwardSessionSupervisor< Channel, InetAddress > sessionSupervisor ;
+    public final OutwardSessionSupervisor< Channel, InetAddress, SESSION_PRIMER > sessionSupervisor ;
 
     /**
      * Should forward {@link Command} objects to some execution queue (not process them
@@ -160,10 +161,10 @@ public class UpendConnector<
         final SslEngineFactory.ForServer sslEngineFactory,
         final String websocketUrlPath,
         final String applicationVersion,
-        final OutwardSessionSupervisor<Channel, InetAddress> sessionSupervisor,
-        final CommandConsumer<Command<Designator, UPWARD_DUTY>> commandConsumer,
+        final OutwardSessionSupervisor< Channel, InetAddress, SESSION_PRIMER > sessionSupervisor,
+        final CommandConsumer< Command< Designator, UPWARD_DUTY > > commandConsumer,
         final Designator.Factory designatorFactory,
-        final CommandBodyDecoder<Designator, UPWARD_DUTY> websocketCommandDecoder,
+        final CommandBodyDecoder< Designator, UPWARD_DUTY > websocketCommandDecoder,
         final HttpRequestRelayer immediateHttpRequestRelayer,
         final HttpRequestRelayer authenticatedHttpRequestRelayer,
         final CommandInterceptor.Factory commandInterceptorFactory,
@@ -288,12 +289,12 @@ public class UpendConnector<
 // Construction
 // ============
 
-  private final Setup< UPWARD_DUTY > setup ;
+  private final Setup< UPWARD_DUTY, SESSION_PRIMER > setup ;
   private final ChannelRegistrationHacker channelRegistrationHacker ;
   private final ChannelGroup channels ;
 
 
-  public UpendConnector( final Setup< UPWARD_DUTY > setup ) {
+  public UpendConnector( final Setup< UPWARD_DUTY, SESSION_PRIMER > setup ) {
     this( setup, null ) ;
   }
 
@@ -301,7 +302,7 @@ public class UpendConnector<
    * Only for tests.
    */
   public UpendConnector(
-      final Setup< UPWARD_DUTY > setup,
+      final Setup< UPWARD_DUTY, SESSION_PRIMER > setup,
       final ChannelRegistrationHacker channelRegistrationHacker
   ) {
     this.setup = checkNotNull( setup ) ;
@@ -436,6 +437,8 @@ public class UpendConnector<
           pipeline, UpendTierName.COMMAND_RECEIVER.tierName(), false, false ) ;
     }
 
+    // TODO add PermissionTier here.
+
     pipeline.addLast( UpendTierName.CATCHER.tierName(), new CatcherTier() ) ;
 
 
@@ -445,8 +448,8 @@ public class UpendConnector<
     // LOGGER.debug( "Built " + pipeline + " for " + socketChannel + "." ) ;
   }
 
-  private static < UPWARD_DUTY > void addCommandInterceptorIfNeeded(
-      final Setup< UPWARD_DUTY > setup,
+  private static < UPWARD_DUTY, SESSION_PRIMER > void addCommandInterceptorIfNeeded(
+      final Setup< UPWARD_DUTY, SESSION_PRIMER > setup,
       final ChannelPipeline pipeline
   ) {
     if( setup.commandInterceptorFactory != null ) {
@@ -619,7 +622,7 @@ public class UpendConnector<
     if( channelRegistrationHacker != null ) {
       channelRegistrationHacker.afterChannelCreated( pipeline.channel(), channelRegistrar ) ;
     }
-    // ChannelTools.dumpPipelineAsynchronously( pipeline, "after WebSocket handshake sent" ) ;
+     ChannelTools.dumpPipelineAsynchronously( pipeline, "after WebSocket handshake sent" ) ;
 
   }
 

@@ -69,11 +69,11 @@ public class BytebufCoat implements PositionalFieldReader, PositionalFieldWriter
   /**
    * TODO: skip {@code String} instantiation and spit directly to the {@link ByteBuf}.
    */
-  private static String urlEncodeUtf8( final String string ) {
+  public static String urlEncodeUtf8( final String string ) {
     return ESCAPER.escape( string ) ;
   }
 
-  private static String urlDecodeUtf8( final ByteBuf byteBuf, final int lastIndex )
+  public static String urlDecodeUtf8( final ByteBuf byteBuf, final int lastIndex )
       throws DecodeException
   {
     final byte[] bytes = new byte[ lastIndex - byteBuf.readerIndex() ] ;

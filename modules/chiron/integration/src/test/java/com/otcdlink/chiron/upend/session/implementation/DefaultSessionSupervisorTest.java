@@ -64,7 +64,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -111,7 +111,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -172,8 +172,8 @@ public class DefaultSessionSupervisorTest {
     sessionSupervisor.sessionCreated(
         hackedDesignator,
         SESSION_1,
-        USER_X.login()
-    ) ;
+        USER_X.login(),
+        null ) ;
 
     new FullVerifications() {{ }} ;
 
@@ -197,7 +197,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
       ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -247,7 +247,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
       ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -324,7 +324,7 @@ public class DefaultSessionSupervisorTest {
           primarySignonAttemptCallback,
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -408,7 +408,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
       ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -457,7 +457,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -515,7 +515,7 @@ public class DefaultSessionSupervisorTest {
     final DefaultSessionSupervisor.SessionCreationDesignator sessionCreationDesignator =
         sessionRegistrationDesignatorCaptor.get( 0 ) ;
 
-    sessionCreationDesignator.signonAttemptCallback.sessionAttributed( SESSION_1 ) ;
+    sessionCreationDesignator.signonAttemptCallback.sessionAttributed( SESSION_1, null ) ;
 
     new FullVerifications() {{ }} ;
 
@@ -540,7 +540,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -612,7 +612,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -675,7 +675,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -767,7 +767,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -849,7 +849,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -947,7 +947,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -1036,7 +1036,7 @@ public class DefaultSessionSupervisorTest {
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
 
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -1123,7 +1123,7 @@ public class DefaultSessionSupervisorTest {
           secondarySignonAttemptCallback,
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -1173,7 +1173,7 @@ public class DefaultSessionSupervisorTest {
           secondarySignonAttemptCallback,
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -1238,7 +1238,7 @@ public class DefaultSessionSupervisorTest {
           secondarySignonAttemptCallback,
       @Injectable final SessionSupervisor.ChannelCloser< MyChannel > channelCloser
   ) throws Exception {
-    final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor =
+    final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor =
         new DefaultSessionSupervisor<>(
             clock,
             stampGenerator,
@@ -1309,7 +1309,7 @@ public class DefaultSessionSupervisorTest {
       final SessionIdentifierGenerator sessionIdentifierGenerator,
       final SignonInwardDuty signonInwardDuty,
       final SessionSupervisor.PrimarySignonAttemptCallback primarySignonAttemptCallback,
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor
   ) {
     oneFactorAuthentication(
         clock,
@@ -1331,7 +1331,7 @@ public class DefaultSessionSupervisorTest {
       final SessionIdentifierGenerator sessionIdentifierGenerator,
       final SignonInwardDuty signonInwardDuty,
       final SessionSupervisor.PrimarySignonAttemptCallback primarySignonAttemptCallback,
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor,
       final Multicaptor< DefaultSessionSupervisor.SessionCreationDesignator<
           MyChannel,
           MyAddress
@@ -1380,7 +1380,7 @@ public class DefaultSessionSupervisorTest {
   }
 
   private static DefaultSessionSupervisor.SessionCreationDesignator primarySignonAttempted(
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor,
       final Clock clock,
       final Stamp.Generator stampGenerator,
       final SessionIdentifierGenerator sessionIdentifierGenerator,
@@ -1401,7 +1401,7 @@ public class DefaultSessionSupervisorTest {
   }
 
   private static DefaultSessionSupervisor.SessionCreationDesignator primarySignonAttempted(
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor,
       final Clock clock,
       final Stamp.Generator stampGenerator,
       final SessionIdentifierGenerator sessionIdentifierGenerator,
@@ -1448,7 +1448,7 @@ public class DefaultSessionSupervisorTest {
       final Stamp.Generator stampGenerator,
       final SignonInwardDuty signonInwardDuty,
       final SessionSupervisor.PrimarySignonAttemptCallback primarySignonAttemptCallback,
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor,
       final MyUser user
   ) {
     return requestPrimaryAuthentication(
@@ -1469,7 +1469,7 @@ public class DefaultSessionSupervisorTest {
       final Stamp.Generator stampGenerator,
       final SignonInwardDuty signonInwardDuty,
       final SessionSupervisor.PrimarySignonAttemptCallback primarySignonAttemptCallback,
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor,
       final MyUser user,
       final Multicaptor< DefaultSessionSupervisor.PrimarySignonAttemptDesignator<
           MyChannel,
@@ -1509,7 +1509,7 @@ public class DefaultSessionSupervisorTest {
 
   private static SecondaryAuthenticator.SecondaryTokenCallback
   primarySignonAttemptedRequestSecondary(
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor,
       final SecondaryAuthenticator secondaryAuthenticator,
       final DefaultSessionSupervisor.PrimarySignonAttemptDesignator<
           MyChannel,
@@ -1545,7 +1545,7 @@ public class DefaultSessionSupervisorTest {
    * we call the method directly.
    */
   private static void forceScavenge(
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor,
       final Clock clock,
       final DateTime now
   ) {
@@ -1558,7 +1558,7 @@ public class DefaultSessionSupervisorTest {
   }
 
   private static void receiveSecondaryToken(
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor,
       final Clock clock,
       final SessionSupervisor.PrimarySignonAttemptCallback primarySignonAttemptCallback,
       final SecondaryAuthenticator.SecondaryTokenCallback secondaryTokenCallback
@@ -1581,7 +1581,7 @@ public class DefaultSessionSupervisorTest {
 
   private static SecondaryAuthenticator.VerificationCallback
   receiveSecondaryCodeVerificationResult(
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor,
       final SecondaryAuthenticator secondaryAuthenticator,
       final DefaultSessionSupervisor.SecondarySignonAttemptDesignator secondarySignonAttemptDesignator
   ) {
@@ -1609,7 +1609,7 @@ public class DefaultSessionSupervisorTest {
   }
 
   private static DefaultSessionSupervisor.SecondarySignonAttemptDesignator attemptSecondarySignon(
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor,
       final Stamp.Generator stampGenerator,
       final SignonInwardDuty signonInwardDuty,
       final SessionSupervisor.SecondarySignonAttemptCallback secondarySignonAttemptCallback
@@ -1648,7 +1648,7 @@ public class DefaultSessionSupervisorTest {
       final Stamp.Generator stampGenerator,
       final SessionIdentifierGenerator sessionIdentifierGenerator,
       final SignonInwardDuty signonInwardDuty,
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor,
       final SecondaryAuthenticator.VerificationCallback verificationCallback,
       final DateTime now
   ) {
@@ -1684,19 +1684,19 @@ public class DefaultSessionSupervisorTest {
   private static void notifyOfSuccessfulSessionCreation(
       final Clock clock,
       final SessionSupervisor.SignonAttemptCallback signonAttemptCallback,
-      final DefaultSessionSupervisor< MyChannel, MyAddress > sessionSupervisor,
+      final DefaultSessionSupervisor< MyChannel, MyAddress, Void > sessionSupervisor,
       final DefaultSessionSupervisor.SessionCreationDesignator sessionCreationDesignator
   ) {
     new Expectations() {{
       clock.getCurrentDateTime() ; result = T_3 ;
-      signonAttemptCallback.sessionAttributed( SESSION_1 ) ;
+      signonAttemptCallback.sessionAttributed( SESSION_1, null ) ;
     }} ;
 
     sessionSupervisor.sessionCreated(
         sessionCreationDesignator,
         SESSION_1,
-        USER_X.login()
-    ) ;
+        USER_X.login(),
+        null ) ;
 
     new FullVerifications() {{ }} ;
 

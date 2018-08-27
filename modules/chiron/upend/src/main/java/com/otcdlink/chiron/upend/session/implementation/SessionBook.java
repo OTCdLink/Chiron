@@ -4,12 +4,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
+import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.session.SignonDecision;
 import com.otcdlink.chiron.middle.session.SignonFailure;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
 import com.otcdlink.chiron.toolbox.collection.KeyHolder;
 import com.otcdlink.chiron.toolbox.collection.SortedKeyHolderMap;
-import com.otcdlink.chiron.upend.session.SignableUser;
 import com.otcdlink.chiron.upend.session.SignonOutwardDuty;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -245,7 +245,7 @@ class SessionBook<
    * Upgrades an existing {@link SessionDetail.Pending} or {@link SessionDetail.Reusing}
    * into {@link SessionDetail.Active}, which means {@link SESSION_IDENTIFIER}
    * was blessed by a call to
-   * {@link SignonOutwardDuty#sessionCreated(Designator, SessionIdentifier, String)}.
+   * {@link SignonOutwardDuty#sessionCreated(Designator, SessionIdentifier, String, Object)}.
    *
    * @param now current absolute time, used to resolve {@link SessionDetail.Orphaned} validity.
    *

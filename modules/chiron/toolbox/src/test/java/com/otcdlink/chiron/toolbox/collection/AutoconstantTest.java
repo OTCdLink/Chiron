@@ -81,6 +81,16 @@ public class AutoconstantTest {
     assertThat( SelfTypedConstant.INTEGER.typeParameter() ).isEqualTo( Integer.class ) ;
   }
 
+  @Test
+  public void overridingBehaviors() {
+    assertThat( Behavior.I1.something() ).isEqualTo( 1 ) ;
+    assertThat( Behavior.I1.genericSomething( null ) ).isEqualTo( 1 ) ;
+    assertThat( Behavior.L2.something( 2L, 4L ) ).isEqualTo( 3L ) ;
+    assertThat( Behavior.L2.genericSomething( 3L ) ).isEqualTo( 3L ) ;
+    assertThat( Behavior.MAP.keySet() ).containsExactly( Behavior.I1.name(), Behavior.L2.name() ) ;
+    assertThat( Behavior.MAP.values() ).containsExactly( Behavior.I1, Behavior.L2 ) ;
+  }
+
   // =======
 // Fixture
 // =======
@@ -165,8 +175,52 @@ public class AutoconstantTest {
 
   public static class SelfTypedConstant< T > extends Autoconstant< T > {
     public static final SelfTypedConstant< Integer > INTEGER = new SelfTypedConstant< Integer >() {};
+    @SuppressWarnings( "unused" )
     public static final Map< String, SelfTypedConstant > MAP = valueMap( SelfTypedConstant.class ) ;
   }
 
+
+  /**
+   * Subclasses define specific behaviors stemming from one generic method, and they appear
+   * as constants in the parent class. This is much more powerful than method overriding in
+   * enum instances, because we can exhibit the refined behavior through a specific method.
+   */
+  static abstract class Behavior< T > extends Autoconstant< T > {
+
+    protected abstract T genericSomething( T t ) ;
+
+    public static final WithInteger I1 = new WithInteger() {
+      @Override
+      public Integer something() {
+        return 1 ;
+      }
+    } ;
+
+    public static final WithLong L2 = new WithLong() {
+      @Override
+      public Long something( final Long l1, final Long l2 ) {
+        return ( l1 + l2 ) / 2 ;
+      }
+    } ;
+
+    @SuppressWarnings( "unused" )
+    public static final Map< String, Behavior > MAP = valueMap( Behavior.class ) ;
+
+    public static abstract class WithInteger extends Behavior< Integer > {
+      protected final Integer genericSomething( final Integer i ) {
+        return something() ;
+      }
+      public abstract Integer something() ;
+    }
+
+    public static abstract class WithLong extends Behavior< Long > {
+      protected final Long genericSomething( final Long l ) {
+        return something( l, l ) ;
+      }
+      public abstract Long something( final Long l1, final Long l2 ) ;
+    }
+
+
+  }
 
 }

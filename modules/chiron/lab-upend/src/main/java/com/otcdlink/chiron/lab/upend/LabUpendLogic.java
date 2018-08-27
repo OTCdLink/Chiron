@@ -7,6 +7,7 @@ import com.otcdlink.chiron.lab.middle.LabUpwardDuty;
 import com.otcdlink.chiron.middle.PhoneNumber;
 import com.otcdlink.chiron.middle.TechnicalFailureNotice;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
+import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.session.SignonDecision;
 import com.otcdlink.chiron.middle.session.SignonFailure;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
@@ -14,7 +15,6 @@ import com.otcdlink.chiron.toolbox.StringWrapper;
 import com.otcdlink.chiron.upend.TimeKit;
 import com.otcdlink.chiron.upend.session.FailedSignonAttempt;
 import com.otcdlink.chiron.upend.session.SessionStore;
-import com.otcdlink.chiron.upend.session.SignableUser;
 import com.otcdlink.chiron.upend.session.SignonAttempt;
 import com.otcdlink.chiron.upend.session.SignonInwardDuty;
 import com.otcdlink.chiron.upend.session.SignonOutwardDuty;
@@ -208,7 +208,7 @@ public class LabUpendLogic
       sessionStore.putSession( sessionIdentifier, new LabUserSession( userKey ) ) ;
       LOGGER.info( "Registered " + sessionIdentifier + " for " + login + " given " +
           designatorInternal + "." ) ;
-      signonOutwardDuty.sessionCreated( designatorInternal, sessionIdentifier, login ) ;
+      signonOutwardDuty.sessionCreated( designatorInternal, sessionIdentifier, login, null ) ;
     } catch( final SessionStore.SessionAlreadyExistsException e ) {
       final SignonFailureNotice signonFailureNotice = new SignonFailureNotice(
           SignonFailure.SESSION_ALREADY_EXISTS ) ;
@@ -217,8 +217,8 @@ public class LabUpendLogic
       signonOutwardDuty.sessionCreated(
           designatorInternal,
           sessionIdentifier,
-          login
-      ) ;
+          login,
+          null ) ;
     }
   }
 

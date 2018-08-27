@@ -10,23 +10,24 @@ import com.otcdlink.chiron.upend.session.SessionSupervisor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class SessionSupervisorCrafter< CHANNEL, ADDRESS >
-    implements SessionSupervisor< CHANNEL, ADDRESS >
+public class SessionSupervisorCrafter< CHANNEL, ADDRESS, SESSION_PRIMER >
+    implements SessionSupervisor< CHANNEL, ADDRESS, SESSION_PRIMER >
 {
 
   private final CommandConsumer<
-        Command< Designator, SessionSupervisor< CHANNEL, ADDRESS > >
+        Command< Designator, SessionSupervisor< CHANNEL, ADDRESS, SESSION_PRIMER > >
     > commandConsumer ;
 
   public SessionSupervisorCrafter(
-      final CommandConsumer<Command< Designator, SessionSupervisor< CHANNEL, ADDRESS > >>
-          commandConsumer
+      final CommandConsumer<
+          Command< Designator, SessionSupervisor< CHANNEL, ADDRESS, SESSION_PRIMER > >
+      > commandConsumer
   ) {
     this.commandConsumer = checkNotNull( commandConsumer ) ;
   }
 
   private void consume(
-      final Command< Designator, SessionSupervisor< CHANNEL, ADDRESS > > command
+      final Command< Designator, SessionSupervisor< CHANNEL, ADDRESS, SESSION_PRIMER > > command
   ) {
     commandConsumer.accept( command ) ;
   }
@@ -37,7 +38,7 @@ public class SessionSupervisorCrafter< CHANNEL, ADDRESS >
       final String password,
       final CHANNEL channel,
       final ADDRESS remoteAddress,
-      final PrimarySignonAttemptCallback callback
+      final PrimarySignonAttemptCallback< SESSION_PRIMER > callback
   ) {
     throw new UnsupportedOperationException( "TODO" ) ;
   }

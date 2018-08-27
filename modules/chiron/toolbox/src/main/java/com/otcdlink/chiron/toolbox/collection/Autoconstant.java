@@ -1,9 +1,11 @@
 package com.otcdlink.chiron.toolbox.collection;
 
+import com.google.common.base.Converter;
 import com.google.common.collect.ImmutableMap;
 import com.otcdlink.chiron.toolbox.ObjectTools;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 
+import javax.annotation.Nonnull;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.SortedMap;
@@ -251,5 +253,21 @@ public abstract class Autoconstant< INSTANCE_SPECIFIC > {
     public DeclarationException( final String message ) {
       super( message ) ;
     }
+  }
+
+  public static < AUTO extends Autoconstant > Converter< AUTO, String > converter(
+      final ImmutableMap< String, AUTO > valueMap
+  ) {
+    return new Converter< AUTO, String >() {
+      @Override
+      protected String doForward( @Nonnull final AUTO auto ) {
+        return auto.name() ;
+      }
+
+      @Override
+      protected AUTO doBackward( @Nonnull final String name ) {
+        return valueMap.get( name ) ;
+      }
+    } ;
   }
 }

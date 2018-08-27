@@ -5,13 +5,13 @@ import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.designator.DesignatorForger;
 import com.otcdlink.chiron.middle.session.SecondaryToken;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
+import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
 import com.otcdlink.chiron.middle.shaft.CrafterShaft;
 import com.otcdlink.chiron.middle.shaft.MethodCallVerifier;
 import com.otcdlink.chiron.middle.shaft.MethodCaller;
 import com.otcdlink.chiron.toolbox.StringWrapper;
 import com.otcdlink.chiron.upend.session.SessionSupervisor;
-import com.otcdlink.chiron.upend.session.SignableUser;
 import org.junit.Test;
 
 public class SessionSupervisorCommandsShaftTest {
@@ -20,7 +20,7 @@ public class SessionSupervisorCommandsShaftTest {
   public void transientMethodsWithCrafterShaft() throws Exception {
     new CrafterShaft<
         Designator,
-        SessionSupervisor< PrivateChannel, PrivateAddress >
+        SessionSupervisor< PrivateChannel, PrivateAddress, Void >
     >( SessionSupervisorCrafter::new, DESIGNATOR )
         .submit( TRANSIENT_METHODS_CALLER, VERIFIER )
     ;
@@ -31,12 +31,12 @@ public class SessionSupervisorCommandsShaftTest {
 // Method callers
 // ==============
 
-  private static final MethodCaller< SessionSupervisor< PrivateChannel, PrivateAddress > >
+  private static final MethodCaller< SessionSupervisor< PrivateChannel, PrivateAddress, Void > >
       TRANSIENT_METHODS_CALLER =
-          new MethodCaller.Default< SessionSupervisor< PrivateChannel, PrivateAddress > >() {
+          new MethodCaller.Default< SessionSupervisor< PrivateChannel, PrivateAddress, Void > >() {
             @Override
             public void callMethods(
-                final SessionSupervisor< PrivateChannel, PrivateAddress > sessionSupervisor
+                final SessionSupervisor< PrivateChannel, PrivateAddress, Void > sessionSupervisor
             ) {
 //              sessionSupervisor.attemptPrimarySignon(
 //                  "TheLogin",
@@ -80,9 +80,9 @@ public class SessionSupervisorCommandsShaftTest {
   private static final PrivateChannel CHANNEL = new PrivateChannel( "Ch4nn3L" ) ;
   private static final PrivateAddress ADDRESS = new PrivateAddress( "4ddr355" ) ;
 
-  private static final SessionSupervisor.PrimarySignonAttemptCallback
+  private static final SessionSupervisor.PrimarySignonAttemptCallback< Void >
       PRIMARY_SIGNON_ATTEMPT_CALLBACK =
-          new SessionSupervisor.PrimarySignonAttemptCallback() {
+          new SessionSupervisor.PrimarySignonAttemptCallback< Void >() {
             @Override
             public void signonResult( final SignonFailureNotice Ø ) { }
 
@@ -93,15 +93,15 @@ public class SessionSupervisorCommandsShaftTest {
             ) { }
 
             @Override
-            public void sessionAttributed( final SessionIdentifier Ø ) { }
+            public void sessionAttributed( final SessionIdentifier Ø, final Void ØØ ) { }
           }
   ;
 
-  private static final SessionSupervisor.SecondarySignonAttemptCallback
+  private static final SessionSupervisor.SecondarySignonAttemptCallback< Void >
       SECONDARY_SIGNON_ATTEMPT_CALLBACK =
-          new SessionSupervisor.SecondarySignonAttemptCallback() {
+          new SessionSupervisor.SecondarySignonAttemptCallback< Void >() {
             @Override
-            public void sessionAttributed( final SessionIdentifier Ø ) { }
+            public void sessionAttributed( final SessionIdentifier Ø, final Void ØØ ) { }
 
             @Override
             public void signonResult( final SignonFailureNotice Ø ) { }
