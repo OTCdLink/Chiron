@@ -264,7 +264,7 @@ public class SshDriver< SETUP extends SshDriver.Setup >
 
   /**
    * Terminates the SSH session and disconnects the streams.
-   * The thread started by {@link #startThreadWaitingForRemoteProcessEnd(ExecutionContext)}
+   * The thread started by {@code #startThreadWaitingForRemoteProcessEnd(ExecutionContext)}
    * will pursue the stop.
    */
   protected final void sendKillSignalToRemoteProcess() {

@@ -4,27 +4,23 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.otcdlink.chiron.configuration.source.CommandLineSources;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import com.otcdlink.chiron.testing.junit5.DirectoryExtension;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class JustFileParameters {
-
-  public interface Simple extends Configuration {
-    int number() ;
-  }
+class JustFileParameters {
 
   @Test
-  public void twoFiles() throws Exception {
+  void twoFiles() throws Exception {
 
-    final File file1 = folder.newFile( "1.properties" ) ;
-    Files.write( "number = 1", file1, Charsets.UTF_8 ) ;
-    final File file2 = folder.newFile( "2.properties" ) ;
-    Files.write( "number = 2", file2, Charsets.UTF_8 ) ;
+    final File file1 = directoryExtension.newFile( "1.properties" ) ;
+    Files.asCharSink( file1, Charsets.UTF_8 ).write( "number = 1" ) ;
+    final File file2 = directoryExtension.newFile( "2.properties" ) ;
+    Files.asCharSink( file2, Charsets.UTF_8 ).write( "number = 2" ) ;
 
     final ImmutableList< String > arguments = ImmutableList.of(
         "--configuration-files", file1.getAbsolutePath(), file2.getAbsolutePath()
@@ -40,7 +36,13 @@ public class JustFileParameters {
 // Fixture
 // =======
 
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder() ;
+  @SuppressWarnings( "WeakerAccess" )
+  @RegisterExtension
+  final DirectoryExtension directoryExtension = new DirectoryExtension() ;
+
+  public interface Simple extends Configuration {
+    int number() ;
+  }
+
 
 }

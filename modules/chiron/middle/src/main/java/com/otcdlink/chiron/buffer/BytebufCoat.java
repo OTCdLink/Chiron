@@ -24,8 +24,8 @@ import static com.google.common.base.Preconditions.checkState;
  * Semantic wrapper around {@link ByteBuf}.
  * TODO: move in some implementation-related package.
  *
- * @see BytebufTools#threadLocalRecyclableCoating() for reusing the same instance (this is the sole mean
- *     to get a {@link BytebufCoat} by the way.
+ * @see BytebufTools#threadLocalRecyclableCoating() for reusing the same instance
+ *     (there is no other mean to get a {@link BytebufCoat} by the way).
  *
  * @see io.netty.buffer.ByteBufInputStream which does a similar thing around {@code DataInput}.
  */

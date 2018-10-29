@@ -388,7 +388,7 @@ public final class UrxTools {
     public static final Pattern URI_PATTERN = Pattern.compile(
         "(?:([a-z]+)://([a-zA-Z0-9]+(?:\\.[a-zA-Z0-9]+)*)(?::([0-9]+))?)?" +
             PATH_PATTERN.pattern() +
-            "(?:\\?([a-zA-Z0-9=&%;_\\-]*))?"
+            "(?:\\?([a-zA-Z0-9=&%;_+@.\\-]*))?"
     ) ;
 
     static {

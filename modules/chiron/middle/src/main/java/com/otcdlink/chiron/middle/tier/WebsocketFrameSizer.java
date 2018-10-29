@@ -76,7 +76,7 @@ public final class WebsocketFrameSizer {
    * has an incremental encoding to describe payload length.
    * <p>
    * <a href='https://tools.ietf.org/html/rfc6455#page-28' >RFC 6455</a> says:
-   * <quote>Payload length:  7 bits, 7+16 bits, or 7+64 bits</quote>.
+   * <cite>Payload length:  7 bits, 7+16 bits, or 7+64 bits</cite>.
    * <ul> <li>
    *   A "Payload length" header on 7      bits means a maximum length of 125.
    *   </li><li>

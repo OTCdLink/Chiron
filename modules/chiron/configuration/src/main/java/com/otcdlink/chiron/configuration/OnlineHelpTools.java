@@ -130,7 +130,7 @@ public final class OnlineHelpTools {
         if( valuedProperty.resolvedValue != ValuedProperty.NO_VALUE ) {
           lineBuilder.append( " = " ) ;
           lineBuilder.append( valuedProperty.resolvedValue == ValuedProperty.NULL_VALUE
-              ? "null" : valuedProperty.stringValue ) ;
+              ? "null" : valuedProperty.valueFromSource ) ;
         }
         lineBuilder.append( " ] " ) ;
       }

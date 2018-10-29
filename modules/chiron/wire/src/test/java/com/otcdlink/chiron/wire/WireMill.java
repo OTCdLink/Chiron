@@ -3,20 +3,23 @@ package com.otcdlink.chiron.wire;
 import com.google.common.base.Converter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+import com.otcdlink.chiron.buffer.CrudeReader;
+import com.otcdlink.chiron.buffer.CrudeWriter;
+import com.otcdlink.chiron.codec.DecodeException;
 import com.otcdlink.chiron.toolbox.StringWrapper;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 import com.otcdlink.chiron.wire.Wire.NodeReader;
 import com.otcdlink.chiron.wire.Wire.NodeToken;
 import com.otcdlink.chiron.wire.Wire.NodeWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -112,19 +117,24 @@ public interface WireMill {
     }
 
     @Override
-    public void toWire( OBJECT object, Wire.WireWriter wireWriter ) throws WireException {
-      wireWriter.writeDelimitedString( converter.convert( object ) ) ;
+    public void toWire( final OBJECT object, final CrudeWriter crudeWriter ) {
+      crudeWriter.writeNullableString( converter.convert( object ) ) ;
     }
 
     @Override
-    public OBJECT fromWire( Wire.WireReader wireReader ) throws WireException {
-      return converter.reverse().convert( wireReader.readDelimitedString() ) ;
+    public OBJECT fromWire( final CrudeReader crudeReader ) throws DecodeException {
+      return converter.reverse().convert( crudeReader.readNullableString() ) ;
     }
   }
 
   final class MutablePivotNode {
     public final PlasticNodeToken nodeDeclaration ;
+
+    /**
+     * Accepts nullable values.
+     */
     public final Map< PlasticLeafToken, Object > valuedLeaves = new HashMap<>() ;
+
     public final Multimap< PlasticNodeToken, MutablePivotNode > subnodes =
         Multimaps.newListMultimap( new HashMap<>(), ArrayList::new ) ;
 
@@ -140,49 +150,21 @@ public interface WireMill {
       }
       return new PivotNode(
           nodeDeclaration,
-          ImmutableMap.copyOf( valuedLeaves ),
+          new ImmutableMapWithNullableValue<>( valuedLeaves ),
           builder.build()
       ) ;
     }
   }
 
-  class ImmutableEntry< K, V > implements Map.Entry< K, V > {
-    private final K key ;
-    private final V value ;
-
-    ImmutableEntry( final @Nullable K key, final @Nullable V value) {
-      this.key = key ;
-      this.value = value ;
-    }
-
-    @Nullable
-    @Override
-    public final K getKey() {
-      return key ;
-    }
-
-    @Nullable
-    @Override
-    public final V getValue() {
-      return value ;
-    }
-
-    @Override
-    public final V setValue( final V value ) {
-      throw new UnsupportedOperationException() ;
-    }
-
-  }
-
 
   final class PivotNode {
     public final PlasticNodeToken plasticNodeDeclaration ;
-    public final ImmutableMap< PlasticLeafToken, Object > valuedLeaves ;
+    public final ImmutableMapWithNullableValue< PlasticLeafToken, Object > valuedLeaves ;
     public final ImmutableMultimap< PlasticNodeToken, PivotNode > subnodes ;
 
     public PivotNode(
         final PlasticNodeToken plasticNodeDeclaration,
-        final ImmutableMap< PlasticLeafToken, Object > valuedLeaves,
+        final ImmutableMapWithNullableValue< PlasticLeafToken, Object > valuedLeaves,
         final ImmutableMultimap< PlasticNodeToken, PivotNode > subnodes
     ) {
       this.plasticNodeDeclaration = checkNotNull( plasticNodeDeclaration ) ;
@@ -195,7 +177,7 @@ public interface WireMill {
       return ToStringTools.getNiceClassName( this ) + "{" +
           "xmlName='" + plasticNodeDeclaration.xmlName() + "';" +
           "valuedLeaves=[" + valuedLeaves.entrySet().stream()
-              .map( e -> "'" + e.getKey().xmlName() + "'->" + e.getValue() )
+              .map( e -> "" + e.getKey().xmlName() + ":" + e.getValue() )
               .collect( Collectors.joining( "," ) ) +
               "];" +
           "subnodes=" + subnodes.values() +
@@ -220,6 +202,7 @@ public interface WireMill {
     public int hashCode() {
       return Objects.hash( valuedLeaves, subnodes ) ;
     }
+
   }
 
 
@@ -309,6 +292,14 @@ public interface WireMill {
           Molder
   {
 
+    /**
+     * Represents a sequence of calls to
+     * {@link NodeReader#singleNode(NodeToken, NodeReader.ReadingAction)} or
+     * {@link NodeReader#nodeSequence(NodeToken, Collector, NodeReader.ReadingAction)} or
+     * {@link NodeWriter#singleNode(NodeToken, Object, NodeWriter.WritingAction)} or
+     * {@link NodeWriter#nodeSequence(NodeToken, int, Iterable, NodeWriter.WritingAction)}.
+     * This can be indirectly defined through a {@link BlockDefinition}.
+     */
     private static abstract class Tread {
 
       private enum Kind {
@@ -320,16 +311,14 @@ public interface WireMill {
         this.kind = checkNotNull( kind ) ;
       }
 
-      public abstract void applyTo(
-          final NodeReader< PlasticNodeToken, PlasticLeafToken > nodeReader,
-          final MutablePivotNode receiver
-      ) throws WireException ;
+      @Override
+      public String toString() {
+        return Tread.class.getSimpleName() + "{" + kind + ";" + "}" ;
+      }
 
-      public abstract void applyTo(
-          final PivotNode pivotNode,
-          final NodeWriter< PlasticNodeToken, PlasticLeafToken > nodeWriter
-      ) throws WireException ;
-
+      /**
+       * Represents a direct call to a {@link NodeWriter} or {@link NodeReader} defining subnodes.
+       */
       public abstract static class ActingTread extends Tread {
         public final PlasticNodeToken nodeDeclaration ;
 
@@ -337,6 +326,23 @@ public interface WireMill {
           super( kind ) ;
           this.nodeDeclaration = checkNotNull( nodeDeclaration ) ;
         }
+
+        public abstract void applyTo(
+            final NodeReader< PlasticNodeToken, PlasticLeafToken > nodeReader,
+            final MutablePivotNode receiver
+        ) throws WireException ;
+
+        public abstract void applyTo(
+            final PivotNode pivotNode,
+            final NodeWriter< PlasticNodeToken, PlasticLeafToken > nodeWriter
+        ) throws WireException ;
+
+
+        @Override
+        public String toString() {
+          return Tread.class.getSimpleName() + "{" + kind + ";" + nodeDeclaration.xmlName() + "}" ;
+        }
+
       }
 
       public static final class SingleNodeTread extends ActingTread {
@@ -414,39 +420,55 @@ public interface WireMill {
         ) throws WireException {
           nodeWriter.nodeSequence(
               nodeDeclaration,
-              pivotNode.subnodes.values(),
+              pivotNode.subnodes.get( nodeDeclaration ),
               ( nodeWriter1, pivotNode1 ) -> writeLeaves( nodeDeclaration, pivotNode1, nodeWriter1 )
           ) ;
         }
       }
 
+      /**
+       * We don't want this class to be a {@link Block} because the {@link Block} has a
+       * {@link NodeToken} which doesn't make sense for an instance of this class.
+       */
       public static class BlockDefinition {
         private final String identifier ;
-        private final List< ActingTread > actingTreads = new ArrayList<>() ;
-        private BlockDefinition( final String identifier ) {
+        private final List< ActingTread > treads = new ArrayList<>() ;
+        private final Function< String, BlockDefinition > reusableBlockResolver ;
+        private BlockDefinition(
+            final String identifier,
+            final Function< String, BlockDefinition > reusableBlockResolver
+        ) {
           this.identifier = checkNotNull( identifier ) ;
+          this.reusableBlockResolver = checkNotNull( reusableBlockResolver ) ;
         }
 
         public Block reuseAs(
             final Kind kind,
             final PlasticNodeToken nodeDeclaration
         ) {
-          final Block block = new Block(
-              kind, nodeDeclaration, ImmutableList.copyOf( actingTreads ) ) ;
+          final Block block = new Block( kind, nodeDeclaration, this ) ;
           return block ;
         }
+
+        @Override
+        public String toString() {
+          return getClass().getSimpleName() + "{'" + identifier + "';" + treads.size() + "}" ;
+        }
+
       }
 
       public static class Block extends ActingTread {
-        private final ImmutableList< ActingTread > actingTreads ;
+        private static final Logger LOGGER = LoggerFactory.getLogger( Block.class ) ;
+
+        private final BlockDefinition blockDefinition ;
         private Block(
             final Kind kind,
             final PlasticNodeToken nodeDeclaration,
-            final ImmutableList< ActingTread > actingTreads
+            final BlockDefinition blockDefinition
         ) {
           super( kind, nodeDeclaration ) ;
           checkArgument( kind == Kind.BLOCK_SEQUENCE || kind == Kind.BLOCK_SINGLE ) ;
-          this.actingTreads = checkNotNull( actingTreads ) ;
+          this.blockDefinition = checkNotNull( blockDefinition ) ;
         }
 
         @Override
@@ -454,20 +476,40 @@ public interface WireMill {
             final NodeReader< PlasticNodeToken, PlasticLeafToken > nodeReader,
             final MutablePivotNode receiver
         ) throws WireException {
+
           switch( kind ) {
             case BLOCK_SINGLE :
-              Tread.readLeaves( nodeDeclaration, nodeReader, receiver ) ;
+              logEntering( Kind.BLOCK_SINGLE ) ;
+              nodeReader.singleNode(
+                  nodeDeclaration,
+                  nodeReader1 -> applyReadLoop( nodeReader1, receiver )
+              ) ;
+              logExiting( Kind.BLOCK_SINGLE ) ;
+              break ;
             case BLOCK_SEQUENCE :
-              for( final ActingTread actingTread : actingTreads ) {
-                final MutablePivotNode pivotNode =
-                    new MutablePivotNode( actingTread.nodeDeclaration ) ;
-                actingTread.applyTo( nodeReader, pivotNode ) ;
-                receiver.subnodes.put( nodeDeclaration, pivotNode ) ;
-              }
+              logEntering( Kind.BLOCK_SEQUENCE ) ;
+              nodeReader.nodeSequence(
+                  nodeDeclaration,
+                  nodeReader1 -> applyReadLoop( nodeReader1, receiver )
+              ) ;
+              logExiting( Kind.BLOCK_SEQUENCE ) ;
               break ;
             default :
-              throw new IllegalStateException( "Unsupported: " + kind ) ;
+              throw new IllegalStateException( "Unsupported: " + this.kind ) ;
           }
+        }
+
+        private MutablePivotNode applyReadLoop(
+            final NodeReader< PlasticNodeToken, PlasticLeafToken > nodeReader,
+            final MutablePivotNode receiver
+        ) throws WireException {
+          for( final ActingTread actingTread : blockDefinition.treads ) {
+            final MutablePivotNode pivotNode =
+                new MutablePivotNode( actingTread.nodeDeclaration ) ;
+            actingTread.applyTo( nodeReader, pivotNode ) ;
+            receiver.subnodes.put( nodeDeclaration, pivotNode ) ;
+          }
+          return null ;
         }
 
         @Override
@@ -477,23 +519,51 @@ public interface WireMill {
         ) throws WireException {
           switch( kind ) {
             case BLOCK_SINGLE :
-              Tread.writeLeaves( nodeDeclaration, pivotNode, nodeWriter ) ;
+              nodeWriter.singleNode(
+                  nodeDeclaration,
+                  pivotNode,
+                  this::applyWritingTreads
+              ) ;
+              break ;
             case BLOCK_SEQUENCE :
-              for( final ActingTread actingTread : actingTreads ) {
-                final ImmutableCollection< PivotNode > subnodesForThisDeclaration =
-                    pivotNode.subnodes.get( actingTread.nodeDeclaration ) ;
-                for( final PivotNode subnode : subnodesForThisDeclaration ) {
-                  actingTread.applyTo( subnode, nodeWriter ) ;
-                }
-              }
+              final ImmutableCollection< PivotNode > subnodes =
+                  pivotNode.subnodes.get( nodeDeclaration ) ;
+              nodeWriter.nodeSequence(
+                  nodeDeclaration,
+                  subnodes.size(),
+                  subnodes,
+                  this::applyWritingTreads
+              ) ;
               break ;
             default :
               throw new IllegalStateException( "Unsupported: " + kind ) ;
           }
         }
+
+        private void applyWritingTreads(
+            final NodeWriter< PlasticNodeToken, PlasticLeafToken > nodeWriter,
+            final PivotNode pivotNode
+        ) throws WireException {
+          Tread.writeLeaves( nodeDeclaration, pivotNode, nodeWriter ) ;
+          for( final ActingTread actingTread : blockDefinition.treads ) {
+            actingTread.applyTo( pivotNode, nodeWriter ) ;
+          }
+        }
+
+        private void logEntering( final Kind kind ) {
+          LOGGER.info( "Entering " + kind + " '" + nodeDeclaration.xmlName() + "' " +
+              blockDefinition + "." ) ;
+        }
+
+        private void logExiting( final Kind kind ) {
+          LOGGER.info( "Exiting " + kind + " '" + nodeDeclaration.xmlName() + "' " +
+              blockDefinition + "." ) ;
+        }
+
       }
 
     }
+
 
     /**
      * The "official" {@link PlasticNodeToken}s for which there is an explicit
@@ -546,14 +616,14 @@ public interface WireMill {
 
     @Override
     public ReusableBlockBodyStep single( final String nodeName ) {
-      RealMolder.this.currentBlockDefinition.actingTreads.add(
+      RealMolder.this.currentBlockDefinition.treads.add(
           new Tread.SingleNodeTread( getNodeDeclarationSafely( nodeName ) ) ) ;
       return this ;
     }
 
     @Override
     public ReusableBlockBodyStep shallowSequence( final String nodeName ) {
-      RealMolder.this.currentBlockDefinition.actingTreads.add(
+      RealMolder.this.currentBlockDefinition.treads.add(
           new Tread.NodeSequenceTread( getNodeDeclarationSafely( nodeName ) ) ) ;
       return this ;
     }
@@ -569,7 +639,7 @@ public interface WireMill {
       final Tread.BlockDefinition blockDefinition = getBlockDefinitionSafely( blockName ) ;
       final Tread.Block tread = blockDefinition.reuseAs(
           Tread.Kind.BLOCK_SINGLE, getNodeDeclarationSafely( nodeName ) ) ;
-      RealMolder.this.currentBlockDefinition.actingTreads.add( tread ) ;
+      RealMolder.this.currentBlockDefinition.treads.add( tread ) ;
       return this ;
     }
 
@@ -578,7 +648,7 @@ public interface WireMill {
       final Tread.BlockDefinition blockDefinition = getBlockDefinitionSafely( blockName ) ;
       final Tread.Block tread = blockDefinition.reuseAs(
           Tread.Kind.BLOCK_SEQUENCE, getNodeDeclarationSafely( nodeName ) ) ;
-      RealMolder.this.currentBlockDefinition.actingTreads.add( tread ) ;
+      RealMolder.this.currentBlockDefinition.treads.add( tread ) ;
       return this ;
     }
 
@@ -597,7 +667,8 @@ public interface WireMill {
     @Override
     public ReusableBlockBodyStep beginReusableBlock( final String blockName ) {
       checkState( currentBlockDefinition == null ) ;
-      this.currentBlockDefinition = new Tread.BlockDefinition( blockName ) ;
+      this.currentBlockDefinition = new Tread.BlockDefinition(
+          blockName, this::getBlockDefinitionSafely ) ;
 
       // Reference it now so it can reference itself.
       reusableBlocks.put( currentBlockDefinition.identifier, currentBlockDefinition ) ;
@@ -657,8 +728,6 @@ public interface WireMill {
       return this ;
     }
   }
-
-
 
 
 }

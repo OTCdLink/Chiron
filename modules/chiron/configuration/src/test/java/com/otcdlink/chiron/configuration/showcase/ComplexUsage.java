@@ -1,16 +1,14 @@
 package com.otcdlink.chiron.configuration.showcase;
 
+import com.google.common.base.Converter;
 import com.google.common.collect.ImmutableList;
 import com.otcdlink.chiron.configuration.Configuration;
 import com.otcdlink.chiron.configuration.ConfigurationTools;
-import com.otcdlink.chiron.configuration.Converters;
 import com.otcdlink.chiron.configuration.NameTransformers;
-import com.otcdlink.chiron.configuration.Obfuscators;
 import com.otcdlink.chiron.configuration.Sources;
 import com.otcdlink.chiron.configuration.TemplateBasedFactory;
+import com.otcdlink.chiron.toolbox.converter.DefaultStringConverters;
 import org.junit.Test;
-
-import java.util.regex.Pattern;
 
 import static com.otcdlink.chiron.configuration.Configuration.Inspector;
 import static com.otcdlink.chiron.configuration.Validation.Accumulator;
@@ -33,13 +31,13 @@ public class ComplexUsage {
         property( using.myNumber() )
             .name( "my-binary-number" )
             .maybeNull()
-            .converter( Converters.from( input -> Integer.parseInt( input, 2 ) ) )
+            .converter( DefaultStringConverters.from( input -> Integer.parseInt( input, 2 ) ) )
             .documentation( "Just a number." )
         ;
         property( using.myString() )
             .defaultValue( "FOO" )
+            .converter( Converter.from( s -> s, s -> "***" ) )
             .documentation( "Just a string." )
-            .obfuscator( Obfuscators.from( Pattern.compile( "OO" ) ) )
         ;
         setGlobalNameTransformer( NameTransformers.LOWER_HYPHEN ) ;
       }
@@ -69,8 +67,8 @@ public class ComplexUsage {
     assertThat( inspector.origin( inspector.lastAccessed().get( 0 ) ) )
         .isEqualTo( Configuration.Property.Origin.BUILTIN ) ;
     assertThat( inspector.lastAccessed().get( 0 ).name() ).isEqualTo( "my-string" ) ;
-    assertThat( inspector.safeValueOf( inspector.lastAccessed().get( 0 ), "*" ) )
-        .isEqualTo( "F*" ) ;
+    assertThat( inspector.stringValueOf( inspector.lastAccessed().get( 0 ) ) )
+        .isEqualTo( "***" ) ;
   }
 
 

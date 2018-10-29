@@ -25,6 +25,13 @@
       <artifactId>Chiron-middle</artifactId>
       <version>${project.version}</version>
     </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml</groupId>
+      <artifactId>aalto-xml</artifactId>
+      <scope>test</scope> <!-- Useful for experimenting, don't need to deploy. -->
+    </dependency>
+
   </dependencies>
 </project>
 

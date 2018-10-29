@@ -19,7 +19,6 @@ public interface SecondaryAuthenticator {
   /**
    * Requests a phone call.
    * @param userPhoneNumber to get in touch with a human user.
-   * @return a non-{@code null} value.
    */
   void requestAuthentication(
       PhoneNumber userPhoneNumber,

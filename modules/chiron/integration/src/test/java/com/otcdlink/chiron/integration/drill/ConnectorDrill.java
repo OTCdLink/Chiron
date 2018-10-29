@@ -431,7 +431,7 @@ public interface ConnectorDrill extends AutoCloseable {
           if( httpRequest.method().equals( HttpMethod.GET ) ) {
             if( httpRequest.uri().matches( ".*" ) ) {
               final boolean keepAlive = HttpUtil.isKeepAlive( httpRequest ) ;
-              new UsualHttpCommands.Html(
+              UsualHttpCommands.Html.htmlBodyOk(
                   "<h2>OK (200) response for " + httpRequest.uri() + "</h2>" +
                       "<p>" + httpRequest.content().toString( Charsets.UTF_8 ) + "</p>"
               ).feed( channelHandlerContext, keepAlive ) ;

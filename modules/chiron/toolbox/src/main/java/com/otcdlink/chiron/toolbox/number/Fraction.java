@@ -1,8 +1,5 @@
 package com.otcdlink.chiron.toolbox.number;
 
-import com.google.common.base.Converter;
-
-import javax.annotation.Nonnull;
 import java.util.Objects;
 import java.util.Random;
 
@@ -64,17 +61,4 @@ public final class Fraction {
 
   public static final Fraction ONE = new Fraction( 1f ) ;
 
-  public static final Converter< Fraction, String > CONVERTER =
-      new Converter< Fraction, String >() {
-        @Override
-        protected String doForward( @Nonnull final Fraction fraction ) {
-          return fraction.asString() ;
-        }
-
-        @Override
-        protected Fraction doBackward( @Nonnull final String string ) {
-          return new Fraction( Float.parseFloat( string ) ) ;
-        }
-      }
-  ;
 }

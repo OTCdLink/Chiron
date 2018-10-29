@@ -5,6 +5,7 @@ import com.otcdlink.chiron.upend.session.SessionIdentifierGenerator;
 
 import java.security.SecureRandom;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -35,8 +36,14 @@ public class DefaultSessionIdentifierGenerator
     super(
         tabooSize,
         valueGenerator( byteCount, random ),
+//        monotonicValueGenerator(),
         ( s1, s2 ) -> s1.asString().equals( s2.asString() )
     ) ;
+  }
+
+  private static final AtomicLong counter = new AtomicLong( 0 ) ;
+  private static Supplier< SessionIdentifier > monotonicValueGenerator() {
+    return () -> new SessionIdentifier( Long.toString( counter.getAndIncrement() ) ) ;
   }
 
   private static Supplier< SessionIdentifier > valueGenerator(

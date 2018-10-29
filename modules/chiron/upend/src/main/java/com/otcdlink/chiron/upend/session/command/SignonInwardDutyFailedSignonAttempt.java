@@ -5,7 +5,7 @@ import com.otcdlink.chiron.buffer.PositionalFieldWriter;
 import com.otcdlink.chiron.codec.DecodeException;
 import com.otcdlink.chiron.command.Command;
 import com.otcdlink.chiron.designator.Designator;
-import com.otcdlink.chiron.upend.session.SignonAttempt;
+import com.otcdlink.chiron.middle.session.SignonSetback;
 import com.otcdlink.chiron.upend.session.SignonInwardDuty;
 
 import java.io.IOException;
@@ -19,12 +19,12 @@ public class SignonInwardDutyFailedSignonAttempt
 {
 
   private final String login ;
-  private final SignonAttempt signonAttempt ;
+  private final SignonSetback.Factor signonAttempt ;
 
   public SignonInwardDutyFailedSignonAttempt(
       final Designator designatorInternal,
       final String login,
-      final SignonAttempt signonAttempt
+      final SignonSetback.Factor signonAttempt
   ) {
     super( designatorInternal ) ;
     this.login = checkNotNull( login ) ;
@@ -49,7 +49,7 @@ public class SignonInwardDutyFailedSignonAttempt
     return new SignonInwardDutyFailedSignonAttempt(
         ( Designator ) designator,
         reader.readDelimitedString(),
-        SignonAttempt.fromOrdinal( reader.readIntegerPrimitive() )
+        SignonSetback.Factor.fromOrdinal( reader.readIntegerPrimitive() )
     ) ;
   }
 

@@ -1,60 +1,29 @@
 package com.otcdlink.chiron.wire;
 
 import com.google.common.collect.ImmutableList;
-import com.otcdlink.chiron.buffer.BytebufTools;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBufUtil;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
-import java.io.StringReader;
+import java.io.IOException;
 import java.io.StringWriter;
 
+import static com.otcdlink.chiron.wire.XmlNodeReader.newXmlStreamReader;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-//@Ignore( "Work in progress" )
+/**
+ * Add new tests to {@link TestsWithWireMill} which is more modular.
+ */
 public class WireTest {
 
-  @Test
-  public void positionalDemo() throws WireException {
-    final ByteBuf byteBuf = Unpooled.buffer() ;
-    final BytebufNodeWriter<WireFixture.MyNodeToken, WireFixture.MyLeafToken> nodeWriter =
-        new BytebufNodeWriter<>( byteBuf ) ;
 
-    final WireFixture.Rake rake = new WireFixture.Rake(
-        "Parent",
-        ImmutableList.of(
-            new WireFixture.Terminal( 1 ),
-            new WireFixture.Terminal( 2 ),
-            new WireFixture.Terminal( 3 )
-        )
-    ) ;
-
-    LOGGER.info( "Created: " + rake ) ;
-
-    WireFixture.writeRake( nodeWriter, rake ) ;
-    // Also works:
-    // nodeWriter.singleNode( WireFixture.MyNode.PARENT, myParent, WireFixture.Demo::writeParent ) ;
-
-    LOGGER.info( "Wrote to wire: \n" + BytebufTools.fullDump( byteBuf ) ) ;
-
-    final BytebufNodeReader<WireFixture.MyNodeToken, WireFixture.MyLeafToken> nodeReader =
-        new BytebufNodeReader<>( byteBuf ) ;
-    final WireFixture.Rake unwired = WireFixture.readRake( nodeReader ) ;
-
-    LOGGER.info( "Did read from wire: " + unwired ) ;
-
-    assertThat( unwired ).isEqualToComparingFieldByField( rake ) ;
-
-  }
 
   @Test
-  public void xmlDemoWithRake() throws WireException {
+  public void xmlDemoWithRake() throws WireException, XMLStreamException {
     final StringWriter stringWriter = new StringWriter() ;
     final XmlNodeWriter<WireFixture.MyNodeToken, WireFixture.MyLeafToken> nodeWriter =
         new XmlNodeWriter<>( stringWriter ) ;
@@ -87,7 +56,7 @@ public class WireTest {
   }
 
   @Test
-  public void deepTree() throws WireException {
+  public void deepTree() throws WireException, IOException, XMLStreamException {
     serializeAndDeserialize( new WireFixture.Tree(
         "Parent",
         ImmutableList.of(
@@ -101,7 +70,7 @@ public class WireTest {
   }
 
   @Test
-  public void deepTree2() throws WireException {
+  public void deepTree2() throws WireException, IOException, XMLStreamException {
     serializeAndDeserialize( new WireFixture.Tree(
         "Parent",
         ImmutableList.of(
@@ -114,7 +83,7 @@ public class WireTest {
   }
 
   @Test
-  public void deepTree3() throws WireException {
+  public void deepTree3() throws WireException, IOException, XMLStreamException {
     serializeAndDeserialize( new WireFixture.Tree(
         "Parent",
         ImmutableList.of(
@@ -204,23 +173,14 @@ public class WireTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger( WireTest.class ) ;
 
-  private static XmlNodeReader<WireFixture.MyNodeToken, WireFixture.MyLeafToken> newXmlNodeReader(
+  private static XmlNodeReader< WireFixture.MyNodeToken, WireFixture.MyLeafToken > newXmlNodeReader(
       final String xml
-  ) {
+  ) throws XMLStreamException {
     return new XmlNodeReader<>(
         newXmlStreamReader( xml ),
         WireFixture.MyNodeToken.MAP.values(),
         WireFixture.MyLeafToken.MAP.values()
     ) ;
-  }
-
-  public static XMLStreamReader newXmlStreamReader( final String xml ) {
-    final XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance() ;
-    try {
-      return xmlInputFactory.createXMLStreamReader( new StringReader( xml ) ) ;
-    } catch( XMLStreamException e ) {
-      throw new RuntimeException( e ) ;
-    }
   }
 
   private static final Wire.NodeReader.ReadingAction<
@@ -249,13 +209,14 @@ public class WireTest {
     return stringWriter.toString() ;
   }
 
-  private static void serializeAndDeserialize( WireFixture.Tree tree ) throws WireException {
+  private static void serializeAndDeserialize( WireFixture.Tree tree )
+      throws WireException, IOException, XMLStreamException {
     LOGGER.info( "Created: " + tree ) ;
 
     final String xml = toXml( tree ) ;
     LOGGER.info( "Wrote XML: \n" + xml ) ;
 
-    final XmlNodeReader<WireFixture.MyNodeToken, WireFixture.MyLeafToken> nodeReader =
+    final XmlNodeReader< WireFixture.MyNodeToken, WireFixture.MyLeafToken > nodeReader =
         newXmlNodeReader( xml ) ;
 
     final WireFixture.Tree unwired = nodeReader.singleNode(
@@ -266,7 +227,35 @@ public class WireTest {
 
     LOGGER.info( "Did read from wire: " + unwired ) ;
     assertThat( unwired ).isEqualToComparingFieldByField( tree ) ;
+
+    final ByteBuf byteBuf = NODE_ENCODER.encodeToUnpooled( tree ) ;
+    LOGGER.info( "Wrote to ByteBuf: \n" + ByteBufUtil.prettyHexDump( byteBuf ) ) ;
+    final WireFixture.Tree unwired2 = NODE_DECODER.decodeFrom( byteBuf ) ;
+    LOGGER.info( "Did read from wire: " + unwired2 ) ;
+    assertThat( unwired2 ).isEqualToComparingFieldByField( tree ) ;
+
   }
 
+  private static final NodeEncoder<
+      WireFixture.MyNodeToken,
+      WireFixture.MyLeafToken,
+      WireFixture.Tree
+  > NODE_ENCODER = new NodeEncoder<>(
+      WireFixture.MyNodeToken.MAP,
+      WireFixture.MyLeafToken.MAP,
+      WireFixture.MyNodeToken.TREE,
+      WireFixture::writeTree
+  ) ;
+
+  public static final NodeDecoder<
+      WireFixture.MyNodeToken,
+      WireFixture.MyLeafToken,
+      WireFixture.Tree
+  > NODE_DECODER = new NodeDecoder<>(
+      WireFixture.MyNodeToken.MAP,
+      WireFixture.MyLeafToken.MAP,
+      WireFixture.MyNodeToken.TREE,
+      WireFixture::readTree
+  ) ;
 
 }

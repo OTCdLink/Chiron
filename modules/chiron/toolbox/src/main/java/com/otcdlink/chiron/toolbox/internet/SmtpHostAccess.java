@@ -71,10 +71,22 @@ public class SmtpHostAccess {
   }
 
   public String asString() {
-    return
-        credential.getLogin() + ":" + credential.getPassword()
-        + "@"
-        + hostname.asString() + ":" + port
-    ;
+    return asString( "******" ) ;
+  }
+
+  public String asString( final String passwordObfuscation ) {
+    final StringBuilder stringBuilder = new StringBuilder() ;
+    stringBuilder.append( credential.getLogin() ) ;
+    stringBuilder.append( ':' ) ;
+    if( passwordObfuscation == null ) {
+      stringBuilder.append( credential.getPassword() ) ;
+    } else {
+      stringBuilder.append( passwordObfuscation ) ;
+    }
+    stringBuilder.append( '@' ) ;
+    stringBuilder.append( hostname.asString() ) ;
+    stringBuilder.append( ':' ) ;
+    stringBuilder.append( port ) ;
+    return stringBuilder.toString() ;
   }
 }

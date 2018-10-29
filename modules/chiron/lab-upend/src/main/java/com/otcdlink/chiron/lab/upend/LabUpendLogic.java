@@ -11,11 +11,11 @@ import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.session.SignonDecision;
 import com.otcdlink.chiron.middle.session.SignonFailure;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
+import com.otcdlink.chiron.middle.session.SignonSetback.Factor;
 import com.otcdlink.chiron.toolbox.StringWrapper;
 import com.otcdlink.chiron.upend.TimeKit;
 import com.otcdlink.chiron.upend.session.FailedSignonAttempt;
 import com.otcdlink.chiron.upend.session.SessionStore;
-import com.otcdlink.chiron.upend.session.SignonAttempt;
 import com.otcdlink.chiron.upend.session.SignonInwardDuty;
 import com.otcdlink.chiron.upend.session.SignonOutwardDuty;
 import org.slf4j.Logger;
@@ -182,7 +182,7 @@ public class LabUpendLogic
   public void failedSignonAttempt(
       final Designator designatorInternal,
       final String login,
-      final SignonAttempt signonAttempt
+      final Factor signonAttempt
   ) {
     final LabUserKey user = new LabUserKey( login ) ;
     if( USERS.contains( user ) ) {

@@ -5,9 +5,13 @@ import com.google.common.base.Converter;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.otcdlink.chiron.buffer.CrudeReader;
+import com.otcdlink.chiron.buffer.CrudeWriter;
+import com.otcdlink.chiron.codec.DecodeException;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 import com.otcdlink.chiron.toolbox.collection.Autoconstant;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.EncoderException;
 
 import java.util.Collection;
 import java.util.stream.Collector;
@@ -86,8 +90,8 @@ public interface Wire {
   }
 
   interface LeafToken< OBJECT > extends Token {
-    void toWire( OBJECT object, WireWriter wireWriter ) throws WireException ;
-    OBJECT fromWire( WireReader wireReader ) throws WireException ;
+    void toWire( OBJECT object, CrudeWriter crudeWriter ) throws WireException ;
+    OBJECT fromWire( CrudeReader wireReader ) throws WireException, DecodeException ;
 
     abstract class Auto< ITEM > extends Autonamed< ITEM > implements LeafToken< ITEM > {
       public Auto() {
@@ -100,39 +104,32 @@ public interface Wire {
 
     class Autoconvert< ITEM > extends Autonamed< ITEM > implements LeafToken< ITEM > {
 
-      private final Converter< ITEM, String > converter ;
+      private final Converter< String, ITEM > converter ;
 
-      public Autoconvert( final Converter< ITEM, String > converter ) {
+      public Autoconvert( final Converter< String, ITEM > converter ) {
         this( null, converter ) ;
       }
 
       public Autoconvert(
           final String customXmlName,
-          final Converter< ITEM, String > converter
+          final Converter< String, ITEM > converter
       ) {
         super( customXmlName ) ;
         this.converter = checkNotNull( converter ) ;
       }
 
       @Override
-      public void toWire( final ITEM item, final WireWriter wireWriter ) throws WireException {
-        wireWriter.writeDelimitedString( converter.convert( item ) ) ;
+      public void toWire( final ITEM item, final CrudeWriter crudeWriter ) throws EncoderException {
+        crudeWriter.writeNullableString( converter.reverse().convert( item ) ); ;
       }
 
       @Override
-      public ITEM fromWire( final WireReader wireReader ) throws WireException {
-        return converter.reverse().convert( wireReader.readDelimitedString() ) ;
+      public ITEM fromWire( final CrudeReader wireReader ) throws DecodeException {
+        return converter.convert( wireReader.readNullableString() ) ;
       }
     }
   }
 
-
-  interface WireWriter {
-    void writeIntegerPrimitive( final int i ) throws WireException ;
-    void writeIntegerObject( final Integer integer ) throws WireException ;
-    void writeDelimitedString( final String string ) throws WireException ;
-    // ...
-  }
 
   interface NodeWriter<
       NODE extends NodeToken< NODE, LEAF >,
@@ -182,9 +179,9 @@ public interface Wire {
     default < ITEM > void nodeSequence(
         NODE node,
         Collection< ITEM > items,
-        WritingAction< NODE, LEAF, ITEM > nodeSequenceWriter
+        WritingAction< NODE, LEAF, ITEM > writingAction
     ) throws WireException {
-      nodeSequence( node, items.size(), items, nodeSequenceWriter ) ;
+      nodeSequence( node, items.size(), items, writingAction ) ;
     }
 
     interface NodeSequenceWriter<
@@ -194,13 +191,15 @@ public interface Wire {
     > {
       void write( NodeWriter< NODE, LEAF > nodeWriter, ITEM item ) throws WireException ;
     }
-  }
 
-  interface WireReader {
-    int readIntegerPrimitive() throws WireException ;
-    Integer readIntegerObject() throws WireException ;
-    String readDelimitedString() throws WireException;
-    // ...
+    <
+        NODE2 extends NodeToken< NODE2, LEAF2 >,
+        LEAF2 extends LeafToken
+    > NodeWriter< NODE2, LEAF2 > redefineWith(
+        ImmutableMap< String, NODE2 > newNodeTokens,
+        ImmutableMap< String, LEAF2 > newLeafTokens
+    ) ;
+
   }
 
 
@@ -255,7 +254,7 @@ public interface Wire {
     <
         NODE2 extends NodeToken< NODE2, LEAF2 >,
         LEAF2 extends LeafToken
-    > XmlNodeReader< NODE2, LEAF2 > redefineWith(
+    > NodeReader< NODE2, LEAF2 > redefineWith(
         ImmutableMap< String, NODE2 > nodes,
         ImmutableMap< String, LEAF2 > leaves
     ) ;

@@ -5,11 +5,11 @@ import com.otcdlink.chiron.command.Stamp;
 import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.designator.DesignatorForger;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
+import com.otcdlink.chiron.middle.session.SignonSetback;
 import com.otcdlink.chiron.middle.shaft.CodecShaft;
 import com.otcdlink.chiron.middle.shaft.CrafterShaft;
 import com.otcdlink.chiron.middle.shaft.MethodCallVerifier;
 import com.otcdlink.chiron.middle.shaft.MethodCaller;
-import com.otcdlink.chiron.upend.session.SignonAttempt;
 import com.otcdlink.chiron.upend.session.SignonInwardDuty;
 import org.junit.Test;
 
@@ -52,7 +52,7 @@ public class SignonInwardDutyCommandsShaftTest {
           signonInwardDuty.registerSession(
               DESIGNATOR, new SessionIdentifier( "The5e5510n" ), "TheLogin" ) ;
           signonInwardDuty.failedSignonAttempt(
-              DESIGNATOR, "TheLogin", SignonAttempt.PRIMARY ) ;
+              DESIGNATOR, "TheLogin", SignonSetback.Factor.PRIMARY ) ;
           signonInwardDuty.resetSignonFailures( DESIGNATOR, "TheLogin" ) ;
           signonInwardDuty.signout( DESIGNATOR ) ;
           signonInwardDuty.signoutQuiet( DESIGNATOR, SESSION_IDENTIFIER ) ;

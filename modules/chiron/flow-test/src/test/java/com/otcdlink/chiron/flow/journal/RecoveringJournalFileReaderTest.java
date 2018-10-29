@@ -3,7 +3,7 @@ package com.otcdlink.chiron.flow.journal;
 import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.integration.echo.EchoCodecFixture;
 import com.otcdlink.chiron.integration.echo.EchoUpwardDuty;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,7 +18,7 @@ public class RecoveringJournalFileReaderTest
 {
 
   @Test
-  public void resolveExistingJournalFile() throws Exception {
+  void resolveExistingJournalFile() throws Exception {
     newJournalReplayFixture().createFile( 2 ) ;
     assertThat( journalFile().length() ).isGreaterThan( 0 ) ;
 
@@ -35,7 +35,7 @@ public class RecoveringJournalFileReaderTest
     assertThat( recoveredFile().length() ).isGreaterThan( 0 ) ;
   }
   @Test
-  public void resolveExistingRecoveryFile() throws Exception {
+  void resolveExistingRecoveryFile() throws Exception {
     newJournalReplayFixture( recoveryFile() ).createFile( 2 ) ;
     assertThat( recoveryFile().length() ).isGreaterThan( 0 ) ;
 
@@ -53,7 +53,7 @@ public class RecoveringJournalFileReaderTest
   }
 
   @Test
-  public void needToResolveBeforeIterating() throws Exception {
+  void needToResolveBeforeIterating() throws Exception {
     assertThatThrownBy( () -> newBareReader( journalFile() ).sliceIterable() )
         .isInstanceOf( IllegalStateException.class ) ;
   }
@@ -93,11 +93,11 @@ public class RecoveringJournalFileReaderTest
   }
 
   private File recoveredFile() {
-    return new File( methodSupport.getDirectory(), "my.recovered" ) ;
+    return new File( methodSupport.testDirectory(), "my.recovered" ) ;
   }
 
   private File recoveryFile() {
-    return new File( methodSupport.getDirectory(), "my.recovery" ) ;
+    return new File( methodSupport.testDirectory(), "my.recovery" ) ;
   }
 
 }

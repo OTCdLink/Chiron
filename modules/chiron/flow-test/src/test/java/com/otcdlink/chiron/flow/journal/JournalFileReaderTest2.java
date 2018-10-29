@@ -5,22 +5,22 @@ import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.integration.echo.EchoCodecFixture;
 import com.otcdlink.chiron.integration.echo.UpwardEchoCommand;
 import com.otcdlink.chiron.middle.CommandAssert;
-import com.otcdlink.chiron.testing.MethodSupport;
+import com.otcdlink.chiron.testing.junit5.DirectoryExtension;
 import com.otcdlink.chiron.toolbox.clock.UpdateableClock;
 import com.otcdlink.chiron.toolbox.text.LineBreak;
 import org.assertj.core.api.Assertions;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
-public class JournalFileReaderTest2 {
+class JournalFileReaderTest2 {
 
   @Test
-  public void justTwoCommands() throws Exception {
-    final File intradayFile = new File( methodSupport.getDirectory(), "my.intraday" ) ;
+  void justTwoCommands() throws Exception {
+    final File intradayFile = new File( methodSupport.testDirectory(), "my.intraday" ) ;
 
     final LineBreak lineBreakWindows = LineBreak.CRLF_WINDOWS ;
     final JournalReplayFixture journalReplayFixture = new JournalReplayFixture(
@@ -69,14 +69,17 @@ public class JournalFileReaderTest2 {
 
   private static final Logger LOGGER = LoggerFactory.getLogger( JournalFileReaderTest2.class ) ;
 
-  @Rule
-  public MethodSupport methodSupport = new MethodSupport() ;
+  @SuppressWarnings( "WeakerAccess" )
+  @RegisterExtension
+  final DirectoryExtension methodSupport = new DirectoryExtension() ;
 
   private final UpdateableClock updateableClock =
       new UpdateableClock.Default( Stamp.FLOOR_MILLISECONDS ) ;
 
-  private static final UpwardEchoCommand<Designator> COMMAND_1 = JournalReplayFixture.newCommand( 1 ) ;
-  private static final UpwardEchoCommand<Designator> COMMAND_2 = JournalReplayFixture.newCommand( 2 ) ;
+  private static final UpwardEchoCommand< Designator > COMMAND_1 =
+      JournalReplayFixture.newCommand( 1 ) ;
+  private static final UpwardEchoCommand< Designator > COMMAND_2 =
+      JournalReplayFixture.newCommand( 2 ) ;
 
 
 }

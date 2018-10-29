@@ -3,7 +3,6 @@ package com.otcdlink.chiron.upend.http.content.file;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import com.otcdlink.chiron.upend.http.content.StaticContent;
-import com.otcdlink.chiron.upend.http.content.caching.StaticContentCacheFactory;
 
 import java.io.File;
 
@@ -12,9 +11,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Resolves a resource name into a {@link StaticContent.FromFile} which is
  * {@code File}-based HTTP-streamable content.
- * <p>
- * The choice of the {@link io.github.otcdlink.chiron.upend.http.content.caching} package is arguable
- * but usage is similar to {@link StaticContentCacheFactory}.
  */
 public class StaticFileContentProvider {
 

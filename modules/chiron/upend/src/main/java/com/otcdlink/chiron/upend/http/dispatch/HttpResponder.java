@@ -123,9 +123,9 @@ public interface HttpResponder {
    * the {@link EvaluationContext} contains the "temptation" to use
    * {@link EvaluationContext#duty()} or {@link EvaluationContext#designator()}, which makes
    * probably no sense. It's not too hard to grab {@link EvaluationContext#contextPath()}
-   * using {@link BareHttpDispatcher.BuildContext#currentBuildContext} if really needed.
+   * using {@code BareHttpDispatcher.BuildContext#currentBuildContext} if really needed.
    */
-  interface Renderer< RESULT > extends BiFunction<RichHttpRequest, RESULT, Object > {
+  interface Renderer< RESULT > extends BiFunction< RichHttpRequest, RESULT, Object > {
 
     @Override
     Object apply(

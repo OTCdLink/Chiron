@@ -53,7 +53,7 @@ import static com.otcdlink.chiron.toolbox.UrxTools.safePort;
 /**
  * <i>The</i> HTTP client to use for tests.
  * <pre>
- final Recorder&lt; Request.Get > recorder = new Recorder&lt;>() ;
+ final Recorder&lt; Request.Get @gt; recorder = new Recorder&lt;&gt;() ;
  final TinyHttpClient httpClient = new TinyHttpClient() ;
  httpClient.start().join() ;
  httpClient.httpGet( "http://localhost:8080/test, recorder ) ;

@@ -10,23 +10,24 @@ import com.otcdlink.chiron.middle.session.SessionIdentifier;
 import com.otcdlink.chiron.middle.shaft.MethodCall;
 import com.otcdlink.chiron.middle.shaft.MethodCallVerifier;
 import com.otcdlink.chiron.middle.shaft.MethodCaller;
-import com.otcdlink.chiron.testing.MethodSupport;
+import com.otcdlink.chiron.testing.junit5.DirectoryExtension;
 import com.otcdlink.chiron.toolbox.clock.UpdateableClock;
 import com.otcdlink.chiron.toolbox.text.LineBreak;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PersisterReplayerTest {
+class PersisterReplayerTest {
+
   @Test
-  public void justOneCommand() throws Exception {
+  void justOneCommand() throws Exception {
     final IntradayFileShaft<
         Designator,
         EchoUpwardDuty< Designator >
     > intradayFileShaft = new IntradayFileShaft<>(
         clock,
-        methodSupport.getDirectory(),
+        methodSupport.testDirectory(),
         EchoUpwardCommandCrafter::new,
         new FileDesignatorCodecTools.InwardDesignatorCodec(),
         new EchoCodecFixture.PartialUpendDecoder(),
@@ -42,8 +43,9 @@ public class PersisterReplayerTest {
   @SuppressWarnings( "unused" )
   private static final Logger LOGGER = LoggerFactory.getLogger( PersisterReplayerTest.class ) ;
 
-  @Rule
-  public final MethodSupport methodSupport = new MethodSupport() ;
+  @SuppressWarnings( "WeakerAccess" )
+  @RegisterExtension
+  final DirectoryExtension methodSupport = new DirectoryExtension() ;
 
   private final UpdateableClock clock = UpdateableClock.newClock( Stamp.FLOOR_MILLISECONDS ) ;
 

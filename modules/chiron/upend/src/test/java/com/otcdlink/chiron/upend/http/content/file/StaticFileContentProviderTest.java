@@ -2,7 +2,7 @@ package com.otcdlink.chiron.upend.http.content.file;
 
 import com.google.common.base.Charsets;
 import com.otcdlink.chiron.fixture.http.WatchedResponseAssert;
-import com.otcdlink.chiron.testing.MethodSupport;
+import com.otcdlink.chiron.testing.junit5.DirectoryExtension;
 import com.otcdlink.chiron.toolbox.UrxTools;
 import com.otcdlink.chiron.toolbox.netty.NettyHttpClient;
 import com.otcdlink.chiron.upend.http.content.caching.StaticContentCacheTest;
@@ -11,9 +11,9 @@ import com.otcdlink.chiron.upend.http.dispatch.HttpDispatcher;
 import com.otcdlink.chiron.upend.http.dispatch.UsualHttpCommands;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,8 +35,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class StaticFileContentProviderTest extends StaticContentTest {
 
   @Test
-  @Ignore( "Requires manual startup")
-  public void useNettySampleStartedInteractively() throws Exception {
+  @Disabled( "Requires manual startup")
+  void useNettySampleStartedInteractively() throws Exception {
     httpClient.httpGet(
         // File must not be too large for an HTTP client that doesn't support chunking.
         UrxTools.parseUrlQuiet( "http://127.0.0.1:8080/Derived.class" ),
@@ -48,8 +48,8 @@ public class StaticFileContentProviderTest extends StaticContentTest {
   }
 
   @Test
-  public void loadFileContent() throws Exception {
-    final FileFixture fileFixture = new FileFixture( methodSupport.getDirectory() ) ;
+  void loadFileContent() throws Exception {
+    final FileFixture fileFixture = new FileFixture( directoryExtension.testDirectory() ) ;
     final StaticFileContentProvider fileContentProvider = new StaticFileContentProvider(
         fileFixture.directory, fileFixture.mimeTypeMap() ) ;
     initialize( httpDispatcher -> httpDispatcher.file( fileContentProvider ) ) ;
@@ -84,8 +84,8 @@ public class StaticFileContentProviderTest extends StaticContentTest {
    * causes no havoc.
    */
   @Test
-  public void crappyHeadRequest() throws Exception {
-    final FileFixture fileFixture = new FileFixture( methodSupport.getDirectory() ) ;
+  void crappyHeadRequest() throws Exception {
+    final FileFixture fileFixture = new FileFixture( directoryExtension.testDirectory() ) ;
     final StaticFileContentProvider fileContentProvider = new StaticFileContentProvider(
         fileFixture.directory, fileFixture.mimeTypeMap() ) ;
     initialize( httpDispatcher -> httpDispatcher.file( fileContentProvider ) ) ;
@@ -106,8 +106,9 @@ public class StaticFileContentProviderTest extends StaticContentTest {
 
   private static final Charset CHARSET = Charsets.US_ASCII ;
 
-  @Rule
-  public final MethodSupport methodSupport = new MethodSupport() ;
+  @SuppressWarnings( "WeakerAccess" )
+  @RegisterExtension
+  final DirectoryExtension directoryExtension = new DirectoryExtension() ;
 
   @Override
   protected int httpClientTimeoutMs() {
@@ -116,7 +117,7 @@ public class StaticFileContentProviderTest extends StaticContentTest {
 
 
 
-  public StaticFileContentProviderTest() throws UnknownHostException { }
+  StaticFileContentProviderTest() throws UnknownHostException { }
 
   @Override
   public void tearDown() throws Exception {

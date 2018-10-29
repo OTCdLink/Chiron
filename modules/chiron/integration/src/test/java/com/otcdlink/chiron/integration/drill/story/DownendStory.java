@@ -6,7 +6,7 @@ import com.otcdlink.chiron.downend.CommandTransceiver;
 import com.otcdlink.chiron.downend.DownendConnector;
 import com.otcdlink.chiron.downend.Tracker;
 import com.otcdlink.chiron.downend.TrackerCurator;
-import com.otcdlink.chiron.fixture.NettyLeakDetectorRule;
+import com.otcdlink.chiron.fixture.NettyLeakDetectorExtension;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill.ForSimpleDownend;
 import com.otcdlink.chiron.integration.drill.SketchLibrary;
@@ -15,8 +15,8 @@ import com.otcdlink.chiron.integration.echo.UpwardEchoCommand;
 import com.otcdlink.chiron.middle.session.SessionLifecycle;
 import com.otcdlink.chiron.middle.tier.TimeBoundary;
 import com.otcdlink.chiron.toolbox.Credential;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,10 +38,11 @@ import static com.otcdlink.chiron.mockster.Mockster.withNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-public class DownendStory {
+@ExtendWith( NettyLeakDetectorExtension.class )
+class DownendStory {
 
   @Test
-  public void doubleStart() throws Exception {
+  void doubleStart() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .forDownendConnector().done()
         .fakeUpend().done()
@@ -54,7 +55,7 @@ public class DownendStory {
   }
 
   @Test
-  public void doubleStop() throws Exception {
+  void doubleStop() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .forDownendConnector().automaticLifecycle( START ).done()
         .fakeUpend().done()
@@ -74,7 +75,7 @@ public class DownendStory {
   }
 
   @Test
-  public void brokenCommand() throws Exception {
+  void brokenCommand() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .forDownendConnector().done()
         .fakeUpend().done()
@@ -89,7 +90,7 @@ public class DownendStory {
   }
 
   @Test
-  public void brokenCommandInCommandTransceiver() throws Exception {
+  void brokenCommandInCommandTransceiver() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .forCommandTransceiver().done()
         .fakeUpend().done()
@@ -108,7 +109,7 @@ public class DownendStory {
   }
 
   @Test
-  public void ping() throws Exception {
+  void ping() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withTimeBoundary( TimeBoundary.newBuilder()
             .pingInterval( 1 )
@@ -128,7 +129,7 @@ public class DownendStory {
   }
 
   @Test
-  public void pingTimeoutCausesDisconnection() throws Exception {
+  void pingTimeoutCausesDisconnection() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withTimeBoundary( TimeBoundary.newBuilder()
             .pingInterval( 1 )
@@ -161,7 +162,7 @@ public class DownendStory {
 
 
   @Test
-  public void echo() throws Exception {
+  void echo() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .forDownendConnector().done()
         .fakeUpend().done()
@@ -172,7 +173,7 @@ public class DownendStory {
   }
 
   @Test
-  public void signonAndEcho() throws Exception {
+  void signonAndEcho() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .forDownendConnector().done()
         .fakeUpend().withAuthentication( ConnectorDrill.Authentication.ONE_FACTOR ).done()
@@ -184,7 +185,7 @@ public class DownendStory {
 
 
   @Test
-  public void echoWithCommandTransceiver() throws Exception {
+  void echoWithCommandTransceiver() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .forCommandTransceiver().done()
         .fakeUpend().done()
@@ -195,7 +196,7 @@ public class DownendStory {
   }
 
   @Test
-  public void trackerSegregation() throws Exception {
+  void trackerSegregation() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withMocksterTimeout( 1, TimeUnit.HOURS )
         .forCommandTransceiver().done()
@@ -232,7 +233,7 @@ public class DownendStory {
   }
 
   @Test
-  public void signonAndEchoWithCommandTransceiver() throws Exception {
+  void signonAndEchoWithCommandTransceiver() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .forCommandTransceiver().done()
         .fakeUpend().withAuthentication( ConnectorDrill.Authentication.ONE_FACTOR ).done()
@@ -243,7 +244,7 @@ public class DownendStory {
   }
 
   @Test
-  public void badCredentialThenCancel() throws Exception {
+  void badCredentialThenCancel() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withTimeBoundary( SketchLibrary.PASSIVE_TIME_BOUNDARY )
         .forDownendConnector()
@@ -302,7 +303,7 @@ public class DownendStory {
   }
 
   @Test
-  public void signonFailsUnrecoverably() throws Exception {
+  void signonFailsUnrecoverably() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withTimeBoundary( SketchLibrary.PASSIVE_TIME_BOUNDARY )
         .forDownendConnector()
@@ -360,7 +361,7 @@ public class DownendStory {
   }
 
   @Test
-  public void commandInterceptor() throws Exception {
+  void commandInterceptor() throws Exception {
 
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withTimeBoundary( SketchLibrary.PASSIVE_TIME_BOUNDARY )
@@ -385,9 +386,6 @@ public class DownendStory {
 
   @SuppressWarnings( "unused" )
   private static final Logger LOGGER = LoggerFactory.getLogger( DownendStory.class ) ;
-
-  @Rule
-  public final NettyLeakDetectorRule nettyLeakDetectorRule = new NettyLeakDetectorRule() ;
 
   private static Tracker extractTracker( final Tracker enhanced ) {
     try {

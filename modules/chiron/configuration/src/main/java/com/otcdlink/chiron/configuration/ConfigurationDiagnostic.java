@@ -70,7 +70,7 @@ public class ConfigurationDiagnostic extends BaseDiagnostic {
             keyBuilder.append( " (" ).append( origin.name().toLowerCase() ).append( ")" ) ;
           }
           //noinspection unchecked
-          final String safeValue = inspector.safeValueOf( property, "******" ) ;
+          final String safeValue = inspector.stringValueOf( property ) ;
           final String key = keyBuilder.toString() ;
           if( safeValue == null ) {
             builder.put( key, NO_VALUE ) ;

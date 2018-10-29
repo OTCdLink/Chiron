@@ -2,6 +2,8 @@ package com.otcdlink.chiron.wire;
 
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
+import com.otcdlink.chiron.buffer.CrudeReader;
+import com.otcdlink.chiron.codec.DecodeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,22 +45,13 @@ public abstract class AbstractXmlNodeReader<
     this.leafNames = checkNotNull( leafNames ) ;
   }
 
-  protected NODE resolve( String xmlName ) throws WireException {
-    final NODE currentNode = nodeNames.get( xmlName ) ;
-    if( currentNode == null ) {
-      throw wireExceptionGenerator.throwWireException(
-          "Unknown Element name '" + xmlName + "' among " + nodeNames.keySet() ) ;
-    }
-    return currentNode;
-  }
-
 
   /**
-   * To be filled with a {@link LEAF} value as {@code String} before using {@link #wireReader}.
+   * To be filled with a {@link LEAF} value as {@code String} before using {@link #crudeReader}.
    */
   protected String attributeAsString = null ;
 
-  protected final Wire.WireReader wireReader = new Wire.WireReader() {
+  protected final CrudeReader crudeReader = new CrudeReader() {
     @Override
     public int readIntegerPrimitive() {
       return Integer.parseInt( attributeAsString ) ;
@@ -70,8 +63,43 @@ public abstract class AbstractXmlNodeReader<
     }
 
     @Override
-    public String readDelimitedString() throws WireException {
+    public String readDelimitedString() {
       return attributeAsString ;
+    }
+
+    @Override
+    public String readNullableString() throws DecodeException {
+      return attributeAsString ;
+    }
+
+    @Override
+    public long readLongPrimitive() throws DecodeException {
+      throw new UnsupportedOperationException( "TODO" );
+    }
+
+    @Override
+    public Long readLongObject() throws DecodeException {
+      throw new UnsupportedOperationException( "TODO" );
+    }
+
+    @Override
+    public float readFloatPrimitive() throws DecodeException {
+      throw new UnsupportedOperationException( "TODO" );
+    }
+
+    @Override
+    public Float readFloatObject() throws DecodeException {
+      throw new UnsupportedOperationException( "TODO" );
+    }
+
+    @Override
+    public boolean readBooleanPrimitive() throws DecodeException {
+      throw new UnsupportedOperationException( "TODO" );
+    }
+
+    @Override
+    public Boolean readBooleanObject() throws DecodeException {
+      throw new UnsupportedOperationException( "TODO" );
     }
   } ;
 
@@ -104,11 +132,11 @@ public abstract class AbstractXmlNodeReader<
 // Debug
 // =====
 
-  private static final boolean DEBUG = true ;
+  private static final boolean DEBUG = false ;
 
-  protected static void debug( final Supplier< String > lazy ) {
+  protected void debug( final Supplier< String > lazy ) {
     if( DEBUG ) {
-      LOGGER.debug( lazy.get() ) ;
+      LOGGER.debug( lazy.get() + " " + location() ) ;
     }
   }
 }

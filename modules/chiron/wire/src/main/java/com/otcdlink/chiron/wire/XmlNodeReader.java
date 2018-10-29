@@ -1,15 +1,16 @@
 package com.otcdlink.chiron.wire;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.otcdlink.chiron.toolbox.collection.StreamTools;
 import com.otcdlink.chiron.wire.Wire.NodeToken;
 
+import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.events.XMLEvent;
-import java.net.URLDecoder;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -59,6 +60,19 @@ public class XmlNodeReader<
     this.eventSource = parent.eventSource ;
   }
 
+  public static XMLStreamReader newXmlStreamReaderQuiet( final String xml ) {
+    try {
+      return newXmlStreamReader( xml ) ;
+    } catch( XMLStreamException e ) {
+      throw new RuntimeException( e ) ;
+    }
+  }
+
+  public static XMLStreamReader newXmlStreamReader( final String xml ) throws XMLStreamException {
+    final XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance() ;
+    return xmlInputFactory.createXMLStreamReader( new StringReader( xml ) ) ;
+  }
+
   @Override
   public <
       NODE2 extends NodeToken< NODE2, LEAF2 >,
@@ -67,9 +81,11 @@ public class XmlNodeReader<
       final ImmutableMap< String, NODE2 > nodes,
       final ImmutableMap< String, LEAF2 > leaves
   ) {
-    checkState( eventSource.pushedBack == null, "Cloaking supported only within a single node" ) ;
+    checkState( eventSource.pushedBack == null,
+        "Redefinition supported only within a single node" ) ;
     return new XmlNodeReader<>( this, nodes, leaves ) ;
   }
+
 
 // ===============
 // Node and Leaves
@@ -83,12 +99,25 @@ public class XmlNodeReader<
       final String attributeValue = xmlStreamReader.getAttributeValue(
           "", leafWithTypedItem.xmlName() ) ;
       if( attributeValue == null ) {
-        return null ;
+        throw wireExceptionGenerator.throwWireException(
+            "No value defined for attribute '" + leafWithTypedItem.xmlName() + "'" ) ;
       } else {
-        attributeAsString = URLDecoder.decode( attributeValue, Charsets.UTF_8.name() ) ;
-        final ITEM item = leafWithTypedItem.fromWire( wireReader ) ;
-        debug( () -> "Extracted Attribute '" + leafWithTypedItem.xmlName() + "' " + item + "." ) ;
-        return item ;
+        if( XmlEscaping.MAGIC_NULL.equals( attributeValue ) ) {
+          debug( () -> "Extracted Attribute '" + leafWithTypedItem.xmlName() + "' null." ) ;
+          return null ;
+        } else {
+          if( XmlEscaping.ACCOLADE_UNESCAPER.needsTransformation( attributeValue ) ) {
+            final StringBuilder stringBuilder = new StringBuilder() ;
+            XmlEscaping.ACCOLADE_UNESCAPER.transform( attributeValue, stringBuilder ) ;
+            attributeAsString = stringBuilder.toString() ;
+          } else {
+            attributeAsString = attributeValue ;
+          }
+          final ITEM item = leafWithTypedItem.fromWire( crudeReader ) ;
+          debug( () -> "Extracted Attribute '" + leafWithTypedItem.xmlName() + "' " + item + "." ) ;
+          return item ;
+        }
+
       }
     } catch( final Exception e ) {
       throw ensureWireException( e ) ;
@@ -105,12 +134,14 @@ public class XmlNodeReader<
       throw wireExceptionGenerator.throwWireException(
           "Expecting " + StaxEvent.Kind.START_ELEMENT + " for " + node ) ;
     }
+    debug( () -> "Entering singleNode '" + node.xmlName() + "'." ) ;
     final ITEM read = readingAction.read( this ) ;
     final StaxEvent endEvent = eventSource.next() ;
     if( endEvent.kind != StaxEvent.Kind.END_ELEMENT ) {
       throw wireExceptionGenerator.throwWireException(
           "Expecting " + StaxEvent.Kind.END_ELEMENT + " for " + node ) ;
     }
+    debug( () -> "Exiting singleNode '" + node.xmlName() + "'." ) ;
     return read ;
   }
 
@@ -121,8 +152,10 @@ public class XmlNodeReader<
       final ReadingAction< NODE, LEAF, ITEM > readingAction
   ) throws WireException {
     final Object container = collector.supplier().get() ;
-    final BiConsumer< Object, ITEM > accumulator = ( BiConsumer< Object, ITEM > ) collector.accumulator() ;
+    final BiConsumer< Object, ITEM > accumulator =
+        ( BiConsumer< Object, ITEM > ) collector.accumulator() ;
     final Function< ?, COLLECTION > finisher = collector.finisher() ;
+    debug( () -> "Entering nodeSequence '" + node.xmlName() + "'." ) ;
     while( true ) {
       final StaxEvent staxEvent = eventSource.next() ;
       if( staxEvent.kind == StaxEvent.Kind.START_ELEMENT ) {
@@ -148,6 +181,7 @@ public class XmlNodeReader<
       }
 
     }
+    debug( () -> "Exiting nodeSequence '" + node.xmlName() + "'." ) ;
     final COLLECTION collection = ( COLLECTION ) ( ( Function ) finisher ).apply( container ) ;
     return collection ;
   }
@@ -157,7 +191,7 @@ public class XmlNodeReader<
       final NODE node,
       final ReadingAction< NODE, LEAF, ITEM > readingAction
   ) throws WireException {
-    nodeSequence( node, Collectors.toList(), readingAction ) ;
+    nodeSequence( node, StreamTools.nullCollector(), readingAction ) ;
   }
 
 
@@ -181,6 +215,15 @@ public class XmlNodeReader<
     public boolean isStartFor( final String xmlName ) {
       return kind == Kind.START_ELEMENT && this.xmlName.equals( xmlName ) ;
     }
+
+    @Override
+    public String toString() {
+      return getClass().getSimpleName() + "{" +
+          "kind=" + kind +
+          ";xmlName='" + xmlName + '\'' +
+          '}'
+      ;
+    }
   }
 
   class EventSource {
@@ -189,10 +232,13 @@ public class XmlNodeReader<
 
     public StaxEvent next() throws WireException {
       if( pushedBack == null ) {
-        return nextPurifiedStaxEvent() ;
+        final StaxEvent purifiedStaxEvent = nextPurifiedStaxEvent() ;
+        debug( () -> EventSource.class.getSimpleName() + " returns " + purifiedStaxEvent ) ;
+        return purifiedStaxEvent ;
       } else {
         final StaxEvent returned = pushedBack ;
         pushedBack = null ;
+        debug( () -> EventSource.class.getSimpleName() + " gives back " + returned  + ".") ;
         return returned ;
       }
     }
@@ -200,6 +246,7 @@ public class XmlNodeReader<
     public void pushback( final StaxEvent staxEvent ) {
       checkState( pushedBack == null ) ;
       pushedBack = checkNotNull( staxEvent ) ;
+      debug( () -> EventSource.class.getSimpleName() + " pushed back " + pushedBack + "." ) ;
     }
 
 

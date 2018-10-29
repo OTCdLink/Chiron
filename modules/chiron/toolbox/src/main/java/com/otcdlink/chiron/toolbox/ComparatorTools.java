@@ -1,5 +1,6 @@
 package com.otcdlink.chiron.toolbox;
 
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.LocalDate;
 
@@ -179,6 +180,16 @@ public final class ComparatorTools {
   public static final Comparator<LocalDate > LOCAL_DATE_COMPARATOR = new WithNull< LocalDate >() {
     @Override
     protected int compareNoNulls( final LocalDate first, final LocalDate second ) {
+      return first.compareTo( second ) ;
+    }
+  } ;
+
+  /**
+   * Treats {@code null} values as in {@link WithNull}.
+   */
+  public static final Comparator< DateTime > DATETIME_COMPARATOR = new WithNull< DateTime >() {
+    @Override
+    protected int compareNoNulls( final DateTime first, final DateTime second ) {
       return first.compareTo( second ) ;
     }
   } ;

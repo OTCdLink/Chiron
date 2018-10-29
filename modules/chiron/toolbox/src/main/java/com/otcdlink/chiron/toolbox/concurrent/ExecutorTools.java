@@ -1,24 +1,17 @@
 package com.otcdlink.chiron.toolbox.concurrent;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ForwardingExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -136,151 +129,6 @@ public final class ExecutorTools {
         }
     ) ;
   }
-
-
-
-  /**
-   * Only for tests.
-   * Executes {@code Runnable}s and {@code Task}s synchronously, throwing {@code RuntimeException}
-   * immediately (in violation of {@code ExecutorService} contract.
-   *
-   * Don't use {@link com.google.common.util.concurrent.MoreExecutors#sameThreadExecutor()}
-   * which swallows exceptions unless we subscribe to some
-   * {@link com.google.common.util.concurrent.ListenableFutureTask#ListenableFutureTask(java.util.concurrent.Callable)}
-   * which requires its own {@code Executor} for sending notifications.
-   */
-  public static final ExecutorServiceFactory SYNCHRONOUS_EXPLODING = new ExecutorServiceFactory() {
-    @Override
-    public ExecutorService create() {
-      return new ExecutorService() {
-
-        private final AtomicBoolean shutdown = new AtomicBoolean( false ) ;
-
-        @Override
-        public void shutdown() {
-          checkState( shutdown.compareAndSet( false, true ), "Already shut down" ) ;
-        }
-
-        @Override
-        public List< Runnable > shutdownNow() {
-          shutdown() ;
-          return ImmutableList.of() ;
-        }
-
-        @Override
-        public boolean isShutdown() {
-          return shutdown.get() ;
-        }
-
-        @Override
-        public boolean isTerminated() {
-          return shutdown.get() ;
-        }
-
-        @Override
-        public boolean awaitTermination( final long timeout, final TimeUnit unit ) {
-          return true ;
-        }
-
-        @Override
-        public < T > Future< T > submit( final Callable< T > task ) {
-          throw new UnsupportedOperationException( "Not implemented" ) ;
-        }
-
-        @Override
-        public < T > Future< T > submit( final Runnable task, final T result ) {
-          throw new UnsupportedOperationException( "Not implemented" ) ;
-        }
-
-        @Override
-        public Future< ? > submit( final Runnable task ) {
-          task.run() ;
-          return new CompletedFuture<>( null, null ) ;
-        }
-
-        @Override
-        public < T > List< Future< T > > invokeAll(
-            final Collection< ? extends Callable< T > > tasks
-        ) throws InterruptedException {
-          throw new UnsupportedOperationException( "Not implemented" ) ;
-        }
-
-        @Override
-        public < T > List< Future< T > > invokeAll(
-            final Collection< ? extends Callable< T > > tasks,
-            final long timeout,
-            final TimeUnit unit
-        ) throws InterruptedException {
-          throw new UnsupportedOperationException( "Not implemented" ) ;
-        }
-
-        @Override
-        public < T > T invokeAny(
-            final Collection< ? extends Callable< T > > tasks
-        ) throws InterruptedException, ExecutionException {
-          throw new UnsupportedOperationException( "Not implemented" ) ;
-        }
-
-        @Override
-        public < T > T invokeAny(
-            final Collection< ? extends Callable< T > > tasks,
-            final long timeout,
-            final TimeUnit unit
-        ) throws InterruptedException, ExecutionException, TimeoutException {
-          throw new UnsupportedOperationException( "Not implemented" ) ;
-        }
-
-        @Override
-        public void execute( final Runnable command ) {
-          command.run() ;
-        }
-
-        /**
-         * Copied from {@link com.sun.xml.internal.ws.util.CompletedFuture}.
-         */
-        class CompletedFuture< T > implements Future< T > {
-          private final T v ;
-          private final Throwable re ;
-
-          public CompletedFuture( final T v, final Throwable re ) {
-            this.v = v ;
-            this.re = re ;
-          }
-
-          @Override
-          public boolean cancel( final boolean mayInterruptIfRunning ) {
-            return false ;
-          }
-
-          @Override
-          public boolean isCancelled() {
-            return false ;
-          }
-
-          @Override
-          public boolean isDone() {
-            return true ;
-          }
-
-          @Override
-          public T get() throws ExecutionException {
-            if( this.re != null ) {
-              throw new ExecutionException( this.re ) ;
-            } else {
-              return this.v ;
-            }
-          }
-
-          @Override
-          public T get( final long timeout, final TimeUnit unit ) throws ExecutionException {
-            return this.get() ;
-          }
-        }
-
-      } ;
-    }
-  } ;
-
 
 
   /**

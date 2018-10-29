@@ -28,7 +28,7 @@ import java.io.IOException;
 //import org.novelang.logger.LoggerFactory;
 
 /**
- * Creates directories on-demand for test purposes.
+ * Lazily instantiates a test directory upon a call to {@link #getDirectory()}.
  * Each test is supposed to instantiate this class in the <code>setUp()</code> method because
  * test name (method name) is not available at the time Test constructor is called.
  * <p>
@@ -118,7 +118,7 @@ public class DirectoryFixture {
 //        LOGGER.debug( "Created '", scratchDirectory.getAbsolutePath(), "'." ) ;
       }
     }
-    return scratchDirectory;
+    return scratchDirectory ;
   }
 
 

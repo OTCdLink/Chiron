@@ -6,6 +6,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
+import com.otcdlink.chiron.buffer.CrudeReader;
+import com.otcdlink.chiron.buffer.CrudeWriter;
+import com.otcdlink.chiron.codec.DecodeException;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 
 import javax.xml.stream.XMLInputFactory;
@@ -23,7 +26,10 @@ import static com.google.common.collect.ImmutableSet.of;
 interface WireFixture {
 
   static XMLStreamReader newStreamReader( final String... xmlLines ) throws XMLStreamException {
-    return newStreamReader( Joiner.on( "\n" ).join( xmlLines ) ) ;
+    final XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance() ;
+    final XMLStreamReader xmlStreamReader =
+        xmlInputFactory.createXMLStreamReader( new StringReader( Joiner.on( "\n" ).join( xmlLines ) ) ) ;
+    return xmlStreamReader ;
   }
   static XMLStreamReader newStreamReader( final String xml ) throws XMLStreamException {
     final XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance() ;
@@ -237,29 +243,29 @@ interface WireFixture {
   abstract class MyLeafToken< ITEM > extends Wire.LeafToken.Auto< ITEM > {
     public static final MyLeafToken< String > S = new MyLeafToken< String >() {
       @Override
-      public void toWire( final String string, final Wire.WireWriter wireWriter )
+      public void toWire( final String string, final CrudeWriter crudeWriter )
           throws WireException
       {
-        wireWriter.writeDelimitedString( string ) ;
+        crudeWriter.writeDelimitedString( string ) ;
       }
 
       @Override
-      public String fromWire( final Wire.WireReader wireReader ) throws WireException {
-        return wireReader.readDelimitedString() ;
+      public String fromWire( final CrudeReader crudeReader ) throws DecodeException {
+        return crudeReader.readDelimitedString() ;
       }
     } ;
 
     public static final MyLeafToken< Integer > I = new MyLeafToken< Integer >() {
       @Override
-      public void toWire( final Integer integer, final Wire.WireWriter wireWriter )
+      public void toWire( final Integer integer, final CrudeWriter crudeWriter )
           throws WireException
       {
-        wireWriter.writeIntegerPrimitive( integer ) ;
+        crudeWriter.writeIntegerPrimitive( integer ) ;
       }
 
       @Override
-      public Integer fromWire( final Wire.WireReader wireReader ) throws WireException {
-        return wireReader.readIntegerPrimitive() ;
+      public Integer fromWire( final CrudeReader crudeReader ) throws DecodeException {
+        return crudeReader.readIntegerPrimitive() ;
       }
     } ;
 

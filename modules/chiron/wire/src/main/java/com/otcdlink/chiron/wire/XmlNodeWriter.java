@@ -2,11 +2,12 @@ package com.otcdlink.chiron.wire;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.otcdlink.chiron.buffer.BytebufCoat;
+import com.google.common.collect.ImmutableMap;
+import com.otcdlink.chiron.buffer.CrudeWriter;
 import com.otcdlink.chiron.toolbox.text.LineBreak;
+import io.netty.handler.codec.EncoderException;
 
 import java.io.IOException;
-import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -22,22 +23,22 @@ public class XmlNodeWriter<
 
   private final MarkupWriter markupWriter ;
 
-  public XmlNodeWriter( final Writer writer ) {
-    this( writer, 0 ) ;
+  public XmlNodeWriter( final Appendable appendable ) {
+    this( appendable, 0 ) ;
   }
 
-  public XmlNodeWriter( final Writer writer, final int startIndent ) {
-    this( writer, startIndent, 2, LineBreak.CR_UNIX ) ;
+  public XmlNodeWriter( final Appendable appendable, final int startIndent ) {
+    this( appendable, startIndent, 2, LineBreak.CR_UNIX ) ;
   }
 
   public XmlNodeWriter(
-      final Writer writer,
+      final Appendable appendable,
       final int startIndent,
       final int maxAttributesOnSameLine,
       final LineBreak lineBreak
   ) {
     this.markupWriter = new MarkupWriter(
-        writer,
+        appendable,
         startIndent,
         maxAttributesOnSameLine,
         lineBreak
@@ -46,7 +47,7 @@ public class XmlNodeWriter<
 
   private final StringBuilder attributeSink = new StringBuilder() ;
 
-  private final Wire.WireWriter wireWriter = new Wire.WireWriter() {
+  private final CrudeWriter wireWriter = new CrudeWriter() {
 
     @Override
     public void writeIntegerPrimitive( final int i ) {
@@ -55,12 +56,59 @@ public class XmlNodeWriter<
 
     @Override
     public void writeIntegerObject( final Integer integer ) {
-      writeIntegerPrimitive( integer ) ;  // FIXME
+      if( integer == null ) {
+        writeDelimitedString( null ) ;
+      } else {
+        writeIntegerPrimitive( integer ) ;
+      }
     }
 
     @Override
-    public void writeDelimitedString( final String string ) {
-      attributeSink.append( BytebufCoat.urlEncodeUtf8( string ) ) ;
+    public void writeDelimitedString( final String string ) throws EncoderException {
+      attributeSink.append( string ) ;
+    }
+
+    @Override
+    public void writeNullableString( String string ) {
+      if( string == null ) {
+        attributeSink.append( XmlEscaping.MAGIC_NULL ) ;
+      } else {
+        try {
+          XmlEscaping.ACCOLADE_ESCAPER.transform( string, attributeSink ) ;
+        } catch( final IOException e ) {
+          throw new EncoderException( "Cound not write '" + string + "'" ) ;
+        }
+      }
+    }
+
+    @Override
+    public void writeLongPrimitive( long longPrimitive ) {
+      throw new UnsupportedOperationException( "TODO" );
+    }
+
+    @Override
+    public void writeLongObject( Long longObject ) {
+      throw new UnsupportedOperationException( "TODO" );
+    }
+
+    @Override
+    public void writeFloatPrimitive( float floatPrimitive ) {
+      throw new UnsupportedOperationException( "TODO" );
+    }
+
+    @Override
+    public void writeFloatObject( Float floatObject ) {
+      throw new UnsupportedOperationException( "TODO" );
+    }
+
+    @Override
+    public void writeBooleanPrimitive( boolean booleanPrimitive ) {
+      throw new UnsupportedOperationException( "TODO" );
+    }
+
+    @Override
+    public void writeBooleanObject( Boolean booleanObject ) {
+      throw new UnsupportedOperationException( "TODO" );
     }
   } ;
 
@@ -152,6 +200,17 @@ public class XmlNodeWriter<
     }
   }
 
+  @Override
+  public <
+      NODE2 extends Wire.NodeToken< NODE2, LEAF2 >,
+      LEAF2 extends Wire.LeafToken
+  > XmlNodeWriter< NODE2, LEAF2 > redefineWith(
+      final ImmutableMap< String, NODE2 > newNodeTokens,
+      final ImmutableMap< String, LEAF2 > newLeafTokens
+  ) {
+    return ( XmlNodeWriter< NODE2, LEAF2 > ) this ;
+  }
+
   private void start( final String elementName ) throws WireException {
     if( ! elementStack.isEmpty() ) {
       elementStack.getFirst().incrementNestedElementCount() ;
@@ -227,4 +286,5 @@ public class XmlNodeWriter<
       new WireException.Generator( this::location ) ;
 
 
+  public static final String XML_HEADER = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" ;
 }

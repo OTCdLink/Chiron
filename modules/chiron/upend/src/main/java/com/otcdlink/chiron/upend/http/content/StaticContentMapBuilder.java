@@ -2,11 +2,13 @@ package com.otcdlink.chiron.upend.http.content;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSource;
+import com.google.common.io.CharSource;
 import com.otcdlink.chiron.upend.http.content.caching.StaticContentCacheFactory;
 import com.otcdlink.chiron.upend.http.content.caching.StaticContentTools;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,8 +39,35 @@ public final class StaticContentMapBuilder {
     ) ;
   }
 
+  public StaticContentMapBuilder put( final String relativePath, final String resourceName ) {
+    return put(
+        relativePath + "/" + resourceName,
+        StaticContentTools.asByteSource( resourceContextClass, resourceName )
+    ) ;
+  }
+
+  public StaticContentMapBuilder put(
+      final String relativePath,
+      final String resourceName,
+      final ByteSource byteSource
+  ) {
+    return put( relativePath + "/" + resourceName, byteSource ) ;
+  }
+
   public StaticContentMapBuilder put( final String resourceName, final ByteSource byteSource ) {
     byteSourceMap.put( checkNotNull( resourceName ), checkNotNull( byteSource ) ) ;
+    return this ;
+  }
+
+  public StaticContentMapBuilder put(
+      final String resourceName,
+      final String content,
+      final Charset charset
+      ) {
+    byteSourceMap.put(
+        checkNotNull( resourceName ),
+        CharSource.wrap( content ).asByteSource( charset )
+    ) ;
     return this ;
   }
 

@@ -13,8 +13,12 @@ public class WireException extends Exception {
       final Exception cause,
       final Wire.Location location
   ) {
-    super( message + ( location.meaningful() ? " (" + location.asString() + ")" : "" ), cause ) ;
-    this.location = checkNotNull( location ) ;
+    super(
+        message +
+            ( location != null && location.meaningful() ? " (" + location.asString() + ")" : "" ),
+        cause
+    ) ;
+    this.location = location ;
   }
 
   public static final class Generator {

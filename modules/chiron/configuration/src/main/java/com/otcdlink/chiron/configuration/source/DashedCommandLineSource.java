@@ -19,8 +19,8 @@ import static com.google.common.base.Preconditions.checkArgument;
  * </pre>
  * Its {@link #map()} method returns this:
  * <pre>
- * fileName -> my/file.txt
- * delay    -> 2000"
+ * fileName -@gt; my/file.txt
+ * delay    -@gt; 2000"
  * </pre>
  * <p>
  * This class is subject to the limitations of {@link com.google.common.base.CaseFormat}.

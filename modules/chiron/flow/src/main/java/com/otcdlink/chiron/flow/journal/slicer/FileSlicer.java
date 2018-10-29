@@ -44,7 +44,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * This is the correct approach:
  * <pre>
  *   Flux.fromIterable( fileSlicer )
- *     .map( slice -> { ... ; return slice ; }
+ *     .map( slice -&gt; { ... ; return slice ; }
  *     .buffer( FileSlicer#DEFAULT_FLUX_BUFFER_SIZE )
  *     .publishOn( scheduler )  // Switch to another thread.
  *     .subscribe()
@@ -132,8 +132,8 @@ Processed 100000000 lines (11188888890 bytes) in 36216 ms (2761210 slice/s, 308 
  </pre>
  * or
  * <pre>
-# dd if=/dev/zero of=testfile bs=100k count=1k && sync
-# sh -c "sync && echo 3 > /proc/sys/vm/drop_caches"
+# dd if=/dev/zero of=testfile bs=100k count=1k &amp;&amp; sync
+# sh -c "sync &amp;&amp; echo 3 &gt; /proc/sys/vm/drop_caches"
 # dd if=testfile of=/dev/null bs=100
 1048576+0 records in
 1048576+0 records out

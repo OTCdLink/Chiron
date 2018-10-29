@@ -20,7 +20,7 @@ public class InternetAddressValidator {
 
   public static final String HOST_NAME = "[a-zA-Z][-a-zA-Z0-9]*(?:\\.[a-zA-Z][-a-zA-Z0-9]*)*" ;
 
-  private static final Pattern HOST_ADDRESS = Pattern.compile(
+  public static final Pattern HOST_ADDRESS = Pattern.compile(
         "(?:"
           + IP_ADDRESS
       + ")|(?:"

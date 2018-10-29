@@ -59,7 +59,7 @@ public interface KeyHolder< KEY extends KeyHolder.Key< KEY > > {
       if( other == null ) {
         return -1 ;
       } else {
-        return index() > other.index() ? 1 : ( index() == other.index() ? 0 : -1 ) ;
+        return Long.compare( index(), other.index() );
       }
     }
 

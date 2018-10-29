@@ -798,7 +798,7 @@ public class UpendConnector<
   /**
    * Tests without the authentication stuff can force the association of a {@link Channel}
    * with a {@link SessionIdentifier} by passing a {@link ChannelRegistrationHacker}
-   * to {@link #UpendConnector(Setup, ChannelRegistrationHacker)}.
+   * to {@code #UpendConnector(Setup, ChannelRegistrationHacker)}.
    */
   public interface ChannelRegistrationHacker {
     void afterChannelCreated( Channel channel, ChannelRegistrar channelRegistrar ) ;

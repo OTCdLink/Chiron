@@ -12,9 +12,9 @@ import com.otcdlink.chiron.toolbox.text.ByteArrayEmbellisher;
 import com.otcdlink.chiron.toolbox.text.Plural;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import org.junit.After;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public abstract class AbstractTcpTransitServerTest {
 
   @Test
-  public void startStop() throws Exception {
+  void startStop() throws Exception {
     final TcpTransitServer tcpTransitServer = newTransitServerStarted() ;
     LOGGER.info( "On Mavericks you can list open ports with: lsof -P -i TCP@localhost:10001" ) ;
     tcpTransitServer.stop()
@@ -46,7 +46,7 @@ public abstract class AbstractTcpTransitServerTest {
   }
 
   @Test
-  public void echo() throws Exception {
+  void echo() throws Exception {
     try(
         final EchoServer ignored1 = EchoServer.newStarted( targetAddress ) ;
         final TcpTransitServer ignored2 = newTransitServerStarted() ;
@@ -64,7 +64,7 @@ public abstract class AbstractTcpTransitServerTest {
   }
 
   @Test
-  public void noTarget() throws Exception {
+  void noTarget() throws Exception {
     try(
         final TcpTransitServer ignored1 = newTransitServerStarted() ;
         final EchoClient echoClient = newClientConnected( false )
@@ -79,7 +79,7 @@ public abstract class AbstractTcpTransitServerTest {
 
 
   @Test
-  public void propagateClosedServerSocket() throws Exception {
+  void propagateClosedServerSocket() throws Exception {
     try(
         final EchoServer echoServer = EchoServer.newStarted( targetAddress ) ;
         final TcpTransitServer ignored = newTransitServerStarted() ;
@@ -102,23 +102,23 @@ public abstract class AbstractTcpTransitServerTest {
 
 
   @Test
-  public void nanoStress() throws Exception {
+  void nanoStress() throws Exception {
     stress( 1, 1, 1 ) ;
   }
 
   @Test
-  public void miniStress() throws Exception {
+  void miniStress() throws Exception {
     stress( 1, 1, 1025 ) ; // 1024 is OK, 1025 used to break some tests.
   }
 
   @Test
-  public void mediumStress() throws Exception {
+  void mediumStress() throws Exception {
     stress( 3, 11, 10_007 ) ;
   }
 
   @Test
-  @Ignore( "Takes too long and breaks IDE if forgot to disable payload dump" )
-  public void bigStress() throws Exception {
+  @Disabled( "Takes too long and breaks IDE if forgot to disable payload dump" )
+  void bigStress() throws Exception {
     stress( 140, 200, 10_007 ) ;
   }
 
@@ -142,8 +142,8 @@ public abstract class AbstractTcpTransitServerTest {
 
   protected abstract TcpTransitServer newTransitServerStarted() throws Exception ;
 
-  @After
-  public void tearDown() throws Exception {
+  @AfterEach
+  void tearDown() throws Exception {
     eventLoopGroup.shutdownGracefully() ;
   }
 

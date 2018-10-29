@@ -19,14 +19,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  *
  * <pre>
- *                      STOPPED  <-----------+
+ *                      STOPPED  &lt;-----------+
  *                        |                  |
- *                        |              STOPPING           ...----> PROBLEM
+ *                        |              STOPPING           ...----&gt; PROBLEM
  *                        |                  ^
  *                    Any-|                  |
  *                        |                  |
  *                        v                  |
- *                +---> CONNECTING ----------+
+ *                +---&gt; CONNECTING ----------+
  *                |       |                  ^
  *                |       |                  |
  *                |       v                  |-EventLoop

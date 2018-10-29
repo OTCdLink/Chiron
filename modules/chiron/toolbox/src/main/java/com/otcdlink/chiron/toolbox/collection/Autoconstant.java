@@ -35,7 +35,7 @@ public static final class Enumeration extends Autoconstant {
   public static final Enumeration A = createNew() ;
   public static final Enumeration B = createNew() ;
   // Mandatory.
-  public static final ImmutableMap< String, Enumeration > MAP = valueMap( Enumeration.class ) ;
+  public static final ImmutableMap&lt; String, Enumeration &gt; MAP = valueMap( Enumeration.class ) ;
 }
  * </pre>
  *
@@ -67,15 +67,15 @@ public static final class Enumeration extends Autoconstant {
  * is defined with a subclass that captures the type (see
  * {@link com.google.common.reflect.TypeToken} for a discussion about this).
  * <pre>
-public static final class Enumeration< T > extends Autoconstant< T > {
-  public static final Enumeration< Integer > A = new Enumeration< Integer >( 1 ) { } ;
-  public static final Enumeration< String > B = new Enumerator< String >( "a" ) { } ;
+public static final class Enumeration&lt; T &gt; extends Autoconstant&lt; T &gt; {
+  public static final Enumeration&lt; Integer &gt; A = new Enumeration&lt; Integer &gt;( 1 ) { } ;
+  public static final Enumeration&lt; String &gt; B = new Enumerator&lt; String &gt;( "a" ) { } ;
   public final T value ;
   private Enumeration( final T value ) {
     this.value = value ;
   }
   // Mandatory.
-  public static final ImmutableMap< String, Enumeration > MAP = valueMap( Enumeration.class ) ;
+  public static final ImmutableMap&lt; String, Enumeration @gt; MAP = valueMap( Enumeration.class ) ;
 }
 assert Enumeration.A.typeParameter().equals( Integer.class ) ;
  * </pre>
@@ -139,6 +139,16 @@ public abstract class Autoconstant< INSTANCE_SPECIFIC > {
     return valueMap( ownerClass, ownerClass ) ;
   }
 
+  public static < THIS extends Autoconstant > ImmutableMap< String, THIS > restrainTo(
+      final ImmutableMap< String, THIS > map,
+      final THIS... values
+  ) {
+    final ImmutableMap.Builder< String, THIS > builder = ImmutableMap.builder() ;
+    for( final THIS value : values ) {
+      builder.put( value.name(), value ) ;
+    }
+    return builder.build() ;
+  }
 
   /**
    * Returns values declared as {@code public}, {@code static}, {@code final} members in the
@@ -255,17 +265,17 @@ public abstract class Autoconstant< INSTANCE_SPECIFIC > {
     }
   }
 
-  public static < AUTO extends Autoconstant > Converter< AUTO, String > converter(
+  public static < AUTO extends Autoconstant > Converter< String, AUTO > converter(
       final ImmutableMap< String, AUTO > valueMap
   ) {
-    return new Converter< AUTO, String >() {
+    return new Converter< String, AUTO >() {
       @Override
-      protected String doForward( @Nonnull final AUTO auto ) {
+      protected String doBackward( @Nonnull final AUTO auto ) {
         return auto.name() ;
       }
 
       @Override
-      protected AUTO doBackward( @Nonnull final String name ) {
+      protected AUTO doForward( @Nonnull final String name ) {
         return valueMap.get( name ) ;
       }
     } ;

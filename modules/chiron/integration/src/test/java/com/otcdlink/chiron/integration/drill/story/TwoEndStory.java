@@ -1,11 +1,11 @@
 package com.otcdlink.chiron.integration.drill.story;
 
-import com.otcdlink.chiron.fixture.NettyLeakDetectorRule;
+import com.otcdlink.chiron.fixture.NettyLeakDetectorExtension;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill;
 import com.otcdlink.chiron.integration.drill.SketchLibrary;
 import com.otcdlink.chiron.middle.tier.WebsocketFrameSizer;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,9 +15,11 @@ import static com.otcdlink.chiron.integration.drill.SketchLibrary.Interceptor.MA
 import static com.otcdlink.chiron.integration.drill.SketchLibrary.Interceptor.MAGIC_PLEASE_INTERCEPT;
 import static com.otcdlink.chiron.integration.drill.SketchLibrary.TAG_TR0;
 
-public class TwoEndStory {
+@ExtendWith( NettyLeakDetectorExtension.class )
+class TwoEndStory {
+
   @Test
-  public void fragmentAgregation() throws Exception {
+  void fragmentAgregation() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withMocksterTimeout( 1, TimeUnit.HOURS )
         .withWebsocketFrameSizer( WebsocketFrameSizer.explicitSizer( 1, 200 ) )
@@ -35,7 +37,7 @@ public class TwoEndStory {
 
 
   @Test
-  public void upendCommandInterceptor() throws Exception {
+  void upendCommandInterceptor() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withMocksterTimeout( 1, TimeUnit.HOURS )
         .withTimeBoundary( SketchLibrary.PASSIVE_TIME_BOUNDARY )
@@ -62,7 +64,5 @@ public class TwoEndStory {
 
   private static final Logger LOGGER = LoggerFactory.getLogger( TwoEndStory.class ) ;
 
-  @Rule
-  public final NettyLeakDetectorRule nettyLeakDetectorRule = new NettyLeakDetectorRule() ;
 
 }

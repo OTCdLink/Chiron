@@ -95,22 +95,22 @@ import static io.netty.channel.ChannelFutureListener.CLOSE;
  * <pre>
  * {@link DownendConnector}                        {@code UpendConnector}
  *    |                                                |
- *    |  >--- 1: HTTP connection --------------------> |
- *    |  <---------------- 2: WebSocket handshake ---< |
- *    |  >--- 3: Primary signon ---------------------> | {@link SessionLifecycle.PrimarySignon}
- *    |  <----- 4: Missing Secondary code + token ---< | {@link SessionLifecycle.SecondarySignonNeeded}
- *    |  >--- 5: Secondary code + token -------------> | {@link SessionLifecycle.SecondarySignon}
- *    |  <----------------- 6: Session identifier ---< | {@link SessionLifecycle.SessionValid}
+ *    |  &gt;--- 1: HTTP connection --------------------&gt; |
+ *    |  &lt;---------------- 2: WebSocket handshake ---&lt; |
+ *    |  &gt;--- 3: Primary signon ---------------------&gt; | {@link SessionLifecycle.PrimarySignon}
+ *    |  &lt;----- 4: Missing Secondary code + token ---&lt; | {@link SessionLifecycle.SecondarySignonNeeded}
+ *    |  &gt;--- 5: Secondary code + token -------------&gt; | {@link SessionLifecycle.SecondarySignon}
+ *    |  &lt;----------------- 6: Session identifier ---&lt; | {@link SessionLifecycle.SessionValid}
  * </pre>
  *
  * This is the Resignon sequence (there is one {@link SessionIdentifier} that may be still valid):
  * <pre>
  * {@link DownendConnector}                        {@code UpendConnector}
  *    |                                                |
- *    |  >--- 1: HTTP (re)connection ----------------> |
- *    |  <---------------- 2: WebSocket handshake ---< |
- *    |  >--- 3: Resubmit {@link SessionIdentifier} ---------> | {@link SessionLifecycle.Resignon}
- *    |  <----------------- 6: Session identifier ---< | {@link SessionLifecycle.SessionValid}
+ *    |  &gt;--- 1: HTTP (re)connection ----------------&gt; |
+ *    |  &lt;---------------- 2: WebSocket handshake ---&lt; |
+ *    |  &gt;--- 3: Resubmit {@link SessionIdentifier} ---------&gt; | {@link SessionLifecycle.Resignon}
+ *    |  &lt;----------------- 6: Session identifier ---&lt; | {@link SessionLifecycle.SessionValid}
  * </pre>
  *
  * <h2>Connectiona and Signon notification</h2>

@@ -40,7 +40,7 @@ public class IntradayOutputStreamPersisterTest extends AbstractJournalPersisterT
 
     public PrivatePersisterKit() {
       this(
-          methodSupport.getDirectory(),
+          directoryExtension.testDirectory(),
           BUFFER_SIZE,
           IntradayPersistenceConstants.LINE_BREAK
       ) ;

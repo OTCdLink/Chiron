@@ -1,12 +1,12 @@
 package com.otcdlink.chiron.integration.drill.story;
 
-import com.otcdlink.chiron.fixture.NettyLeakDetectorRule;
+import com.otcdlink.chiron.fixture.NettyLeakDetectorExtension;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill;
 import com.otcdlink.chiron.integration.drill.SketchLibrary;
 import com.otcdlink.chiron.middle.tier.TimeBoundary;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,6 +16,7 @@ import static com.otcdlink.chiron.mockster.Mockster.any;
 import static com.otcdlink.chiron.mockster.Mockster.exactly;
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith( NettyLeakDetectorExtension.class )
 public class PingPongStory {
 
   @Test
@@ -82,8 +83,6 @@ public class PingPongStory {
   @SuppressWarnings( "unused" )
   private static final Logger LOGGER = LoggerFactory.getLogger( PingPongStory.class ) ;
 
-  @Rule
-  public final NettyLeakDetectorRule nettyLeakDetectorRule = new NettyLeakDetectorRule() ;
 
 
 }

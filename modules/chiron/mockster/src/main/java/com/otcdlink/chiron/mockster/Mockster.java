@@ -41,7 +41,7 @@ import static com.google.common.base.Preconditions.checkState;
  *     someComponent.callSubsystemWith( 123 ) ) ;
  *     assertThat( captured ).isCorrectRegardingWePassed( 123 ) ;
  *
- *     final Future< Integer > future = someComponent.squareAsync( 12 ) ;
+ *     final Future&lt; Integer @gt; future = someComponent.squareAsync( 12 ) ;
  *     nextResult( 144 ) ;
  *     // Blocks until someComponents calls the method. Then asserts on parameter values.
  *     // Then lets the method called by someComponent return 144.

@@ -6,7 +6,7 @@ import org.joda.time.LocalDate;
 
 import java.math.BigDecimal;
 
-public interface PositionalFieldWriter {
+public interface PositionalFieldWriter extends CrudeWriter {
 
   /**
    * Writes a nullity marker if {@code writeIt} is {@code true}, and nothing otherwise.
@@ -22,26 +22,6 @@ public interface PositionalFieldWriter {
    * null. A non-null value resolves this ambiguity.
    */
   void writeExistenceMark() ;
-
-  void writeDelimitedString( final String nonNullString ) ;
-
-  void writeNullableString( final String string ) ;
-
-  void writeIntegerPrimitive( final int integerPrimitive ) ;
-
-  void writeIntegerObject( final Integer integerObject ) ;
-
-  void writeLongPrimitive( long longPrimitive ) ;
-
-  void writeLongObject( Long longObject ) ;
-
-  void writeFloatPrimitive( float floatPrimitive ) ;
-
-  void writeFloatObject( Float floatObject ) ;
-
-  void writeBooleanPrimitive( final boolean booleanPrimitive ) ;
-
-  void writeBooleanObject( final Boolean booleanObject ) ;
 
   void writeBigDecimal( final BigDecimal bigDecimal ) ;
 

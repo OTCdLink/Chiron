@@ -3,6 +3,8 @@ package com.otcdlink.chiron.toolbox;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import com.otcdlink.chiron.toolbox.collection.ImmutableKeyHolderMap;
+import com.otcdlink.chiron.toolbox.collection.KeyHolder;
 
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
@@ -81,4 +83,40 @@ public final class ImmutableCollectionTools {
     }
     return Maps.immutableEnumMap( allValueMap ) ;
   }
+
+  /**
+   * @throws IllegalArgumentException if the {@link KEY} already exists.
+   */
+  public static< KEY extends KeyHolder.Key< KEY >, VALUE extends KeyHolder< KEY > >
+  ImmutableKeyHolderMap< KEY, VALUE > add(
+      final ImmutableKeyHolderMap< KEY, VALUE > map,
+      final VALUE value
+  ) {
+    return add(
+        map,
+        value,
+        v -> new IllegalArgumentException( "Already exists: key " + value.key() + " in " + map )
+    ) ;
+  }
+
+  public static<
+      KEY extends KeyHolder.Key< KEY >,
+      VALUE extends KeyHolder< KEY >,
+      EXCEPTION extends Exception
+  >
+  ImmutableKeyHolderMap< KEY, VALUE > add(
+      final ImmutableKeyHolderMap< KEY, VALUE > map,
+      final VALUE value,
+      final Function< VALUE, EXCEPTION > exceptionThrower
+  ) throws EXCEPTION {
+    if( map.containsKey( value.key() ) ) {
+      throw exceptionThrower.apply( value ) ;
+    }
+    final ImmutableKeyHolderMap.Builder< KEY, VALUE > builder = ImmutableKeyHolderMap.builder() ;
+    builder.putAll( map.values() ) ;
+    builder.put( value ) ;
+    return builder.build() ;
+  }
+
+
 }

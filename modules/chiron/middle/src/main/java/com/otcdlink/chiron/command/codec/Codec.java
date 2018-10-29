@@ -33,4 +33,23 @@ public interface Codec< OBJECT > extends Encoder< OBJECT >, Decoder< OBJECT > {
     protected abstract OBJECT decodeNonNull( PositionalFieldReader reader ) throws IOException ;
 
   }
+
+  static < OBJECT > Codec< OBJECT > codec(
+      final Encoder< OBJECT > encoder,
+      final Decoder< OBJECT > decoder
+  ) {
+    return new Codec<OBJECT>() {
+      @Override
+      public OBJECT decodeFrom( final PositionalFieldReader reader ) throws IOException {
+        return decoder.decodeFrom( reader ) ;
+      }
+
+      @Override
+      public void encodeTo( final OBJECT object, final PositionalFieldWriter writer )
+          throws IOException
+      {
+        encoder.encodeTo( object, writer ) ;
+      }
+    };
+  }
 }

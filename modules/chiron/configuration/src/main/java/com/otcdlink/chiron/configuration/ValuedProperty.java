@@ -10,47 +10,38 @@ class ValuedProperty {
 
   public final Configuration.Property property ;
   public final Configuration.Source source ;
-  public final String stringValue ;
+  public final String valueFromSource ;
   public final Object resolvedValue ;
+  public final String resolvedValueToString ;
   public final Configuration.Property.Origin origin ;
 
   public ValuedProperty( final Configuration.Property property ) {
     this.property = checkNotNull( property ) ;
     this.source = Sources.UNDEFINED ;
-    this.stringValue = "<not-set>"  ;
+    this.valueFromSource = "<not-set>"  ;
+    this.resolvedValueToString = "<not-set>"  ;
     this.resolvedValue = NO_VALUE ;
     this.origin = Configuration.Property.Origin.BUILTIN ;
   }
 
-  public ValuedProperty(
-      final Configuration.Property property,
-      final Configuration.Source source,
-      final Object resolvedValue,
-      final Configuration.Property.Origin origin
-  ) {
-    this.property = checkNotNull( property ) ;
-    this.source = checkNotNull( source ) ;
-    this.stringValue =
-        ( resolvedValue == NULL_VALUE || resolvedValue == NO_VALUE || resolvedValue == null )
-        ? null
-        : resolvedValue.toString()
-    ;
-    this.resolvedValue = resolvedValue ;
-    this.origin = checkNotNull( origin ) ;
-  }
 
   public ValuedProperty(
       final Configuration.Property property,
       final Configuration.Source source,
-      final String stringValue,
+      final String valueFromSource,
       final Object resolvedValue,
       final Configuration.Property.Origin origin
   ) {
     this.property = checkNotNull( property ) ;
     this.source = checkNotNull( source ) ;
-    this.stringValue = stringValue ;
+    this.valueFromSource = valueFromSource ;
     this.resolvedValue = resolvedValue ;
     this.origin = checkNotNull( origin ) ;
+    if( resolvedValue == NULL_VALUE || resolvedValue == NO_VALUE || resolvedValue == null ) {
+      resolvedValueToString = null ;
+    } else {
+      resolvedValueToString = valueFromSource ;
+    }
   }
 
 
@@ -79,7 +70,7 @@ class ValuedProperty {
   public String toString() {
     return getClass().getSimpleName() + "{"
         + "property.name()=" + property.name() + "; "
-        + "stringValue=" + stringValue + "; "
+        + "stringValue=" + valueFromSource + "; "
         + "source=" + source.sourceName()
         + "}"
     ;
@@ -110,8 +101,8 @@ class ValuedProperty {
     if ( !source.equals( that.source ) ) {
       return false ;
     }
-    if ( stringValue != null
-        ? ! stringValue.equals( that.stringValue ) : that.stringValue != null
+    if ( valueFromSource != null
+        ? ! valueFromSource.equals( that.valueFromSource ) : that.valueFromSource != null
     ) {
       return false;
     }
@@ -123,7 +114,7 @@ class ValuedProperty {
   public int hashCode() {
     int result = property.hashCode() ;
     result = 31 * result + source.hashCode() ;
-    result = 31 * result + ( stringValue != null ? stringValue.hashCode() : 0 ) ;
+    result = 31 * result + ( valueFromSource != null ? valueFromSource.hashCode() : 0 ) ;
     result = 31 * result + ( resolvedValue != null ? resolvedValue.hashCode() : 0 ) ;
     result = ( 31 * result ) + origin.hashCode() ;
     return result ;

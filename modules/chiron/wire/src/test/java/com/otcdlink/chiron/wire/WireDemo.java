@@ -6,9 +6,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,9 +32,9 @@ public class WireDemo {
         new MyLeafToken<>( Converter.identity() ) ;
 
     public static final MyLeafToken< Integer > Y =
-        new MyLeafToken<>( Ints.stringConverter().reverse() ) ;
+        new MyLeafToken<>( Ints.stringConverter() ) ;
 
-    private MyLeafToken( Converter< ITEM, String > converter ) {
+    private MyLeafToken( Converter< String, ITEM > converter ) {
       super( converter ) ;
     }
     static final ImmutableMap< String, MyLeafToken> MAP = valueMap( MyLeafToken.class ) ;
@@ -162,6 +159,7 @@ public class WireDemo {
 
     final SomeA parsedA = nodeReader.singleNode( MyNodeToken.A, WireDemo::readSomeA ) ;
 
+    @SuppressWarnings( "unused" )
     final SomeA parsedAgainWithMoreCompactCode = new XmlNodeReader<>(
         newStreamReader( xml ),  // Need a fresh one.
         MyNodeToken.MAP,
@@ -186,11 +184,6 @@ public class WireDemo {
 
     LOGGER.info( "Rewritten XML: \n" + xmlWritten ) ;
 
-    final ByteBuf byteBuf = Unpooled.buffer() ;
-    final BytebufNodeWriter< MyNodeToken, MyLeafToken > bytebufNodeWriter =
-        new BytebufNodeWriter<>( byteBuf  ) ;
-    bytebufNodeWriter.singleNode( MyNodeToken.A, someA, WireDemo::writeSomeA ) ;
-    LOGGER.info( "ByteBuf content: \n" + ByteBufUtil.prettyHexDump( byteBuf ) ) ;
 
   }
 

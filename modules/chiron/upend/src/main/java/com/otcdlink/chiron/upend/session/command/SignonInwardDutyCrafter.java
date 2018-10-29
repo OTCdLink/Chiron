@@ -4,7 +4,7 @@ import com.otcdlink.chiron.command.Command;
 import com.otcdlink.chiron.command.CommandConsumer;
 import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
-import com.otcdlink.chiron.upend.session.SignonAttempt;
+import com.otcdlink.chiron.middle.session.SignonSetback.Factor;
 import com.otcdlink.chiron.upend.session.SignonInwardDuty;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -50,7 +50,7 @@ public class SignonInwardDutyCrafter implements SignonInwardDuty {
   public void failedSignonAttempt(
       final Designator designatorInternal,
       final String login,
-      final SignonAttempt signonAttempt
+      final Factor signonAttempt
   ) {
     consume( new SignonInwardDutyFailedSignonAttempt( designatorInternal, login, signonAttempt ) ) ;
   }

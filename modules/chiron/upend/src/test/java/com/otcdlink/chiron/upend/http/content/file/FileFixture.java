@@ -21,6 +21,14 @@ import java.util.Map;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Defines some {@link FileElement}s that are convenient to write tests involving file resource
+ * loading.
+ *
+ * @see #file_X
+ * @see #file_A_Y
+ * @see #file_A_Z
+ */
 public final class FileFixture {
 
   private static final Logger LOGGER = LoggerFactory.getLogger( StaticContentCacheTest.class ) ;
@@ -85,6 +93,10 @@ public final class FileFixture {
     return mimeTypeMap.get() ;
   }
 
+  /**
+   * Lazily creates a {@code File} with given relative path and content, then verifies that
+   * some [{@code path}, {@link ByteSource}] pair represents the same file.
+   */
   public final class FileElement {
     public final String relativePath ;
     public final String content ;

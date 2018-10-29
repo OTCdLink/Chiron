@@ -8,6 +8,7 @@ import com.otcdlink.chiron.middle.session.SessionIdentifier;
 import com.otcdlink.chiron.middle.session.SignonDecision;
 import com.otcdlink.chiron.middle.session.SignonFailure;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
+import com.otcdlink.chiron.middle.session.SignonSetback;
 import com.otcdlink.chiron.upend.session.command.SignonInwardDutyPrimarySignonAttempt;
 import com.otcdlink.chiron.upend.session.command.SignonInwardDutySecondarySignonAttempt;
 import com.otcdlink.chiron.upend.session.implementation.DefaultSessionSupervisor;
@@ -70,7 +71,7 @@ public interface SignonInwardDuty {
   void failedSignonAttempt(
       Designator designatorInternal,
       String login,
-      SignonAttempt signonAttempt
+      SignonSetback.Factor signonAttempt
   ) ;
 
   /**

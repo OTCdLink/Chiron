@@ -40,10 +40,10 @@ public final class FilenameTools {
    * This method will handle a file in either Unix or Windows format.
    * The text after the last forward or backslash is returned.
    * <pre>
-   * a/b/c.txt --> c.txt
-   * a.txt     --> a.txt
-   * a/b/c     --> c
-   * a/b/c/    --> ""
+   * a/b/c.txt --@gt; c.txt
+   * a.txt     --@gt; a.txt
+   * a/b/c     --@gt; c
+   * a/b/c/    --@gt; ""
    * </pre>
    * <p>
    * The output will be the same irrespective of the machine that the code is running on.

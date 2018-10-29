@@ -4,12 +4,12 @@ import com.otcdlink.chiron.command.Command;
 import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.integration.echo.EchoUpwardDuty;
 import com.otcdlink.chiron.integration.echo.UpwardEchoCommand;
-import com.otcdlink.chiron.testing.MethodSupport;
+import com.otcdlink.chiron.testing.junit5.DirectoryExtension;
 import com.otcdlink.chiron.toolbox.concurrent.ExecutorTools;
 import com.otcdlink.chiron.toolbox.netty.NettyTools;
 import com.otcdlink.chiron.toolbox.text.LineBreak;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -27,7 +27,7 @@ public abstract class AbstractJournalFileReaderTest<
 > {
 
   @Test
-  public void reread() throws Exception {
+  void reread() throws Exception {
     newJournalReplayFixture().createFile( 2 ) ;
     final READER journalReader = newJournalReader( journalFile() ) ;
     iterateAndVerify( journalReader ) ;
@@ -40,10 +40,10 @@ public abstract class AbstractJournalFileReaderTest<
   private static final Logger LOGGER = LoggerFactory.getLogger(
       AbstractJournalFileReaderTest.class ) ;
 
-  @Rule
-  public final MethodSupport methodSupport = new MethodSupport() ;
+  @RegisterExtension
+  final DirectoryExtension methodSupport = new DirectoryExtension() ;
 
-  protected abstract READER newJournalReader( File file ) throws IOException;
+  protected abstract READER newJournalReader( File file ) throws IOException ;
 
 
   private Scheduler scheduler( final String role ) {
@@ -51,17 +51,17 @@ public abstract class AbstractJournalFileReaderTest<
         Executors.newSingleThreadExecutor( ExecutorTools.newThreadFactory( role ) ) );
   }
 
-  protected final File journalFile() {
-    return new File( methodSupport.getDirectory(), "my.journal" ) ;
+  final File journalFile() {
+    return new File( methodSupport.testDirectory(), "my.journal" ) ;
   }
 
 
-  protected final JournalReplayFixture newJournalReplayFixture() {
+  final JournalReplayFixture newJournalReplayFixture() {
     final File journalFile = journalFile() ;
     return newJournalReplayFixture( journalFile ) ;
   }
 
-  protected final JournalReplayFixture newJournalReplayFixture( final File journalFile ) {
+  final JournalReplayFixture newJournalReplayFixture( final File journalFile ) {
     return new JournalReplayFixture(
         LOGGER,
         journalFile,
@@ -69,7 +69,7 @@ public abstract class AbstractJournalFileReaderTest<
     ) ;
   }
 
-  protected final void iterateAndVerify( READER journalReader ) {
+  private final void iterateAndVerify( READER journalReader ) {
     final Flux< Command< Designator, EchoUpwardDuty< Designator > > > flux = Flux
         .fromIterable( journalReader.sliceIterable() )
         .publishOn( scheduler( "deserialize" ) )

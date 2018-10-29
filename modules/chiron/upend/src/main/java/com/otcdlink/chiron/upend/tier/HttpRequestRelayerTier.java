@@ -37,7 +37,7 @@ public class HttpRequestRelayerTier
             channelHandlerContext.pipeline()
         ) ;
       } catch( final Exception e ) {
-        LOGGER.error( "Could not handle " + fullHttpRequest + ".", e ) ;
+        LOGGER.warn( "Could not handle " + fullHttpRequest + ", " + e.getMessage() ) ;
 
         new UsualHttpCommands.BadRequest( "Bad request: " + fullHttpRequest.uri() )
             .feed( channelHandlerContext, true ) ;

@@ -1,11 +1,15 @@
 package com.otcdlink.chiron.configuration;
 
+import com.google.common.base.Converter;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.reflect.AbstractInvocationHandler;
+import com.otcdlink.chiron.configuration.Configuration.Source;
+import com.otcdlink.chiron.toolbox.converter.ConverterException;
+import com.otcdlink.chiron.toolbox.converter.DefaultStringConverters;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -36,7 +40,7 @@ public abstract class TemplateBasedFactory< C extends Configuration >
   private final Class< C > configurationClass ;
   private ConstructionKit< C > constructionKit = new ConstructionKit<>() ;
   protected final C using;
-  private final ImmutableMap< String, Configuration.Property< C >> propertySet ;
+  private final ImmutableMap< String, Configuration.Property< C > > propertySet ;
   private final boolean checkAllPropertiesDefined ;
 
   protected TemplateBasedFactory( final Class< C > configurationClass ) throws DefinitionException {
@@ -87,8 +91,8 @@ public abstract class TemplateBasedFactory< C extends Configuration >
     private final Map< Method, Map< Configuration.PropertySetup.Feature, Object > > features
         = new HashMap<>() ;
     public PropertySetupCollector< C > collector = null ;
-    public ImmutableMap< Class< ? >, Configuration.Converter > transientConverters
-        = Converters.DEFAULTS ;
+    public ImmutableMap< Class< ? >, Converter > transientConverters
+        = DefaultStringConverters.ALL;
     public Configuration.NameTransformer transientNameTransformer = NameTransformers.IDENTITY ;
     public boolean checkAllPropertiesDefined = true ;
   }
@@ -113,7 +117,7 @@ public abstract class TemplateBasedFactory< C extends Configuration >
    * @param converters a non-null object.
    */
   protected final void setConverters(
-      final ImmutableMap< Class< ? >, Configuration.Converter > converters
+      final ImmutableMap< Class< ? >, Converter > converters
   ) {
     checkInitializing() ;
     constructionKit.transientConverters = checkNotNull( converters ) ;
@@ -144,7 +148,9 @@ public abstract class TemplateBasedFactory< C extends Configuration >
    * @param configuration a {@link Configuration}
    * @return
    */
-  protected ImmutableMap<Configuration.Property< C >, TweakedValue > tweak( final C configuration ) {
+  protected ImmutableMap< Configuration.Property< C >, TweakedValue > tweak(
+      final C configuration
+  ) {
     return ImmutableMap.of() ;
   }
 
@@ -166,7 +172,7 @@ public abstract class TemplateBasedFactory< C extends Configuration >
   private static< C extends Configuration > ImmutableMap< String, Configuration.Property< C >>
   buildPropertyMap(
       final Map< Method, Map< Configuration.PropertySetup.Feature, Object > > allFeatures,
-      final ImmutableMap< Class< ? >, Configuration.Converter > defaultConverters,
+      final ImmutableMap< Class< ? >, Converter > defaultConverters,
       final Configuration.NameTransformer globalNameTransformer
   ) throws DefinitionException {
 
@@ -178,8 +184,7 @@ public abstract class TemplateBasedFactory< C extends Configuration >
       final Method method = entry.getKey() ;
       final Map< Configuration.PropertySetup.Feature, Object > features = entry.getValue() ;
 
-      final Configuration.Converter converter
-          = resolveConverter( method, features, defaultConverters ) ;
+      final Converter converter = resolveConverter( method, features, defaultConverters ) ;
       final Configuration.NameTransformer specificNameTransformer
           = resolveNameTransformer( features ) ;
       final String explicitName = resolveExplicitName( features ) ;
@@ -190,7 +195,6 @@ public abstract class TemplateBasedFactory< C extends Configuration >
       final String defaultValueAsString
           = resolveDefaultValueAsString( features, defaultValue ) ;
       final boolean maybeNull = resolveMayBeNull( features ) ;
-      final Configuration.Obfuscator obfuscator = resolveObfuscator( features ) ;
       final String documentation = resolveDocumentation( features ) ;
       final ConfigurationProperty< C > configurationProperty = new ConfigurationProperty<>(
           method,
@@ -199,7 +203,6 @@ public abstract class TemplateBasedFactory< C extends Configuration >
           defaultValueAsString,
           converter,
           maybeNull,
-          obfuscator,
           documentation
       ) ;
       propertyBuilder.put( propertyName, configurationProperty ) ;
@@ -265,20 +268,20 @@ public abstract class TemplateBasedFactory< C extends Configuration >
         Configuration.PropertySetup.Feature.NAME_TRANSFORMER );
   }
 
-  private static Configuration.Converter resolveConverter(
+  private static Converter resolveConverter(
       final Method method,
       final Map< Configuration.PropertySetup.Feature, Object > features,
-      final ImmutableMap< Class< ? >, Configuration.Converter > defaultConverters
+      final ImmutableMap< Class< ? >, Converter > defaultConverters
   ) {
-    final Configuration.Converter converter ;
-    final Configuration.Converter explicitConverter = ( Configuration.Converter )
+    final Converter converter ;
+    final Converter explicitConverter = ( Converter )
         features.get( Configuration.PropertySetup.Feature.CONVERTER ) ;
     if( explicitConverter == null ) {
-      final Configuration.Converter defaultConverter
+      final Converter defaultConverter
           = defaultConverters.get( method.getReturnType() ) ;
       if( defaultConverter == null ) {
         throw new DefinitionException(
-            "No " + ConfigurationTools.getNiceName( Configuration.Converter.class )
+            "No " + ConfigurationTools.getNiceName( Converter.class )
                 + " declared for " + method.getReturnType().getName() ) ;
       } else {
         converter = defaultConverter ;
@@ -297,14 +300,6 @@ public abstract class TemplateBasedFactory< C extends Configuration >
         Configuration.PropertySetup.Feature.MAYBE_NULL ) ;
     maybeNull = explicitMayBeNull != null && explicitMayBeNull ;
     return maybeNull ;
-  }
-
-  private static Configuration.Obfuscator resolveObfuscator(
-      final Map< Configuration.PropertySetup.Feature, Object > features
-  ) {
-    final Configuration.Obfuscator obfuscator = ( Configuration.Obfuscator ) features.get(
-        Configuration.PropertySetup.Feature.OBFUSCATOR ) ;
-    return obfuscator;
   }
 
   private static String resolveDocumentation(
@@ -339,26 +334,27 @@ public abstract class TemplateBasedFactory< C extends Configuration >
 // ======================
 
   @Override
-  public final C create( final Configuration.Source source1, final Configuration.Source... others )
+  public final C create( final Source source1, final Source... others )
       throws DeclarationException
   {
-    final List<Configuration.Source> sources = new ArrayList<>( others.length + 2 ) ;
+    final List< Source > sources = new ArrayList<>( others.length + 2 ) ;
     sources.add( new PropertyDefaultSource<>(
         configurationClass, ImmutableSet.copyOf( propertySet.values() ) ) ) ;
     sources.add( source1 ) ;
     Collections.addAll( sources, others ) ;
 
-    final Map< String, ValuedProperty> values = new HashMap<>() ;
+    final Map< String, ValuedProperty > values = new HashMap<>() ;
     final Set< Validation.Bad > exceptions = new HashSet<>() ;
 
     if( checkAllPropertiesDefined ) {
-      for( final Configuration.Source source : sources ) {
-        if( source instanceof Configuration.Source.Stringified ) {
-          final Configuration.Source.Stringified stringified = ( Configuration.Source.Stringified ) source ;
+      for( final Source source : sources ) {
+        if( source instanceof Source.Stringified ) {
+          final Source.Stringified stringified =
+              ( Source.Stringified ) source ;
           checkPropertyNamesAllDeclared(
               stringified, stringified.map().keySet(), propertySet, exceptions ) ;
-        } else if( source instanceof Configuration.Source.Raw ) {
-          final Configuration.Source.Raw raw = ( Configuration.Source.Raw ) source ;
+        } else if( source instanceof Source.Raw ) {
+          final Source.Raw raw = ( Source.Raw ) source ;
           checkPropertyNamesAllDeclared(
               raw, raw.map().keySet(), ImmutableSet.copyOf( propertySet.values() ), exceptions ) ;
         } else {
@@ -367,16 +363,17 @@ public abstract class TemplateBasedFactory< C extends Configuration >
       }
     }
 
-    for( final Map.Entry< String, Configuration.Property< C >> entry : propertySet.entrySet() ) {
+    for( final Map.Entry< String, Configuration.Property< C > > entry : propertySet.entrySet() ) {
       final Configuration.Property< C > property = entry.getValue() ;
       if( property.maybeNull() ) {
         feedWithDefaultNull( property, values ) ;
       }
-      for( final Configuration.Source source : sources ) {
-        if( source instanceof Configuration.Source.Stringified ) {
-          feedWithValue( ( Configuration.Source.Stringified ) source, values, property, exceptions ) ;
-        } else if( source instanceof Configuration.Source.Raw ) {
-          feedWithValue( ( Configuration.Source.Raw ) source, values, property, exceptions ) ;
+      for( final Source source : sources ) {
+        if( source instanceof Source.Stringified ) {
+          feedWithValue(
+              ( Source.Stringified ) source, values, property, exceptions ) ;
+        } else if( source instanceof Source.Raw ) {
+          feedWithValue( ( Source.Raw ) source, values, property, exceptions ) ;
         } else {
           throw new IllegalArgumentException( "Unsupported:" + source ) ;
         }
@@ -520,7 +517,7 @@ public abstract class TemplateBasedFactory< C extends Configuration >
 
   @SuppressWarnings( "unchecked" )
   private C createProxy(
-      final ImmutableSet<Configuration.Source> sources,
+      final ImmutableSet<Source> sources,
       final ImmutableSortedMap< String, ValuedProperty > properties
   ) {
     final ThreadLocal< Map<Configuration.Inspector, List<Configuration.Property> > > inspectors = new ThreadLocal<>() ;
@@ -556,7 +553,7 @@ public abstract class TemplateBasedFactory< C extends Configuration >
   }
 
   private void checkPropertyNamesAllDeclared(
-      final Configuration.Source source,
+      final Source source,
       final ImmutableSet< String > actualPropertyNames,
       final ImmutableMap< String, ? extends Configuration.Property> declaredProperties,
       final Set< Validation.Bad > exceptions
@@ -572,7 +569,7 @@ public abstract class TemplateBasedFactory< C extends Configuration >
   }
 
   private void checkPropertyNamesAllDeclared(
-      final Configuration.Source.Raw source,
+      final Source.Raw source,
       final ImmutableSet<Configuration.Property< C >> actualProperties,
       final ImmutableSet<Configuration.Property< C >> declaredProperties,
       final Set< Validation.Bad > exceptions
@@ -581,7 +578,7 @@ public abstract class TemplateBasedFactory< C extends Configuration >
       if( ! declaredProperties.contains( actualProperty ) ) {
         exceptions.add( new Validation.Bad(
             "Unknown property '" + actualProperty.name() + "'",
-            ImmutableSet.<Configuration.Source>of( source )
+            ImmutableSet.<Source>of( source )
         ) ) ;
       }
     }
@@ -601,53 +598,61 @@ public abstract class TemplateBasedFactory< C extends Configuration >
       }
       stringBuilder.append( valuedProperty.property.name() ) ;
       stringBuilder.append( '=' ) ;
-      stringBuilder.append( valuedProperty.stringValue ) ;
+      stringBuilder.append( valuedProperty.resolvedValueToString ) ;
     }
     return stringBuilder.toString() ;
   }
 
   private static< C extends Configuration > void feedWithValue(
-      final Configuration.Source.Stringified source,
+      final Source.Stringified source,
       final Map< String, ValuedProperty > values,
       final Configuration.Property< C > property,
       final Set< Validation.Bad > exceptions
   ) {
     final String valueFromSource = source.map().get( property.name() ) ;
-    if ( valueFromSource != null || source.map().containsKey( property.name() )) {
+    if ( valueFromSource != null || source.map().containsKey( property.name() ) ) {
       final Object convertedValue = convertSafe( exceptions, property, valueFromSource, source ) ;
       if( convertedValue != CONVERSION_FAILED ) {
+        final String valueToString = convertBack( exceptions, property, convertedValue, source ) ;
         final ValuedProperty valuedProperty = new ValuedProperty(
-            property, source, valueFromSource, convertedValue, Configuration.Property.Origin.EXPLICIT ) ;
+            property,
+            source,
+            valueToString,
+            convertedValue,
+            Configuration.Property.Origin.EXPLICIT
+        ) ;
         values.put( property.name(), valuedProperty ) ;
       }
     }
   }
 
   private void feedWithValue(
-      final Configuration.Source.Raw source,
+      final Source.Raw source,
       final Map< String, ValuedProperty > values,
       final Configuration.Property< C > property,
       final Set< Validation.Bad > exceptions
   ) {
     if( source.map().containsKey( property ) ) {
       final boolean usingDefault = source instanceof PropertyDefaultSource ;
-      final Object value ;
-      {
-        final Object valueFromSource = source.map().get( property ) ;
-        value = valueFromSource == ValuedProperty.NULL_VALUE ? null : valueFromSource ;
-      }
-      if( value != null && ! mayAssign( property, value )
-      ) {
+      final Object valueFromSource = source.map().get( property ) ;
+      final Object value = valueFromSource == ValuedProperty.NULL_VALUE ? null : valueFromSource ;
+      if( value != null && ! mayAssign( property, value ) ) {
         exceptions.add( new Validation.Bad(
             "Can't use '" + value + "' as a value for " + property.name(),
-            ImmutableSet.<Configuration.Source>of( source )
+            ImmutableSet.<Source>of( source )
         ) ) ;
       }
+      final String valueFromSourceToString = valueFromSource == ValuedProperty.NULL_VALUE ?
+          null : ( String ) property.converter().reverse().convert( valueFromSource ) ;
       final ValuedProperty valuedProperty = new ValuedProperty(
           property,
           source,
+
+          /** {@link Source.Raw} means there is no original String representation. */
+          valueFromSourceToString,
           value,
-          usingDefault ? Configuration.Property.Origin.BUILTIN : Configuration.Property.Origin.EXPLICIT
+          usingDefault ? Configuration.Property.Origin.BUILTIN :
+              Configuration.Property.Origin.EXPLICIT
       ) ;
       values.put( property.name(), valuedProperty ) ;
     }
@@ -687,6 +692,7 @@ public abstract class TemplateBasedFactory< C extends Configuration >
     final ValuedProperty valuedProperty = new ValuedProperty(
         property,
         Sources.UNDEFINED,
+        null,
         ValuedProperty.NULL_VALUE,
         Configuration.Property.Origin.BUILTIN
     ) ;
@@ -697,20 +703,49 @@ public abstract class TemplateBasedFactory< C extends Configuration >
       final Set< Validation.Bad > exceptions,
       final Configuration.Property property,
       final String valueFromSource,
-      final Configuration.Source source
+      final Source source
   ) {
     try {
       if( valueFromSource != null ) {
         return property.converter().convert( valueFromSource ) ;
       }
-    } catch ( final Exception e ) {
-      exceptions.add( new Validation.Bad(
-          "Conversion failed on property '" + property.name() + "': "
-              + e.getClass().getName() + ", " + e.getMessage(),
-          ImmutableSet.of( source )
-      ) ) ;
+    } catch ( Exception e ) {
+      addBadValidation( exceptions, property, source, e, "Conversion failed on property '" ) ;
     }
     return CONVERSION_FAILED ;
+  }
+
+  private static String convertBack(
+      final Set< Validation.Bad > exceptions,
+      final Configuration.Property property,
+      final Object valueToConvertBack,
+      final Source source
+  ) {
+    try {
+      if( valueToConvertBack != null ) {
+        return ( String ) property.converter().reverse().convert( valueToConvertBack ) ;
+      }
+    } catch ( Exception e ) {
+      addBadValidation( exceptions, property, source, e, "Retroconversion failed on property '" ) ;
+    }
+    return null ;
+  }
+
+  private static void addBadValidation(
+      final Set< Validation.Bad > exceptions,
+      final Configuration.Property property,
+      final Source source,
+      Exception e,
+      final String message
+  ) {
+    if( e instanceof ConverterException ) {
+      e = ( Exception ) e.getCause();
+    }
+    exceptions.add( new Validation.Bad(
+        message + property.name() + "': "
+            + e.getClass().getName() + ", " + e.getMessage(),
+        ImmutableSet.of( source )
+    ) );
   }
 
   private static final Object CONVERSION_FAILED = new Object() {
@@ -727,13 +762,13 @@ public abstract class TemplateBasedFactory< C extends Configuration >
     private final ThreadLocal< Map<Configuration.Inspector, List<Configuration.Property> > > inspectors ;
     private final ImmutableSortedMap< String, ValuedProperty > properties ;
     private final Configuration.Factory factory ;
-    private final ImmutableSet<Configuration.Source> sources ;
+    private final ImmutableSet<Source> sources ;
     private final ImmutableMap< Method, ValuedProperty> valuedPropertiesByMethod ;
 
     public ConfigurationInvocationHandler(
         final ThreadLocal< Map<Configuration.Inspector, List<Configuration.Property> > > inspectors,
         final Configuration.Factory factory,
-        final ImmutableSet<Configuration.Source> sources,
+        final ImmutableSet<Source> sources,
         final ImmutableSortedMap< String, ValuedProperty > properties,
         final ImmutableMap< Method, ValuedProperty > valuedPropertiesByMethod
     ) {
@@ -845,7 +880,7 @@ public abstract class TemplateBasedFactory< C extends Configuration >
     }
 
     @Override
-    public ImmutableSet<Configuration.Source> $$sources$$() {
+    public ImmutableSet<Source> $$sources$$() {
       return sources ;
     }
 

@@ -7,7 +7,7 @@ import org.joda.time.LocalDate;
 
 import java.math.BigDecimal;
 
-public interface PositionalFieldReader {
+public interface PositionalFieldReader extends CrudeReader {
 
   /**
    * Reads (consumes bytes) if there is a nullity marker, has no effect otherwise.
@@ -20,26 +20,6 @@ public interface PositionalFieldReader {
 
   void readExistenceMarker() throws DecodeException ;
 
-  String readDelimitedString() throws DecodeException ;
-
-  String readNullableString() throws DecodeException ;
-
-  int readIntegerPrimitive() throws DecodeException ;
-
-  Integer readIntegerObject() throws DecodeException ;
-
-  long readLongPrimitive() throws DecodeException ;
-
-  Long readLongObject() throws DecodeException ;
-
-  float readFloatPrimitive() throws DecodeException ;
-
-  Float readFloatObject() throws DecodeException ;
-
-  boolean readBooleanPrimitive() throws DecodeException ;
-
-  Boolean readBooleanObject() throws DecodeException ;
-
   BigDecimal readBigDecimal() throws DecodeException ;
 
   DateTime readDateTime() throws DecodeException ;
@@ -47,7 +27,6 @@ public interface PositionalFieldReader {
   LocalDate readLocalDate() throws DecodeException ;
 
   Duration readDuration() throws DecodeException ;
-
 
   int readableBytes() ;
 

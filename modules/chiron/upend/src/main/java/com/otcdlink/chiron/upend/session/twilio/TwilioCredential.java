@@ -79,7 +79,11 @@ public class TwilioCredential {
   }
 
   public String asString() {
-    return accountSid + ":" + authorizationToken + ":" + callerId ;
+    return accountSid + ":" + authorizationToken + ":" + callerId.getAsString() ;
+  }
+
+  public String asStringNoAuthorizationToken() {
+    return accountSid + ":******:" + callerId.getAsString() ;
   }
 
   @Override

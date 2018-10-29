@@ -3,46 +3,46 @@ package com.otcdlink.chiron.integration.journal;
 import com.google.common.collect.ImmutableList;
 import com.otcdlink.chiron.flow.journal.slicer.FileSlicer;
 import com.otcdlink.chiron.flow.journal.slicer.FileSlicerFixture;
-import com.otcdlink.chiron.testing.MethodSupport;
+import com.otcdlink.chiron.testing.junit5.DirectoryExtension;
 import com.otcdlink.chiron.toolbox.netty.NettyTools;
 import com.otcdlink.chiron.toolbox.text.LineBreak;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-public class FileSlicerTest {
+class FileSlicerTest {
 
 
   @Test
-  public void simpleSlice() throws Exception {
+  void simpleSlice() throws Exception {
     check( 1024, 4, LineBreak.CR_UNIX, true, "AB" ) ;
   }
 
   @Test
-  public void simpleSliceNoTrailingBreak() throws Exception {
+  void simpleSliceNoTrailingBreak() throws Exception {
     check( 1024, 4, LineBreak.CR_UNIX, false, "AB" ) ;
   }
 
   @Test
-  public void emptySlices() throws Exception {
+  void emptySlices() throws Exception {
     check( 1024, 4, LineBreak.CR_UNIX, true, "", "" ) ;
   }
 
   @Test
-  public void noSlice() throws Exception {
+  void noSlice() throws Exception {
     check( 1024, 1, LineBreak.CR_UNIX, true, ImmutableList.of() ) ;
   }
 
   @Test
-  public void twoSlices() throws Exception {
+  void twoSlices() throws Exception {
     check( 1024, 4, LineBreak.CR_UNIX, true, "AB", "C" ) ;
   }
 
   @Test
-  public void threeSlicesOnTwoChunks() throws Exception {
+  void threeSlicesOnTwoChunks() throws Exception {
     check( 6, 2, LineBreak.CR_UNIX, true, "Aa", "Bb", "C" ) ;
   }
 
@@ -56,7 +56,7 @@ public class FileSlicerTest {
    </pre>
    */
   @Test
-  public void contentSplitOverChunks() throws Exception {
+  void contentSplitOverChunks() throws Exception {
     check( 6, 2, LineBreak.CR_UNIX, true, "A", "a@", "BC", "D" ) ;
   }
 
@@ -70,25 +70,25 @@ public class FileSlicerTest {
    </pre>
    */
   @Test
-  public void delimiterSplitOverChunks() throws Exception {
+  void delimiterSplitOverChunks() throws Exception {
     check( 8, 2, LineBreak.CRLF_WINDOWS, true, "A", "a", "B", "C" ) ;
   }
 
   @Test
-  public void simpleSliceWithMultibyteDelimiter() throws Exception {
+  void simpleSliceWithMultibyteDelimiter() throws Exception {
     check( 1024, 4, LineBreak.CRLF_WINDOWS, true, "AB" ) ;
   }
 
   @Test
-  public void twoSlicesWithMultibyteDelimiter() throws Exception {
+  void twoSlicesWithMultibyteDelimiter() throws Exception {
     check( 1024, 4, LineBreak.CRLF_WINDOWS, true, "AB", "CD" ) ;
   }
 
   @Test
-  public void manySlices() throws Exception {
+  void manySlices() throws Exception {
     final int sliceCount = 1_000_000 ;
     FileSlicerFixture.check(
-        methodSupport.getDirectory(),
+        methodSupport.testDirectory(),
         FileSlicer.DEFAULT_CHUNK_MAXIMUM_LENGTH,
         FileSlicer.DEFAULT_SLICE_MAXIMUM_LENGTH,
         LineBreak.CR_UNIX,
@@ -106,8 +106,9 @@ public class FileSlicerTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger( FileSlicerTest.class ) ;
 
-  @Rule
-  public MethodSupport methodSupport = new MethodSupport() ;
+  @SuppressWarnings( "WeakerAccess" )
+  @RegisterExtension
+  final DirectoryExtension methodSupport = new DirectoryExtension() ;
 
   private void check(
       final int chunkMaximumLength,
@@ -133,7 +134,7 @@ public class FileSlicerTest {
       final ImmutableList< String > content
   ) throws IOException, InterruptedException {
     FileSlicerFixture.check(
-        methodSupport.getDirectory(),
+        methodSupport.testDirectory(),
         chunkMaximumLength,
         sliceMaximumLength,
         lineBreak,

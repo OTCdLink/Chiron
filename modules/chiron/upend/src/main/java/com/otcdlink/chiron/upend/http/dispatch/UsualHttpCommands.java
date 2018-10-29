@@ -164,12 +164,20 @@ public final class UsualHttpCommands {
 
   public static class Html extends AbstractAnymlResponse {
 
-    public Html( final String htmlBody ) {
+    public static Html htmlBodyOk( final String body ) {
+      return htmlOk( "<html><body>" + body + "</body></html>" ) ;
+    }
+
+    public static Html htmlOk( final String html ) {
+      return new Html( OK, html ) ;
+    }
+
+    private Html( final String htmlBody ) {
       this( OK, htmlBody ) ;
     }
 
-    public Html( final HttpResponseStatus httpResponseStatus, final String htmlBody ) {
-      super( httpResponseStatus, "text/html", "<html><body>" + htmlBody + "</body></html>" ) ;
+    public Html( final HttpResponseStatus httpResponseStatus, final String html ) {
+      super( httpResponseStatus, "text/html", html ) ;
     }
 
     public static HttpResponder.Outbound outbound( final String htmlBody ) {

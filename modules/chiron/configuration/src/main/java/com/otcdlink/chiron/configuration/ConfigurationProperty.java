@@ -1,5 +1,6 @@
 package com.otcdlink.chiron.configuration;
 
+import com.google.common.base.Converter;
 import com.google.common.base.Strings;
 
 import java.lang.reflect.Method;
@@ -16,11 +17,10 @@ class ConfigurationProperty< C extends Configuration >
 
   private final Method method ;
   private final String name ;
-  private final Configuration.Converter converter ;
+  private final Converter< String, ? > converter ;
   private final String defaultValueAsString ;
   private final Object defaultValue ;
   private final boolean maybeNull ;
-  private final Configuration.Obfuscator obfuscator;
   private final String documentation ;
 
   ConfigurationProperty(
@@ -28,9 +28,8 @@ class ConfigurationProperty< C extends Configuration >
       final String name,
       final Object defaultValue,
       final String defaultValueAsString,
-      final Configuration.Converter converter,
+      final Converter< String, ? > converter,
       final boolean maybeNull,
-      final Configuration.Obfuscator obfuscator,
       final String documentation
   ) {
     checkArgument( ! Strings.isNullOrEmpty( name ) ) ;
@@ -40,7 +39,6 @@ class ConfigurationProperty< C extends Configuration >
     this.defaultValueAsString = defaultValueAsString ;
     this.converter = checkNotNull( converter ) ;
     this.maybeNull = maybeNull ;
-    this.obfuscator = obfuscator ;
     this.documentation = documentation == null ? "" : documentation ;
   }
 
@@ -61,7 +59,7 @@ class ConfigurationProperty< C extends Configuration >
   }
 
   @Override
-  public Configuration.Converter converter() {
+  public Converter< String, ? > converter() {
     return converter ;
   }
 
@@ -73,11 +71,6 @@ class ConfigurationProperty< C extends Configuration >
   @Override
   public String defaultValueAsString() {
     return defaultValueAsString ;
-  }
-
-  @Override
-  public Configuration.Obfuscator obfuscator() {
-    return obfuscator ;
   }
 
   @Override

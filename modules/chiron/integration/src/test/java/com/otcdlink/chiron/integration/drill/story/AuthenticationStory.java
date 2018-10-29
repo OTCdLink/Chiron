@@ -1,17 +1,18 @@
 package com.otcdlink.chiron.integration.drill.story;
 
-import com.otcdlink.chiron.fixture.NettyLeakDetectorRule;
+import com.otcdlink.chiron.fixture.NettyLeakDetectorExtension;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill;
 import com.otcdlink.chiron.integration.drill.SketchLibrary;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class AuthenticationStory {
+@ExtendWith( NettyLeakDetectorExtension.class )
+class AuthenticationStory {
 
   @Test
-  public void downendConnectorSignonAndEcho() throws Exception {
+  void downendConnectorSignonAndEcho() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .forDownendConnector()
             .done()
@@ -27,7 +28,7 @@ public class AuthenticationStory {
   }
 
   @Test
-  public void downendConnectorSignonAndEchoWithProxy() throws Exception {
+  void downendConnectorSignonAndEchoWithProxy() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withProxy( true )
         .forDownendConnector()
@@ -42,7 +43,7 @@ public class AuthenticationStory {
   }
 
   @Test
-  public void downendConnector2FaSignonAndEcho() throws Exception {
+  void downendConnector2FaSignonAndEcho() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .forDownendConnector()
             .done()
@@ -56,7 +57,7 @@ public class AuthenticationStory {
   }
 
   @Test
-  public void commandTransceiverPrimarySignon() throws Exception {
+  void commandTransceiverPrimarySignon() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .forCommandTransceiver()
             .done()
@@ -78,8 +79,6 @@ public class AuthenticationStory {
   @SuppressWarnings( "unused" )
   private static final Logger LOGGER = LoggerFactory.getLogger( AuthenticationStory.class ) ;
 
-  @Rule
-  public final NettyLeakDetectorRule nettyLeakDetectorRule = new NettyLeakDetectorRule() ;
 
 
 }

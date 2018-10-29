@@ -78,30 +78,7 @@ class ConfigurationInspector< C extends Configuration > implements Configuration
   @Override
   public String stringValueOf( final Configuration.Property< C > property ) {
     final ValuedProperty valuedProperty = valuedProperties.get( property.name() ) ;
-    return valuedProperty == null ? null : valuedProperty.stringValue ;
-  }
-
-  @Override
-  public String safeValueOf(
-      final Configuration.Property< C > property,
-      final String replacement
-  ) {
-    final ValuedProperty valuedProperty = valuedSlot( property ) ;
-    final String stringValue ;
-    if( valuedProperty.origin == Configuration.Property.Origin.BUILTIN ) {
-      stringValue = valuedProperty.property.defaultValueAsString() ;
-    } else {
-      stringValue = valuedProperty.stringValue ;
-    }
-    if( stringValue == null ) {
-      return null ;
-    } else {
-      if( property.obfuscator() == null ) {
-        return stringValue ;
-      } else {
-        return property.obfuscator().obfuscate( stringValue, replacement ) ;
-      }
-    }
+    return valuedProperty == null ? null : valuedProperty.valueFromSource;
   }
 
   @Override

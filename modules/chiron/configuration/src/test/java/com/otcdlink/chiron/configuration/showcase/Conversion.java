@@ -1,7 +1,7 @@
 package com.otcdlink.chiron.configuration.showcase;
 
+import com.google.common.base.Converter;
 import com.otcdlink.chiron.configuration.Configuration;
-import com.otcdlink.chiron.configuration.Converters;
 import com.otcdlink.chiron.configuration.Sources;
 import com.otcdlink.chiron.configuration.TemplateBasedFactory;
 import org.junit.Test;
@@ -21,7 +21,10 @@ public class Conversion {
     final Configuration.Factory< Converted > factory = new TemplateBasedFactory< Converted >( Converted.class ) {
       @Override
       protected void initialize() {
-        property( using.pattern() ).converter( Converters.from( Pattern::compile ) ) ;
+        property( using.pattern() ).converter( Converter.from(
+            Pattern::compile,
+            Pattern::pattern
+        ) ) ;
       }
     } ;
     final Converted configuration = factory.create( Sources.newSource( "pattern = .*" ) ) ;

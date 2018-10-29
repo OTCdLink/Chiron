@@ -5,7 +5,7 @@ import com.otcdlink.chiron.downend.CommandTransceiver;
 import com.otcdlink.chiron.downend.DownendConnector;
 import com.otcdlink.chiron.downend.Tracker;
 import com.otcdlink.chiron.downend.TrackerCurator;
-import com.otcdlink.chiron.fixture.NettyLeakDetectorRule;
+import com.otcdlink.chiron.fixture.NettyLeakDetectorExtension;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill;
 import com.otcdlink.chiron.integration.drill.SketchLibrary;
 import com.otcdlink.chiron.integration.drill.SketchLibrary.DummySessionPrimer;
@@ -17,8 +17,8 @@ import com.otcdlink.chiron.toolbox.Credential;
 import com.otcdlink.chiron.upend.UpendConnector;
 import com.otcdlink.chiron.upend.session.SessionSupervisor;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,10 +37,11 @@ import static com.otcdlink.chiron.mockster.Mockster.exactly;
 import static com.otcdlink.chiron.mockster.Mockster.withCapture;
 import static com.otcdlink.chiron.mockster.Mockster.withNull;
 
-public class ReconnectStory {
+@ExtendWith( NettyLeakDetectorExtension.class )
+class ReconnectStory {
 
   @Test
-  public void downendConnectorResignonWithHttpProxy() throws Exception {
+  void downendConnectorResignonWithHttpProxy() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withMocksterTimeout( 1, TimeUnit.HOURS )
         .forDownendConnector().done()
@@ -86,7 +87,7 @@ public class ReconnectStory {
   }
 
   @Test
-  public void reconnectThroughProxyWithOutdatedSession() throws Exception {
+  void reconnectThroughProxyWithOutdatedSession() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withMocksterTimeout( 1, TimeUnit.HOURS )
         .forDownendConnector().done()
@@ -148,7 +149,7 @@ public class ReconnectStory {
   }
 
   @Test
-  public void reconnectThroughProxyWithSessionReuse() throws Exception {
+  void reconnectThroughProxyWithSessionReuse() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withMocksterTimeout( 1, TimeUnit.HOURS )
         .forDownendConnector().done()
@@ -191,7 +192,7 @@ public class ReconnectStory {
   }
 
   @Test
-  public void downendConnectorKickout() throws Exception {
+  void downendConnectorKickout() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .forDownendConnector()
             .automaticLifecycle( ConnectorDrill.AutomaticLifecycle.START )
@@ -208,7 +209,7 @@ public class ReconnectStory {
   }
 
   @Test
-  public void noUpend() throws Exception {
+  void noUpend() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withTimeBoundary( SketchLibrary.PASSIVE_TIME_BOUNDARY )
         .forDownendConnector()
@@ -245,7 +246,7 @@ public class ReconnectStory {
     }
   }
   @Test
-  public void downendRestart() throws Exception {
+  void downendRestart() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withTimeBoundary( SketchLibrary.PASSIVE_TIME_BOUNDARY )
         .forDownendConnector().done()
@@ -270,7 +271,7 @@ public class ReconnectStory {
   }
 
   @Test
-  public void simpleReconnect() throws Exception {
+  void simpleReconnect() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withTimeBoundary( SketchLibrary.PASSIVE_TIME_BOUNDARY )
         .forDownendConnector().done()
@@ -295,7 +296,7 @@ public class ReconnectStory {
   }
 
   @Test
-  public void commandTransceiverPingTimeoutAndReconnect() throws Exception {
+  void commandTransceiverPingTimeoutAndReconnect() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withMocksterTimeout( 1, TimeUnit.HOURS )
         .withTimeBoundary( TimeBoundary.newBuilder()
@@ -337,7 +338,7 @@ public class ReconnectStory {
   }
 
   @Test
-  public void trackerTimeout() throws Exception {
+  void trackerTimeout() throws Exception {
     final int delay = 50 ;
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withMocksterTimeout( 1, TimeUnit.HOURS )
@@ -382,7 +383,7 @@ public class ReconnectStory {
   }
 
   @Test
-  public void sessionReuse() throws Exception {
+  void sessionReuse() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withMocksterTimeout( 1, TimeUnit.HOURS )
         .withTimeBoundary( SketchLibrary.PASSIVE_TIME_BOUNDARY )
@@ -420,7 +421,7 @@ public class ReconnectStory {
   }
 
   @Test
-  public void sessionReuseFails() throws Exception {
+  void sessionReuseFails() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .withMocksterTimeout( 1, TimeUnit.HOURS )
         .withTimeBoundary( SketchLibrary.PASSIVE_TIME_BOUNDARY )
@@ -479,7 +480,7 @@ public class ReconnectStory {
 
 
   @Test
-  public void newTimeBoundary() throws Exception {
+  void newTimeBoundary() throws Exception {
 
     final TimeBoundary.ForAll timeBoundary1 = TimeBoundary.newBuilder()
         .pingInterval( 888_888_888 )
@@ -573,8 +574,5 @@ public class ReconnectStory {
 // =======
 
   private static final Logger LOGGER = LoggerFactory.getLogger( ReconnectStory.class ) ;
-
-  @Rule
-  public final NettyLeakDetectorRule nettyLeakDetectorRule = new NettyLeakDetectorRule() ;
 
 }

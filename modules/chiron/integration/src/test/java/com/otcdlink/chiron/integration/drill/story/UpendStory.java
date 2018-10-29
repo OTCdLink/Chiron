@@ -1,7 +1,7 @@
 package com.otcdlink.chiron.integration.drill.story;
 
 import com.otcdlink.chiron.command.Command;
-import com.otcdlink.chiron.fixture.NettyLeakDetectorRule;
+import com.otcdlink.chiron.fixture.NettyLeakDetectorExtension;
 import com.otcdlink.chiron.fixture.http.WatchedResponseAssert;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill;
 import com.otcdlink.chiron.integration.drill.ConnectorDrill.ForUpendConnector.HttpRequestRelayerKind;
@@ -10,9 +10,9 @@ import com.otcdlink.chiron.middle.tier.CommandInterceptor;
 import com.otcdlink.chiron.toolbox.netty.Hypermessage;
 import com.otcdlink.chiron.toolbox.netty.NettyHttpClient;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,10 +21,11 @@ import java.util.concurrent.Semaphore;
 import static com.otcdlink.chiron.mockster.Mockster.any;
 import static com.otcdlink.chiron.mockster.Mockster.exactly;
 
-public class UpendStory {
+@ExtendWith( NettyLeakDetectorExtension.class )
+class UpendStory {
 
   @Test
-  public void connectUpendAndEcho() throws Exception {
+  void connectUpendAndEcho() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .fakeDownend()
             .done()
@@ -43,9 +44,9 @@ public class UpendStory {
     }
   }
 
-  @Ignore( "Work in progress" )
+  @Disabled( "Work in progress" )
   @Test
-  public void sessionPrimer() throws Exception {
+  void sessionPrimer() throws Exception {
 
     final Semaphore intercepted = new Semaphore( 0 ) ;
     final CommandInterceptor commandInterceptor = new CommandInterceptor() {
@@ -76,7 +77,7 @@ public class UpendStory {
   }
 
   @Test
-  public void httpOk() throws Exception {
+  void httpOk() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .fakeDownend()
             .done()
@@ -98,7 +99,7 @@ public class UpendStory {
   }
 
   @Test
-  public void httpNotFound() throws Exception {
+  void httpNotFound() throws Exception {
     try( final ConnectorDrill drill = ConnectorDrill.newBuilder()
         .fakeDownend()
             .done()
@@ -128,7 +129,5 @@ public class UpendStory {
 
   private static final Logger LOGGER = LoggerFactory.getLogger( UpendStory.class ) ;
 
-  @Rule
-  public final NettyLeakDetectorRule nettyLeakDetectorRule = new NettyLeakDetectorRule() ;
 
 }

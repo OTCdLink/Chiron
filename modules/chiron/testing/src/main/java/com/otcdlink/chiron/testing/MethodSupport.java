@@ -3,6 +3,10 @@ package com.otcdlink.chiron.testing;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.otcdlink.chiron.testing.junit5.DirectorySupplier;
+import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
+import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -15,9 +19,15 @@ import java.lang.reflect.Method;
 import java.util.regex.Pattern;
 
 /**
- * Formerly belonging to {@code org.novelang.testing.junit} package.
+ * Works for JUnit 4 as a {@link TestRule} and JUnit 5 as an Extension.
  */
-public class MethodSupport implements TestRule, Supplier< File > {
+public class MethodSupport
+    implements
+        TestRule,
+        Supplier< File >,
+        BeforeTestExecutionCallback,
+        AfterTestExecutionCallback
+{
 
   private static final Logger LOGGER = LoggerFactory.getLogger( MethodSupport.class ) ;
   private static final Pattern SAFE_METHOD_NAME_PATTERN = Pattern.compile( "(^[a-zA-Z0-9_$]+).*" ) ;
@@ -182,4 +192,23 @@ public class MethodSupport implements TestRule, Supplier< File > {
     }
   }
 
+// =======
+// JUnit 5
+// =======
+
+
+  @Override
+  public void beforeTestExecution( final ExtensionContext context ) throws Exception {
+    synchronized( stateLock ) {
+      testName = context.getUniqueId() ;
+      testMethod = context.getTestMethod().orElse( null ) ;
+      directoryFixture = DirectorySupplier.loadInScope( context ) ;
+    }
+    beforeStatementEvaluation() ;
+  }
+
+  @Override
+  public void afterTestExecution( final ExtensionContext context ) throws Exception {
+    afterStatementEvaluation() ;
+  }
 }

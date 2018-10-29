@@ -1,24 +1,25 @@
 package com.otcdlink.chiron.fixture.tcp.http;
 
-import com.otcdlink.chiron.fixture.NettyLeakDetectorRule;
+import com.otcdlink.chiron.fixture.NettyLeakDetectorExtension;
 import com.otcdlink.chiron.fixture.tcp.AbstractTcpTransitServerTest;
 import com.otcdlink.chiron.fixture.tcp.EchoClient;
 import com.otcdlink.chiron.fixture.tcp.EchoServer;
 import com.otcdlink.chiron.fixture.tcp.TcpTransitServer;
 import com.otcdlink.chiron.toolbox.internet.HostPort;
 import com.otcdlink.chiron.toolbox.text.LineBreak;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ExtendWith( NettyLeakDetectorExtension.class )
 public class ConnectProxyTest extends AbstractTcpTransitServerTest {
 
   @Test
-  public void echoWithLag() throws Exception {
+  void echoWithLag() throws Exception {
     try(
         final EchoServer ignored1 = EchoServer.newStarted( targetAddress ) ;
         final ConnectProxy connectProxy = newTransitServerStarted() ;
@@ -53,9 +54,6 @@ public class ConnectProxyTest extends AbstractTcpTransitServerTest {
 // =======
 // Fixture
 // =======
-
-  @Rule
-  public final NettyLeakDetectorRule nettyLeakDetectorRule = new NettyLeakDetectorRule() ;
 
   @Override
   protected ConnectProxy newTransitServerStarted() throws Exception {

@@ -1,7 +1,9 @@
 package com.otcdlink.chiron.upend.session;
 
 import com.google.common.collect.ImmutableMap;
+import com.otcdlink.chiron.middle.session.SignonSetback;
 import com.otcdlink.chiron.toolbox.ComparatorTools;
+import com.otcdlink.chiron.toolbox.EnumTools;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -12,9 +14,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Counter for failed signon attempts, with support for Secondary authentication.
  * It contains several internal counters, one per
- * {@link SignonAttempt} value.
+ * {@link SignonSetback.Factor} value.
  * Each call to
- * {@link #increment(SignonAttempt)}
+ * {@link #increment(SignonSetback.Factor)}
  * increments corresponding counter, and zeroes counter of lower rank (corresponding to lower
  * ordinal value of the enum).
  * This means one successful primary signon attempt followed by one secondary signon
@@ -31,14 +33,14 @@ public class FailedSignonAttempt {
    */
   private final int limit ;
 
-  private final ImmutableMap< SignonAttempt, Integer > counters ;
+  private final ImmutableMap< SignonSetback.Factor, Integer > counters ;
 
 
   public static FailedSignonAttempt create() {
     return create( MAXIMUM_SIGNON_ATTEMPTS ) ;
   }
 
-  public static FailedSignonAttempt create( final SignonAttempt signonAttempt ) {
+  public static FailedSignonAttempt create( final SignonSetback.Factor signonAttempt ) {
     return create( signonAttempt, MAXIMUM_SIGNON_ATTEMPTS ) ;
   }
 
@@ -46,14 +48,14 @@ public class FailedSignonAttempt {
    * For tests only.
    */
   public static FailedSignonAttempt create( final int limit ) {
-    return create( SignonAttempt.values()[ 0 ], limit ) ;
+    return create( SignonSetback.Factor.values()[ 0 ], limit ) ;
   }
 
   /**
    * For tests only.
    */
   public static FailedSignonAttempt create(
-      final SignonAttempt signonAttempt,
+      final SignonSetback.Factor signonAttempt,
       final int limit
   ) {
     return new FailedSignonAttempt(
@@ -63,7 +65,7 @@ public class FailedSignonAttempt {
   }
 
   private FailedSignonAttempt(
-      final ImmutableMap< SignonAttempt, Integer > counters,
+      final ImmutableMap<SignonSetback.Factor, Integer > counters,
       final int limit
   ) {
     this.counters = checkNotNull( counters ) ;
@@ -71,7 +73,10 @@ public class FailedSignonAttempt {
     this.limit = limit ;
   }
 
-  public FailedSignonAttempt increment( final SignonAttempt signonAttemptToIncrement ) {
+  /**
+   * Increment given counter, and reset counters of lower {@link SignonSetback.Factor} rank.
+   */
+  public FailedSignonAttempt increment( final SignonSetback.Factor signonAttemptToIncrement ) {
     return new FailedSignonAttempt(
         resetAndIncrement( counters, signonAttemptToIncrement ),
         limit
@@ -79,7 +84,7 @@ public class FailedSignonAttempt {
   }
 
   public boolean hasReachedLimit() {
-    for( final Map.Entry< SignonAttempt, Integer > entry : counters.entrySet() ) {
+    for( final Map.Entry<SignonSetback.Factor, Integer > entry : counters.entrySet() ) {
       if( entry.getValue() >= limit ) {
         return true ;
       }
@@ -93,7 +98,7 @@ public class FailedSignonAttempt {
     stringBuilder.append( getClass().getSimpleName() ) ;
     stringBuilder.append( "{" ) ;
 
-    for( final Map.Entry< SignonAttempt, Integer > entry : counters.entrySet() ) {
+    for( final Map.Entry<SignonSetback.Factor, Integer > entry : counters.entrySet() ) {
       if( entry.getKey().ordinal() > 0 ) {
         stringBuilder.append( ";" ) ;
       }
@@ -106,24 +111,24 @@ public class FailedSignonAttempt {
   }
 
 
-  /*package*/ static final ImmutableMap< SignonAttempt, Integer > MAP_FULL_OF_ZEROES
+  /*package*/ static final ImmutableMap<SignonSetback.Factor, Integer > MAP_FULL_OF_ZEROES
       = createMapFullOfZeroes() ;
 
-  private static ImmutableMap< SignonAttempt, Integer > createMapFullOfZeroes() {
-    final ImmutableMap.Builder< SignonAttempt, Integer > builder = ImmutableMap.builder() ;
-    for( final SignonAttempt signonAttempt : SignonAttempt.values() ) {
+  private static ImmutableMap<SignonSetback.Factor, Integer > createMapFullOfZeroes() {
+    final ImmutableMap.Builder<SignonSetback.Factor, Integer > builder = ImmutableMap.builder() ;
+    for( final SignonSetback.Factor signonAttempt : SignonSetback.Factor.values() ) {
       builder.put( signonAttempt, 0 ) ;
     }
     return builder.build() ;
   }
 
-  private static ImmutableMap< SignonAttempt, Integer > resetAndIncrement(
-      final ImmutableMap< SignonAttempt, Integer > map,
-      final SignonAttempt signonAttempt
+  private static ImmutableMap<SignonSetback.Factor, Integer > resetAndIncrement(
+      final ImmutableMap<SignonSetback.Factor, Integer > map,
+      final SignonSetback.Factor signonAttempt
   ) {
     checkNotNull( signonAttempt ) ;
-    final ImmutableMap.Builder< SignonAttempt, Integer > builder = ImmutableMap.builder() ;
-    for( final Map.Entry< SignonAttempt, Integer > entry : map.entrySet() ) {
+    final ImmutableMap.Builder<SignonSetback.Factor, Integer > builder = ImmutableMap.builder() ;
+    for( final Map.Entry<SignonSetback.Factor, Integer > entry : map.entrySet() ) {
       if( signonAttempt == entry.getKey() ) {
         builder.put( signonAttempt, entry.getValue() + 1 ) ;
       } else if( signonAttempt.ordinal() > entry.getKey().ordinal() ) {
@@ -135,11 +140,45 @@ public class FailedSignonAttempt {
     return builder.build() ;
   }
 
-  public ImmutableMap< SignonAttempt, Integer > counters() {
+  public ImmutableMap<SignonSetback.Factor, Integer > counters() {
     return counters ;
   }
 
-  private static final Comparator< Map< SignonAttempt, Integer > > COUNTERS_COMPARATOR
+  public static SignonSetback asSignonSetback(
+      final ImmutableMap<SignonSetback.Factor, Integer > signonAttempts
+  ) {
+    if( signonAttempts == null ) {
+      return SignonSetback.NONE ;
+    } else {
+      final ImmutableMap.Builder< SignonSetback.Factor, Integer > builder = ImmutableMap.builder() ;
+      final SignonSetback.Factor[] factorValues = SignonSetback.Factor.values() ;
+      for( final Map.Entry<SignonSetback.Factor, Integer > entry : signonAttempts.entrySet() ) {
+        builder.put(
+            EnumTools.fromOrdinalSafe( factorValues, entry.getKey().ordinal() ),
+            entry.getValue()
+        ) ;
+      }
+      return SignonSetback.fromMap( builder.build() ) ;
+    }
+  }
+
+  public static FailedSignonAttempt fromSignonSetback( final SignonSetback signonSetback ) {
+    return new FailedSignonAttempt( signonAttemptsFrom( signonSetback ), MAXIMUM_SIGNON_ATTEMPTS ) ;
+  }
+
+  public static ImmutableMap<SignonSetback.Factor, Integer > signonAttemptsFrom(
+      final SignonSetback signonSetback
+  ) {
+    final ImmutableMap.Builder<SignonSetback.Factor, Integer > builder = ImmutableMap.builder() ;
+    final SignonSetback.Factor[] signonAttempValues = SignonSetback.Factor.values() ;
+    for( final Map.Entry< SignonSetback.Factor, Integer > entry : signonSetback.toMap().entrySet()
+    ) {
+      builder.put( signonAttempValues[ entry.getKey().ordinal() ], entry.getValue() ) ;
+    }
+    return builder.build() ;
+  }
+
+  private static final Comparator< Map<SignonSetback.Factor, Integer > > COUNTERS_COMPARATOR
       = ComparatorTools.mapComparator( ComparatorTools.INTEGER_COMPARATOR ) ;
 
   public static final Comparator< FailedSignonAttempt > COMPARATOR
@@ -160,5 +199,6 @@ public class FailedSignonAttempt {
         }
       }
   ;
+
 
 }

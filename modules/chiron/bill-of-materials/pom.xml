@@ -30,7 +30,7 @@
     <library.bouncycastle.version>1.58</library.bouncycastle.version>
     <library.jsch-agentproxy.version>0.0.9</library.jsch-agentproxy.version>
     <!--<library.jsch-agentproxy.version>0.9.0-OTCdLink-fix-SNAPSHOT</library.jsch-agentproxy.version>-->
-    <library.jmh.version>1.18</library.jmh.version>
+    <library.jmh.version>1.19</library.jmh.version>
     <library.reactor3.version>3.1.0.RELEASE</library.reactor3.version>
     <library.bytebuddy.version>1.8.12</library.bytebuddy.version>
 
@@ -217,6 +217,18 @@
       </dependency>
 
       <dependency>
+        <groupId>com.fasterxml</groupId>
+        <artifactId>aalto-xml</artifactId>
+        <version>1.1.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.github.petitparser.java-petitparser</groupId>
+        <artifactId>petitparser-core</artifactId>
+        <version>2.1.0</version>
+      </dependency>
+
+      <dependency>
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>
         <version>3.0.2</version>
@@ -293,6 +305,14 @@
       </dependency>
 
       <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>5.3.1</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava-testlib</artifactId>
         <version>${library.google-guava.version}</version>
@@ -351,7 +371,7 @@
         <groupId>org.openjdk.jmh</groupId>
         <artifactId>jmh-generator-annprocess</artifactId>
         <version>${library.jmh.version}</version>
-        <scope>provided</scope>
+        <scope>test</scope>
       </dependency>
       
 

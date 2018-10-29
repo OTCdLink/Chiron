@@ -3,7 +3,6 @@ package com.otcdlink.chiron.wire;
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import com.google.common.html.HtmlEscapers;
 import com.otcdlink.chiron.toolbox.text.LineBreak;
 
 import java.io.Flushable;
@@ -106,7 +105,11 @@ public class MarkupWriter {
     } else {
       closeStartingElementIfNeeded( true ) ;
       element( element, ElementClosing.STARTING_KEEP_ON_SAME_LINE, attributes ) ;
-      appendable.append( htmlEscape ? htmlEscape( text ) : text ) ;
+      if( htmlEscape ) {
+        XmlEscaping.ATTRIBUTE_ESCAPER.transform( text, appendable ) ;
+      } else {
+        appendable.append( text ) ;
+      }
       appendable.append( "</" ).append( element ).append( '>' ).append( lineBreak.asString ) ;
       unclosedStartingElement = false ;
     }
@@ -162,7 +165,7 @@ public class MarkupWriter {
         stringBuilder.append( preAttributeSeparator ) ;
         stringBuilder.append( nameValueAttributes.get( i ) ) ;
         stringBuilder.append( "='" ) ;
-        stringBuilder.append( htmlEscape( nameValueAttributes.get( i + 1 ) ) ) ;
+        XmlEscaping.ATTRIBUTE_ESCAPER.transform( nameValueAttributes.get( i + 1 ), stringBuilder ) ;
         stringBuilder.append( "\' " ) ;
       }
     }
@@ -250,10 +253,6 @@ public class MarkupWriter {
 
 
   public static final Charset CHARSET_UTF8 = Charsets.UTF_8 ;
-
-  private static String htmlEscape( final String text ) {
-    return HtmlEscapers.htmlEscaper().escape( text ) ;
-  }
 
   /**
    * Wraps the usage of a, {@link Appendable} so we control what happens before and after using it.

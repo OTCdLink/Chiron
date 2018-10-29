@@ -11,6 +11,7 @@ import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.session.SignonDecision;
 import com.otcdlink.chiron.middle.session.SignonFailure;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
+import com.otcdlink.chiron.middle.session.SignonSetback;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 import com.otcdlink.chiron.toolbox.clock.Clock;
 import com.otcdlink.chiron.upend.TimeKit;
@@ -18,7 +19,6 @@ import com.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
 import com.otcdlink.chiron.upend.session.SecondaryAuthenticator;
 import com.otcdlink.chiron.upend.session.SessionIdentifierGenerator;
 import com.otcdlink.chiron.upend.session.SessionSupervisor;
-import com.otcdlink.chiron.upend.session.SignonAttempt;
 import com.otcdlink.chiron.upend.session.SignonInwardDuty;
 import com.otcdlink.chiron.upend.session.twilio.AuthenticationFailure;
 import org.joda.time.DateTime;
@@ -61,7 +61,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *
  * <pre>
 
-  +--------------> SessionEnforcerTier
+  +--------------&gt; SessionEnforcerTier
   |                -------------------
   |                                |
   |                                | [Supervisor thread]
@@ -104,7 +104,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
                     |   |                            |                         | 11: secondaryAuthResult
                     |   |                            |                         |     (success)
                     |   |                            |                         |
-                    |   +------------------------> SecondaryAuthenticator -----+
+                    |   +------------------------&gt; SecondaryAuthenticator -----+
                     |      [Channel Executor]      ----------------------
                     |      [now: thread pool]      requestAuthentication
                     |                              verifySecondaryCode
@@ -414,7 +414,7 @@ public class DefaultSessionSupervisor< CHANNEL, ADDRESS, SESSION_PRIMER >
         signonInwardDuty.failedSignonAttempt(
             designatorFactory.internalZero( designator ),
             signonDecision.userIdentity.login(),
-            SignonAttempt.PRIMARY
+            SignonSetback.Factor.PRIMARY
         ) ;
         designator.callback.signonResult( signonDecision.signonFailureNotice ) ;
       }
@@ -586,7 +586,7 @@ public class DefaultSessionSupervisor< CHANNEL, ADDRESS, SESSION_PRIMER >
           signonInwardDuty.failedSignonAttempt(
               designatorFactory.internal(),
               pendingSecondaryAuthentication.userIdentity.login(),
-              SignonAttempt.SECONDARY
+              SignonSetback.Factor.SECONDARY
           ) ;
           designator.callback.signonResult( new SignonFailureNotice(
               SignonFailure.INVALID_SECONDARY_CODE, authenticationFailureNotice.message ) ) ;

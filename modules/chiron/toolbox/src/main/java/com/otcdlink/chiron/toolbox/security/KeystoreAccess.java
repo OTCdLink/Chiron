@@ -142,12 +142,20 @@ public class KeystoreAccess {
   }
 
   public String asString() {
+    return asStringWithObfuscatedPassword( null ) ;
+  }
+
+  public String asStringWithObfuscatedPassword( final String obfuscator ) {
     final StringBuilder stringBuilder = new StringBuilder() ;
     if( ! usingDefaultAlias ) {
       stringBuilder.append( alias ) ;
       stringBuilder.append( ':' ) ;
     }
-    stringBuilder.append( password ) ;
+    if( obfuscator == null ) {
+      stringBuilder.append( password ) ;
+    } else {
+      stringBuilder.append( obfuscator ) ;
+    }
     if( ! usingDefaultKeystoreUrl ) {
       stringBuilder.append( '@' ) ;
       stringBuilder.append( keystoreUrl.toExternalForm() ) ;

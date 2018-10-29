@@ -1,8 +1,6 @@
 package com.otcdlink.chiron.middle.session;
 
-import com.otcdlink.chiron.toolbox.ComparatorTools;
-
-import java.util.Comparator;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -43,40 +41,23 @@ public final class SignonDecision< USER_IDENTITY > {
     ;
   }
 
+
   @Override
   public boolean equals( final Object other ) {
-    if( other == this ) {
+    if( this == other ) {
       return true ;
     }
-    if( other.getClass() != this.getClass() ) {
+    if( other == null || getClass() != other.getClass() ) {
       return false ;
     }
-    final SignonDecision that = ( SignonDecision ) other ;
-    return COMPARATOR.compare( this, that ) == 0 ;
+    final SignonDecision< ? > that = ( SignonDecision< ? > ) other ;
+    return Objects.equals( userIdentity, that.userIdentity ) &&
+        Objects.equals( signonFailureNotice, that.signonFailureNotice ) ;
   }
 
   @Override
   public int hashCode() {
-    return
-          userIdentity.hashCode()
-        + signonFailureNotice.hashCode() * 31
-    ;
+    return Objects.hash( userIdentity, signonFailureNotice ) ;
   }
 
-  public static final Comparator<SignonDecision> COMPARATOR
-      = new ComparatorTools.WithNull<SignonDecision>() {
-        @Override
-        protected int compareNoNulls( final SignonDecision first, final SignonDecision second ) {
-          final int signonFailureNoticeComparison = SignonFailureNotice.COMPARATOR.compare(
-              first.signonFailureNotice, second.signonFailureNotice ) ;
-          if( signonFailureNoticeComparison == 0 ) {
-            final int userIdentityComparison = ComparatorTools.LAST_CHANCE_COMPARATOR.compare(
-                first.userIdentity, second.userIdentity ) ;
-            return userIdentityComparison ;
-          } else {
-            return signonFailureNoticeComparison ;
-          }
-        }
-      }
-  ;
 }

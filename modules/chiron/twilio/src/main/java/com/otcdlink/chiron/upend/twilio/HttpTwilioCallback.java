@@ -78,7 +78,7 @@ public final class HttpTwilioCallback {
 
       if( token != null && twilioStatus != null ) {
         twilioHttpCallback.updateTwilioCallStatus( token, twilioStatus ) ;
-        return new UsualHttpCommands.Html(
+        return UsualHttpCommands.Html.htmlBodyOk(
             "Status set to " + callStatus + " for " + token + "." ) ;
       } else {
         return new UsualHttpCommands.Html(
@@ -96,7 +96,7 @@ public final class HttpTwilioCallback {
       final String message =
           "Twilio reported an unsupported request: '" + httpRequest.uri() + "'." ;
       LOGGER.warn( message ) ;
-      return new UsualHttpCommands.Html( message ) ;
+      return UsualHttpCommands.Html.htmlBodyOk( message ) ;
     } ;
   }
 

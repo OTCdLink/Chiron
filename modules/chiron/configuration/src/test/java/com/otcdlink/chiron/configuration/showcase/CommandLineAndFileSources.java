@@ -6,27 +6,22 @@ import com.google.common.io.Files;
 import com.otcdlink.chiron.configuration.Configuration;
 import com.otcdlink.chiron.configuration.ConfigurationTools;
 import com.otcdlink.chiron.configuration.source.CommandLineSources;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import com.otcdlink.chiron.testing.junit5.DirectoryExtension;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class CommandLineAndFileSources {
-
-  public interface Simple extends Configuration {
-    String string() ;
-    int number() ;
-  }
+class CommandLineAndFileSources {
 
   @Test
-  public void test() throws Exception {
-    final File file1 = folder.newFile( "1.properties" ) ;
-    Files.write( "string=foo", file1, Charsets.UTF_8 ) ;
-    final File file2 = folder.newFile( "2.properties" ) ;
-    Files.write( "number=42", file2, Charsets.UTF_8 ) ;
+  void test() throws Exception {
+    final File file1 = directoryExtension.newFile( "1.properties" ) ;
+    Files.asCharSink( file1, Charsets.UTF_8 ).write( "string=foo" ) ;
+    final File file2 = directoryExtension.newFile( "2.properties" ) ;
+    Files.asCharSink( file2, Charsets.UTF_8 ).write( "number=42" ) ;
 
     final ImmutableList< String > arguments = ImmutableList.of(
         "--configuration-files", file1.getAbsolutePath(), file2.getAbsolutePath(),
@@ -46,6 +41,14 @@ public class CommandLineAndFileSources {
 // Fixture
 // =======
 
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder() ;
+  @SuppressWarnings( "WeakerAccess" )
+  @RegisterExtension
+  final DirectoryExtension directoryExtension = new DirectoryExtension() ;
+
+  public interface Simple extends Configuration {
+    String string() ;
+    int number() ;
+  }
+
+
 }

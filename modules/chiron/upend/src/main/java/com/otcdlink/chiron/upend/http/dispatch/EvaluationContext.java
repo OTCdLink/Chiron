@@ -2,9 +2,8 @@ package com.otcdlink.chiron.upend.http.dispatch;
 
 import com.otcdlink.chiron.designator.Designator;
 import com.otcdlink.chiron.toolbox.netty.RichHttpRequest;
-import io.netty.channel.Channel;
 
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 /**
  * What a {@link HttpResponder.Resolver}, {@link HttpResponder.Condition}, or
@@ -25,7 +24,7 @@ public interface EvaluationContext< DUTY > {
 
   /**
    * Creates a fresh {@link Designator} of {@link Designator.Kind#INTERNAL} kind,
-   * which may be the result of {@link Designator.Factory#phasing(Channel, Function)}
+   * which may be the result of {@link Designator.Factory#phasing(RichHttpRequest, BiFunction)}
    * when it makes sense.
    */
   Designator designator() ;

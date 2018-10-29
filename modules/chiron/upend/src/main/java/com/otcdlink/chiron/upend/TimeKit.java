@@ -8,13 +8,15 @@ import com.otcdlink.chiron.toolbox.clock.PulseModulator;
 import com.otcdlink.chiron.toolbox.clock.UpdateableClock;
 import org.joda.time.DateTime;
 
+import java.util.function.Function;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Gather some time-related components so they give consistent values.
  * Rename into TimeProvisioner?
  */
-public class TimeKit< CLOCK extends Clock> {
+public class TimeKit< CLOCK extends Clock > {
 
   public final CLOCK clock ;
 
@@ -26,9 +28,17 @@ public class TimeKit< CLOCK extends Clock> {
       final CLOCK clock,
       final Pulse.Factory pulseFactory
   ) {
+    this( clock, Designator.Factory::new, pulseFactory ) ;
+  }
+
+  protected TimeKit(
+      final CLOCK clock,
+      final Function< Stamp.Generator, Designator.Factory > designatorFactoryFactory,
+      final Pulse.Factory pulseFactory
+  ) {
     this.clock = checkNotNull( clock ) ;
     this.stampGenerator = new Stamp.Generator( clock ) ;
-    this.designatorFactory = new Designator.Factory( stampGenerator ) ;
+    this.designatorFactory = designatorFactoryFactory.apply( stampGenerator ) ;
     this.pulseFactory = checkNotNull( pulseFactory ) ;
   }
 
@@ -44,20 +54,7 @@ public class TimeKit< CLOCK extends Clock> {
     final UpdateableClock updateableClock = new PulseModulator( initialClockValue ) ;
     return new TimeKit<>(
         updateableClock,
-        ( resolution, tickee ) -> new Pulse( resolution, tickee ) {
-      @Override
-      protected void startScheduler() { }
-
-      @Override
-      protected void schedule( final long delayMilliseconds, final Runnable runnable ) { }
-
-      @Override
-      protected void stopScheduler() { }
-
-      @Override
-      public long currentTimeMillis() { return updateableClock.currentTimeMillis() ; }
-
-    } ) ;
+        ( resolution, tickee ) -> new SimplePulse( resolution, tickee, updateableClock ) ) ;
   }
 
   public static TimeKit< PulseModulator > instrumentedTimeKit(
@@ -77,5 +74,29 @@ public class TimeKit< CLOCK extends Clock> {
   }
 
 
+  protected static class SimplePulse extends Pulse {
+    private final Clock clock;
 
+    public SimplePulse(
+        final Resolution resolution,
+        final Tickee tickee,
+        final Clock clock
+    ) {
+      super( resolution, tickee ) ;
+      this.clock = checkNotNull( clock ) ;
+    }
+
+    @Override
+    protected void startScheduler() { }
+
+    @Override
+    protected void schedule( final long delayMilliseconds, final Runnable runnable ) { }
+
+    @Override
+    protected void stopScheduler() { }
+
+    @Override
+    public long currentTimeMillis() { return clock.currentTimeMillis() ; }
+
+  }
 }

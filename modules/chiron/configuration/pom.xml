@@ -20,6 +20,12 @@
       <artifactId>Chiron-toolbox</artifactId>
       <version>${project.version}</version>
     </dependency>
+
+    <dependency>
+      <groupId>com.otcdlink.chiron</groupId>
+      <artifactId>Chiron-testing</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
 </project>
 

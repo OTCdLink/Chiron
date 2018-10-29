@@ -1,5 +1,6 @@
 package com.otcdlink.chiron.configuration;
 
+import com.google.common.base.Converter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -28,9 +29,7 @@ public interface Configuration {
 
 
     /**
-     * Contains {@code String}s to
-     * {@link Configuration.Converter#convert(String) convert}
-     * into expected type.
+     * Contains {@code String}s to {@link Converter#convert(Object)} convert} into expected type.
      */
     interface Stringified extends Source {
       ImmutableMap< String, String > map() ;
@@ -77,7 +76,7 @@ public interface Configuration {
 
     /**
      * Default value extracted from {@link #defaultValueAsString()} after using
-     * available {@link Configuration.Converter}s.
+     * available {@link Converter}s.
      *
      * It makes sense to calculate it when creating {@link Configuration.Property} objects as we can
      * fail fast if annotations define a wrong default value.
@@ -93,14 +92,6 @@ public interface Configuration {
      *     {@link #maybeNull()} returns {@code true}.
      */
     String defaultValueAsString() ;
-
-    /**
-     * A pattern indicating sensible part that should not appear in clear in logs.
-     *
-     * @see Configuration.Inspector#safeValueOf(Configuration.Property, String)
-     * @return a possibly {@code null} value.
-     */
-    Obfuscator obfuscator() ;
 
     Converter converter() ;
 
@@ -123,18 +114,6 @@ public interface Configuration {
     }
   }
 
-  /**
-   * Transforms a plain {@code String} into a property value.
-   */
-  interface Converter< T > {
-    /**
-     * @param input a possibly null {@code String}
-     * @return the converted value, that can also be {@code null}.
-     * @throws Exception if any problem occured.
-     */
-    T convert( String input ) throws Exception ;
-  }
-
 
   /**
    * Transforms a Java method name from an interface defining a {@link Configuration}
@@ -144,19 +123,6 @@ public interface Configuration {
   interface NameTransformer {
 
     String transform( String javaMethodName ) ;
-
-  }
-
-  /**
-   * Obfuscates a value for {@link Inspector#safeValueOf(Property, String)}.
-   */
-  interface Obfuscator {
-
-    /**
-     * @param propertyAsString a non-null {@code String}.
-     * @param replacement
-     */
-    String obfuscate( String propertyAsString, String replacement ) ;
 
   }
 
@@ -174,12 +140,6 @@ public interface Configuration {
     ImmutableSet< Source > sources() ;
 
     String stringValueOf( Property< C > property ) ;
-
-    /**
-     * Returns a possibly obfuscated value if property was annotated with an
-     * {@link Configuration.Property#obfuscator()}.
-     */
-    String safeValueOf( Property< C > property, String replacement ) ;
 
     /**
      * Returns the {@link Configuration.Property} corresponding
@@ -255,13 +215,8 @@ public interface Configuration {
       return this ;
     }
 
-    public PropertySetup< C, T > converter( final Converter< T > converter ) {
+    public PropertySetup< C, T > converter( final Converter< String, T > converter ) {
       setupAcceptor.accept( lastAccessed, Feature.CONVERTER, converter ) ;
-      return this ;
-    }
-
-    public PropertySetup< C, T > obfuscator( final Obfuscator obfuscator ) {
-      setupAcceptor.accept( lastAccessed, Feature.OBFUSCATOR, obfuscator ) ;
       return this ;
     }
 
@@ -284,7 +239,6 @@ public interface Configuration {
       NAME_TRANSFORMER,
       MAYBE_NULL,
       CONVERTER,
-      OBFUSCATOR,
       DOCUMENTATION,
       DEFAULT_VALUE_AS_STRING
     }

@@ -13,12 +13,13 @@ import com.otcdlink.chiron.middle.session.SessionIdentifier;
 import com.otcdlink.chiron.middle.session.SignonDecision;
 import com.otcdlink.chiron.middle.session.SignonFailure;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
+import com.otcdlink.chiron.middle.session.SignonSetback;
+import com.otcdlink.chiron.middle.session.SignonSetback.Factor;
 import com.otcdlink.chiron.toolbox.Credential;
 import com.otcdlink.chiron.toolbox.clock.Clock;
 import com.otcdlink.chiron.upend.session.SecondaryAuthenticator;
 import com.otcdlink.chiron.upend.session.SessionIdentifierGenerator;
 import com.otcdlink.chiron.upend.session.SessionSupervisor;
-import com.otcdlink.chiron.upend.session.SignonAttempt;
 import com.otcdlink.chiron.upend.session.SignonInwardDuty;
 import com.otcdlink.chiron.upend.session.SignonOutwardDuty;
 import com.otcdlink.chiron.upend.session.twilio.AuthenticationFailure;
@@ -575,7 +576,7 @@ public class DefaultSessionSupervisorTest {
       signonInwardDuty.failedSignonAttempt(
           withCapture( internalDesignatorCapture ),
           USER_X.login(),
-          SignonAttempt.PRIMARY
+          Factor.PRIMARY
       ) ;
       primarySignonAttemptCallback.signonResult(
           new SignonFailureNotice( SignonFailure.INVALID_CREDENTIAL ) ) ;
@@ -913,7 +914,7 @@ public class DefaultSessionSupervisorTest {
       signonInwardDuty.failedSignonAttempt(
           designatorInternal,
           USER_X.login(),
-          SignonAttempt.SECONDARY
+          SignonSetback.Factor.SECONDARY
       ) ;
       secondarySignonAttemptCallback.signonResult(
           new SignonFailureNotice( SignonFailure.INVALID_SECONDARY_CODE, "" ) ) ;

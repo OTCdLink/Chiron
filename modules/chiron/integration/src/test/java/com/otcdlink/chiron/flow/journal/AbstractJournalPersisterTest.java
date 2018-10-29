@@ -9,11 +9,11 @@ import com.otcdlink.chiron.fixture.CatcherFixture;
 import com.otcdlink.chiron.integration.echo.EchoUpwardDuty;
 import com.otcdlink.chiron.integration.echo.UpwardEchoCommand;
 import com.otcdlink.chiron.middle.session.SessionIdentifier;
-import com.otcdlink.chiron.testing.MethodSupport;
+import com.otcdlink.chiron.testing.junit5.DirectoryExtension;
 import com.otcdlink.chiron.toolbox.text.LineBreak;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public abstract class AbstractJournalPersisterTest {
 
   @Test
-  public void simpleWrite() throws Exception {
+  void simpleWrite() throws Exception {
     final PersisterKit persisterKit = newPersisterKit() ;
     persisterKit.writeSequence(
         command( "Hello", 1 ),
@@ -44,7 +44,7 @@ public abstract class AbstractJournalPersisterTest {
    * doing something stupid like holding the whole file in a single buffer.
    */
   @Test
-  public void lotsOfWrite() throws Exception {
+  void lotsOfWrite() throws Exception {
     final PersisterKit persisterKit = newPersisterKit() ;
     final int commandCount = PersisterKit.BUFFER_SIZE / PersisterKit.BYTES_PER_LINE + 10 ;
     persisterKit.writeSequence( commandCount ) ;
@@ -54,8 +54,8 @@ public abstract class AbstractJournalPersisterTest {
   }
 
   @Test
-  @Ignore( "Takes too long and asserts nothing" )
-  public void evenMoreWrites() throws Exception {
+  @Disabled( "Takes too long and asserts nothing" )
+  void evenMoreWrites() throws Exception {
     final PersisterKit persisterKit = newPersisterKit() ;
     persisterKit.persister.autoFlush( true ) ;
     persisterKit.writeSequence( 100_000 ) ;
@@ -88,14 +88,14 @@ public abstract class AbstractJournalPersisterTest {
         DESIGNATOR_FORGER.counter( index ).upward(), index + "__" + message ) ;
   }
 
-  @Rule
-  public final MethodSupport methodSupport = new MethodSupport() ;
+  @RegisterExtension
+  final DirectoryExtension directoryExtension = new DirectoryExtension() ;
 
   protected abstract PersisterKit newPersisterKit() ;
 
   protected abstract class PersisterKit {
 
-    public static final int BUFFER_SIZE = 1000 ;
+    static final int BUFFER_SIZE = 1000 ;
 
     /**
      * Include a directory that doesn't exist yet so we we test its creation.
@@ -104,17 +104,17 @@ public abstract class AbstractJournalPersisterTest {
 
     public final CatcherFixture.RecordingCatcher< CatcherFixture.Record > catcher =
         CatcherFixture.newSimpleRecordingCatcher() ;
-    public final JournalPersister< Command< Designator, EchoUpwardDuty< Designator > > >
+    final JournalPersister< Command< Designator, EchoUpwardDuty< Designator > > >
         persister ;
-    protected final int bufferSize ;
-    protected final LineBreak lineBreak ;
-    public final String lineEnd ;
+    final int bufferSize ;
+    final LineBreak lineBreak ;
+    final String lineEnd ;
 
     public PersisterKit() {
       this( BUFFER_SIZE, IntradayPersistenceConstants.LINE_BREAK ) ;
     }
 
-    public PersisterKit( final int bufferSize, final LineBreak lineBreak ) {
+    PersisterKit( final int bufferSize, final LineBreak lineBreak ) {
       this.lineBreak = lineBreak ;
       this.bufferSize = bufferSize ;
       this.lineEnd = lineBreak.asString ;
@@ -129,7 +129,7 @@ public abstract class AbstractJournalPersisterTest {
     //      .join( Files.readLines( intradayFile, Charsets.US_ASCII ) ) ;
     public abstract String loadActualFile() throws IOException;
 
-    public final void writeSequence( final int commandCount ) throws IOException {
+    final void writeSequence( final int commandCount ) throws IOException {
       writeSequence( () -> new AbstractIterator<
           Command< Designator, EchoUpwardDuty< Designator > >
       >() {
@@ -146,14 +146,14 @@ public abstract class AbstractJournalPersisterTest {
     }
 
     @SafeVarargs
-    public final void writeSequence(
-        final Command< Designator, EchoUpwardDuty< Designator > >... commands
+    final void writeSequence(
+        final Command<Designator, EchoUpwardDuty<Designator>>... commands
     ) throws IOException {
       writeSequence( ImmutableList.copyOf( commands ) ) ;
     }
 
-    public final void writeSequence(
-        final Iterable< Command< Designator, EchoUpwardDuty< Designator > > > commands
+    final void writeSequence(
+        final Iterable<Command<Designator, EchoUpwardDuty<Designator>>> commands
     ) throws IOException {
       persister.open() ;
       LOGGER.info( "Writing " + Command.class.getSimpleName() + "s ..." ) ;
@@ -186,7 +186,7 @@ public abstract class AbstractJournalPersisterTest {
      * This is a pessimistic approximation of the number of bytes in a text line representing a
      * {@link Command}.
      */
-    public static final int BYTES_PER_LINE = 20 ;
+    static final int BYTES_PER_LINE = 20 ;
   }
 
   private static final String COMMAND = Command.class.getSimpleName() ;

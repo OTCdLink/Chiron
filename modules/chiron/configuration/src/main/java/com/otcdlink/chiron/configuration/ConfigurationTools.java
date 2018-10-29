@@ -29,14 +29,15 @@ public final class ConfigurationTools {
   ) {
     final ConfigurationInspector.InspectorEnabled inspectorEnabled
         = ( ConfigurationInspector.InspectorEnabled ) configuration ;
-    final ThreadLocal< Map<Configuration.Inspector, List<Configuration.Property> > > inspectorsThreadLocal
-        = inspectorEnabled.$$inspectors$$() ;
-    Map<Configuration.Inspector, List<Configuration.Property> > inspectors = inspectorsThreadLocal.get() ;
+    final ThreadLocal< Map< Configuration.Inspector, List<Configuration.Property > > >
+        inspectorsThreadLocal = inspectorEnabled.$$inspectors$$() ;
+    Map< Configuration.Inspector, List<Configuration.Property> > inspectors =
+        inspectorsThreadLocal.get() ;
     if( inspectors == null ) {
       inspectors = new WeakHashMap<>() ;
       inspectorsThreadLocal.set( inspectors ) ;
     }
-    final List<Configuration.Property> accessedProperties = new ArrayList<>() ;
+    final List< Configuration.Property > accessedProperties = new ArrayList<>() ;
 
     @SuppressWarnings( "unchecked" )
     final ConfigurationInspector< C > inspector = new ConfigurationInspector(
@@ -55,7 +56,7 @@ public final class ConfigurationTools {
   public static < C extends Configuration > String lastValueAsString(
       final Configuration.Inspector< C > inspector
   ) {
-    return inspector.safeValueOf( inspector.lastAccessed().get( 0 ), "******" ) ;
+    return inspector.stringValueOf( inspector.lastAccessed().get( 0 ) ) ;
   }
   
 // ===============

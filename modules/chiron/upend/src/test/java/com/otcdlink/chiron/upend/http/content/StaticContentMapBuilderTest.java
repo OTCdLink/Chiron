@@ -2,20 +2,20 @@ package com.otcdlink.chiron.upend.http.content;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSource;
-import com.otcdlink.chiron.testing.MethodSupport;
+import com.otcdlink.chiron.testing.junit5.DirectoryExtension;
 import com.otcdlink.chiron.upend.http.content.caching.StaticContentCacheTest;
 import com.otcdlink.chiron.upend.http.content.file.FileFixture;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class StaticContentMapBuilderTest {
+class StaticContentMapBuilderTest {
 
 
   @Test
-  public void fromDirectory() throws Exception {
-    final FileFixture fileFixture = new FileFixture( methodSupport.getDirectory() ) ;
+  void fromDirectory() throws Exception {
+    final FileFixture fileFixture = new FileFixture( methodSupport.testDirectory() ) ;
 
     fileFixture.file_X.file() ;
     fileFixture.file_A_Y.file() ;
@@ -41,8 +41,10 @@ public class StaticContentMapBuilderTest {
 // =======
 
   private static final Logger LOGGER = LoggerFactory.getLogger( StaticContentCacheTest.class ) ;
-  @Rule
-  public final MethodSupport methodSupport = new MethodSupport() ;
+
+  @SuppressWarnings( "WeakerAccess" )
+  @RegisterExtension
+  final DirectoryExtension methodSupport = new DirectoryExtension() ;
 
 
 }
