@@ -5,6 +5,8 @@ import com.otcdlink.chiron.command.Command;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 
+import java.util.function.Consumer;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -26,7 +28,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * and Downend, while {@link CommandInterceptorTier} hides differences when sending Inbound
  * or Outbound.
  */
-public interface CommandInterceptor {
+public interface CommandInterceptor extends VisitableInterceptor {
 
   /**
    * @param sink where to send intercepted {@link Command}s to.
@@ -48,6 +50,10 @@ public interface CommandInterceptor {
     void sendBackward( Object message ) ;
   }
 
+  default void visit( final Consumer< CommandInterceptor > visitor ) {
+    visitor.accept( this ) ;
+  }
+
   /**
    * Creates a new instance for one specific {@link CommandInterceptorTier}.
    */
@@ -65,11 +71,18 @@ public interface CommandInterceptor {
     }
   }
 
-  final class Chain implements CommandInterceptor {
+  final class Chain implements CommandInterceptor, VisitableInterceptor {
     private final ImmutableList< CommandInterceptor > interceptors ;
 
     public Chain( final ImmutableList< CommandInterceptor > interceptors ) {
       this.interceptors = checkNotNull( interceptors ) ;
+    }
+
+    @Override
+    public void visit( final Consumer< CommandInterceptor > visitor ) {
+      for( final CommandInterceptor commandInterceptor : interceptors ) {
+        commandInterceptor.visit( visitor ) ;
+      }
     }
 
     @Override

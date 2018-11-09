@@ -68,7 +68,8 @@ public interface SessionSupervisor< CHANNEL, ADDRESS, SESSION_PRIMER > {
 
     /**
      *
-     * @param sessionPrimer may be null when reusing a session.
+     * @param sessionPrimer may be null when reusing a session. We need this parameter here
+     *     to configure Netty's Pipeline before any {@link Command} goes through it.
      */
     void sessionAttributed( SessionIdentifier sessionIdentifier, SESSION_PRIMER sessionPrimer ) ;
 

@@ -36,28 +36,30 @@ class EvaluatorParserTest {
     LOGGER.info( "Parsing \"" + testDefinition.query + "\" ..." ) ;
 
     final EvaluatorParser<
-        EvaluatorFixture.MyEntity,
-        EvaluatorFixture.MyEntitiyField< ?, ?, ? >
-    > evaluatorParser = new EvaluatorParser<>( empty ) ;
+            EvaluatorFixture.MyEntity,
+            EvaluatorFixture.MyContext,
+            EvaluatorFixture.MyEntitiyField< ?, ?, ?, ? >
+        > evaluatorParser = new EvaluatorParser<>( empty ) ;
 
     final Evaluator<
-        EvaluatorFixture.MyEntity,
-        EvaluatorFixture.MyEntitiyField< ?, ?, ? >
-    >  evaluator1,  evaluator2 ;
+            EvaluatorFixture.MyEntity,
+            EvaluatorFixture.MyContext,
+            EvaluatorFixture.MyEntitiyField< ?, ?, ?, ? >
+        > evaluator1, evaluator;
     evaluator1 = evaluatorParser.parse( testDefinition.query ) ;
     final String reprinted = evaluator1.asString() ;
     LOGGER.info( "Also reprinted from " + evaluator1 + "." ) ;
-    evaluator2 = evaluatorParser.parse( reprinted ) ;
+    evaluator = evaluatorParser.parse( reprinted ) ;
 
     for( final TestDefinition.EntityAssertion entityAssertion : testDefinition.entityAssertions ) {
       final boolean evaluation1 = evaluator1.evaluate( entityAssertion.myEntity ) ;
-      final boolean evaluation2 = evaluator2.evaluate( entityAssertion.myEntity ) ;
+      final boolean evaluation2 = evaluator.evaluate( entityAssertion.myEntity ) ;
       assertThat( evaluation1 )
           .describedAs( "Evaluating " + entityAssertion.myEntity + " with " + evaluator1 )
           .isEqualTo( entityAssertion.evaluationResult )
       ;
       assertThat( evaluation2 )
-          .describedAs( "Evaluating " + entityAssertion.myEntity + " with " + evaluator2 +
+          .describedAs( "Evaluating " + entityAssertion.myEntity + " with " + evaluator +
               " which was parsed from \"" + evaluator1 + "\"" )
           .isEqualTo( entityAssertion.evaluationResult )
       ;
@@ -136,9 +138,10 @@ class EvaluatorParserTest {
    * Just to save some characters in test methods without resorting to a static import.
    */
   private final Evaluator<
-      EvaluatorFixture.MyEntity,
-      EvaluatorFixture.MyEntitiyField< ?, ?, ? >
-  > empty = EvaluatorFixture.MyEntitiyField.EMPTY ;
+          EvaluatorFixture.MyEntity,
+          EvaluatorFixture.MyContext,
+          EvaluatorFixture.MyEntitiyField< ?, ?, ?, ? >
+      > empty = EvaluatorFixture.MyEntitiyField.empty( null ) ;
 
   private static void printToLogger( final Evaluator evaluator ) {
     LOGGER.info( "Created:\n" + evaluator.asString( EvaluatorPrinter.Setup.MULTILINE ) ) ;

@@ -10,6 +10,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,6 +35,11 @@ public class CommandInterceptorTest {
         new Traversal( fixture.commandInterceptor1, fixture.command2, false ),
         new Traversal( fixture.commandInterceptor2, fixture.command2, true )
     ) ;
+
+    final List< CommandInterceptor > visited = new ArrayList<>( 2 ) ;
+    interceptorChain.visit( visited::add ) ;
+    assertThat( visited )
+        .containsExactly( fixture.commandInterceptor1, fixture.commandInterceptor2 ) ;
 
   }
 

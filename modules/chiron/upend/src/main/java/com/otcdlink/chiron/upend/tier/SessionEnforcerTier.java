@@ -6,10 +6,12 @@ import com.otcdlink.chiron.middle.session.SessionIdentifier;
 import com.otcdlink.chiron.middle.session.SessionLifecycle;
 import com.otcdlink.chiron.middle.session.SignableUser;
 import com.otcdlink.chiron.middle.session.SignonFailureNotice;
+import com.otcdlink.chiron.middle.tier.VisitableInterceptor;
 import com.otcdlink.chiron.toolbox.ToStringTools;
 import com.otcdlink.chiron.toolbox.netty.NettyTools;
 import com.otcdlink.chiron.upend.UpendConnector;
 import com.otcdlink.chiron.upend.session.OutwardSessionSupervisor;
+import com.otcdlink.chiron.upend.session.SessionPrimable;
 import com.otcdlink.chiron.upend.session.SessionSupervisor;
 import com.otcdlink.chiron.upend.session.SessionSupervisor.ChannelCloser;
 import io.netty.channel.Channel;
@@ -231,10 +233,10 @@ public class SessionEnforcerTier< ADDRESS, SESSION_PRIMER >
     channelHandlerContext.close() ;
   }
 
-  private class SignonCallback< SESSIONPRIMER >
+  private class SignonCallback
       implements
-      SessionSupervisor.PrimarySignonAttemptCallback< SESSIONPRIMER >,
-      SessionSupervisor.SecondarySignonAttemptCallback< SESSIONPRIMER >
+      SessionSupervisor.PrimarySignonAttemptCallback< SESSION_PRIMER >,
+      SessionSupervisor.SecondarySignonAttemptCallback< SESSION_PRIMER >
   {
     /**
      * Documentation says the {@link ChannelHandlerContext} remains the same between calls to
@@ -251,11 +253,16 @@ public class SessionEnforcerTier< ADDRESS, SESSION_PRIMER >
     @Override
     public void sessionAttributed(
         final SessionIdentifier sessionIdentifier,
-        final SESSIONPRIMER sessionPrimer
+        final SESSION_PRIMER sessionPrimer
     ) {
       checkNotNull( sessionIdentifier ) ;
       LOGGER.debug( "Associated " + sessionIdentifier + " to " +
           channelHandlerContext.channel() + "." ) ;
+
+      if( sessionPrimer != null ) {
+        // Does not happen in Channel's thread but let's say it's safe for now.
+        primePipelineWith( channelHandlerContext, sessionPrimer ) ;
+      }
 
       // Channel could have get closed the time Session attribution occured elsewhere.
       if( channelHandlerContext.channel().isActive() ) {
@@ -292,6 +299,30 @@ public class SessionEnforcerTier< ADDRESS, SESSION_PRIMER >
     }
   }
 
+  private void primePipelineWith(
+      final ChannelHandlerContext channelHandlerContext,
+      final SESSION_PRIMER sessionPrimer
+  ) {
+    channelHandlerContext.channel().pipeline().forEach( entry -> {
+      if( entry.getValue() instanceof VisitableInterceptor ) {
+        primePipelineWith( ( VisitableInterceptor ) entry.getValue(), sessionPrimer ) ;
+      }
+    } ) ;
+  }
+
+  private void primePipelineWith(
+      final VisitableInterceptor visitableInterceptor,
+      final SESSION_PRIMER sessionPrimer
+  ) {
+    if( visitableInterceptor instanceof SessionPrimable ) {
+      ( ( SessionPrimable ) visitableInterceptor ).primeWith( sessionPrimer ) ;
+    }
+    visitableInterceptor.visit( commandInterceptor -> {
+      if( commandInterceptor != visitableInterceptor ) {
+        primePipelineWith( commandInterceptor, sessionPrimer ) ;
+      }
+    } );
+  }
 
 // ==================================
 // Check session validity and forward
@@ -315,17 +346,6 @@ public class SessionEnforcerTier< ADDRESS, SESSION_PRIMER >
       final ChannelHandlerContext channelHandlerContext,
       final SessionLifecycle.Phase signonPhase
   ) {
-    sendDownward( channelHandlerContext, null, signonPhase ) ;
-  }
-
-  private void sendDownward(
-      final ChannelHandlerContext channelHandlerContext,
-      final SESSION_PRIMER sessionPrimer,
-      final SessionLifecycle.Phase signonPhase
-  ) {
-    if( sessionPrimer != null ) {
-      channelHandlerContext.write( sessionPrimer ) ;
-    }
     channelHandlerContext.writeAndFlush( signonPhase )/*.addListener( future -> {
       if( ! future.isSuccess() ) {
         LOGGER.error( "Failed to send " + signonPhase + " in " + channelHandlerContext + ".",

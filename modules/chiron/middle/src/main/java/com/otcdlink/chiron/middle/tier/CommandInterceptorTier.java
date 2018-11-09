@@ -11,13 +11,17 @@ import org.joda.time.Duration;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Wraps a {@link CommandInterceptor} into a {@link ChannelHandler} that can run upend or downend.
  */
-public abstract class CommandInterceptorTier extends ChannelDuplexHandler {
+public abstract class CommandInterceptorTier
+    extends ChannelDuplexHandler
+    implements VisitableInterceptor
+{
 
   private final TypeParameterMatcher commandMatcher ;
 
@@ -53,6 +57,11 @@ public abstract class CommandInterceptorTier extends ChannelDuplexHandler {
       outboundSink = new OutboundSink( channelHandlerContext ) ;
     }
     return outboundSink ;
+  }
+
+  @Override
+  public final void visit( final Consumer< CommandInterceptor > visitor ) {
+    commandInterceptor.visit( visitor ) ;
   }
 
   @Override

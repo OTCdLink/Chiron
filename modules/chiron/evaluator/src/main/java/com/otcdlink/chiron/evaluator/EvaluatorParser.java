@@ -26,34 +26,23 @@ import static com.google.common.base.Preconditions.checkState;
 /**
  * Creates an {@link Evaluator} from its stringified form, printed with {@link EvaluatorPrinter}.
  */
-public final class EvaluatorParser< ENTITY, QUERYFIELD extends QueryField< ENTITY, ?, ?, ? > > {
+public final class EvaluatorParser<
+    ENTITY,
+    ENTITY_CONTEXT,
+    QUERYFIELD extends QueryField< ENTITY, ENTITY_CONTEXT, ?, ?, ?, ? >
+> {
 
-  private final Evaluator< ENTITY, QUERYFIELD > emptyEvaluator ;
+  private final Evaluator< ENTITY, ENTITY_CONTEXT, QUERYFIELD > emptyEvaluator ;
   private final ImmutableBiMap< String, QUERYFIELD > queryFieldMap ;
 
   public EvaluatorParser(
-      final ImmutableSet< QUERYFIELD > queryFields,
-      final Operator.Contextualizer contextualizer
-  ) {
-    this( queryFields, contextualizer, EvaluatorPrinter.Setup.MULTILINE ) ;
-  }
-
-  public EvaluatorParser(
-      final ImmutableSet< QUERYFIELD > queryFields,
-      final Operator.Contextualizer contextualizer,
-      final EvaluatorPrinter.Setup evaluatorPrinterSetup
-  ) {
-    this( Evaluator.empty( queryFields, contextualizer ), evaluatorPrinterSetup ) ;
-  }
-
-  public EvaluatorParser(
-      final Evaluator< ENTITY, QUERYFIELD > emptyEvaluator
+      final Evaluator< ENTITY, ENTITY_CONTEXT, QUERYFIELD > emptyEvaluator
   ) {
     this( emptyEvaluator, EvaluatorPrinter.Setup.MULTILINE ) ;
   }
 
   public EvaluatorParser(
-      final Evaluator< ENTITY, QUERYFIELD > emptyEvaluator,
+      final Evaluator< ENTITY, ENTITY_CONTEXT, QUERYFIELD > emptyEvaluator,
       final EvaluatorPrinter.Setup evaluatorPrinterSetup
   ) {
     checkArgument( emptyEvaluator.kind == Evaluator.Kind.EMPTY ) ;
@@ -134,9 +123,11 @@ public final class EvaluatorParser< ENTITY, QUERYFIELD extends QueryField< ENTIT
 
   private Parser operatorToken() {
     final Set< String > operatorSymbols = new LinkedHashSet<>() ;
-    final Evaluator< ?, ? > typedEvaluator = this.emptyEvaluator ;
-    for( final QueryField< ?, ?, ?, ? > queryField : typedEvaluator.queryFields ) {
-      operatorSymbols.addAll( queryField.operatorBiMap.keySet() ) ;
+    final Evaluator< ENTITY, ENTITY_CONTEXT, QUERYFIELD > typedEvaluator = this.emptyEvaluator ;
+    for( final QueryField< ENTITY, ENTITY_CONTEXT, ?, ?, ?, ? > queryField :
+        typedEvaluator.queryFields
+    ) {
+      operatorSymbols.addAll( queryField.operatorSymbolMap().keySet() ) ;
     }
     return newOringParser( operatorSymbols ) ;
   }
@@ -155,7 +146,7 @@ public final class EvaluatorParser< ENTITY, QUERYFIELD extends QueryField< ENTIT
     return FIELD_NAME_TOKEN
         .seq( operatorToken(), PARAMETER_TOKEN )
         .trim()
-        .map( ( Function< List< String >, Evaluator > ) tokens -> {
+        .map( ( Function< List< String >, Evaluator> ) tokens -> {
           final String fieldName = tokens.get( 0 ) ;
           final String operatorAsString = tokens.get( 1 ) ;
           final String escapedParameterAsString = tokens.get( 2 ) ;
@@ -165,12 +156,12 @@ public final class EvaluatorParser< ENTITY, QUERYFIELD extends QueryField< ENTIT
             throw new ParseRuntimeException(
                 "Undeclared '" + fieldName + "' in " + queryFieldMap.keySet() ) ;
           }
-          final Object parameter = queryField.parameterConverterFromString.convert(
+          final Object parameter = queryField.parameterConverter().convert(
               unescapedParameterAsString ) ;
-          final Operator operator = queryField.operatorBiMap.get( operatorAsString ) ;
+          final Operator operator = queryField.operatorSymbolMap().get( operatorAsString ) ;
           if( operator == null ) {
-            throw new ParseRuntimeException(
-                "Undeclared '" + operatorAsString + "' in " + queryField.operatorBiMap.keySet() ) ;
+            throw new ParseRuntimeException( "Undeclared '" + operatorAsString + "' in " +
+                queryField.operatorSymbolMap().keySet() ) ;
           }
           return ( ( Evaluator ) emptyEvaluator ).field( queryField, operator, parameter ) ;
         } )
@@ -203,7 +194,9 @@ public final class EvaluatorParser< ENTITY, QUERYFIELD extends QueryField< ENTIT
 
 
   @SuppressWarnings( "unused" )
-  public Evaluator< ENTITY, QUERYFIELD > parse( final String text ) throws ParseException {
+  public Evaluator< ENTITY, ENTITY_CONTEXT, QUERYFIELD > parse( final String text )
+      throws ParseException
+  {
     try {
       final Result result = topParser().parse( text ) ;
       return toEvaluator( result ) ;
@@ -212,12 +205,12 @@ public final class EvaluatorParser< ENTITY, QUERYFIELD extends QueryField< ENTIT
     }
   }
 
-  private Evaluator< ENTITY, QUERYFIELD > toEvaluator( final Result result ) {
+  private Evaluator< ENTITY, ENTITY_CONTEXT, QUERYFIELD > toEvaluator( final Result result ) {
     final List< Object > parsed = result.get() ;
     if( parsed == null || parsed.isEmpty() ) {
       return emptyEvaluator ;
     } else {
-      return ( Evaluator< ENTITY, QUERYFIELD > ) parsed.get( 0 ) ;
+      return ( Evaluator< ENTITY, ENTITY_CONTEXT, QUERYFIELD > ) parsed.get( 0 ) ;
     }
   }
 
@@ -249,7 +242,7 @@ public final class EvaluatorParser< ENTITY, QUERYFIELD extends QueryField< ENTIT
     if( retained.size() == 2 && retained.get( 0 ) instanceof Evaluator.Kind ) {
       final Evaluator.Kind combinatorKind = ( Evaluator.Kind ) retained.get( 0 ) ;
       final List< Object > subevaluatorList = ( List< Object > ) retained.get( 1 ) ;
-      final ImmutableList.Builder< Evaluator< ENTITY, QUERYFIELD > > builder =
+      final ImmutableList.Builder<Evaluator< ENTITY, ENTITY_CONTEXT, QUERYFIELD >> builder =
           ImmutableList.builder() ;
       for( final Object subevaluatorOrList : subevaluatorList ) {
         if( subevaluatorOrList instanceof List ) {

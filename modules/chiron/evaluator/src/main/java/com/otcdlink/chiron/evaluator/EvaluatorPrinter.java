@@ -38,13 +38,12 @@ public final class EvaluatorPrinter {
         return ;
 
       case FIELD :
-        Evaluator.Just< ?, ?, ?, ?, ? > forField = ( Evaluator.Just ) evaluator ;
+        Evaluator.ForField< ?, ?, ?, ?, ?, ?, ? > forField = ( Evaluator.ForField ) evaluator ;
         printSetup.indent( depth, appendable ) ;
         printSetup.prettyName( forField.queryfield, appendable ) ;
         appendable.append( ' ' ) ;
         appendable.append( forField.operator.symbol() ) ;
-        final Converter stringConverter = forField.queryfield
-            .parameterConverterFromString.reverse() ;
+        final Converter stringConverter = forField.queryfield.parameterConverter().reverse() ;
         final String parameterAsString = ( String ) stringConverter.convert( forField.parameter ) ;
         if( parameterAsString == null ) {
           appendable.append( ' ' ) ;
@@ -65,7 +64,7 @@ public final class EvaluatorPrinter {
         appendable.append( evaluator.kind.name() ) ;
         printSetup.openParenthesis( appendable ) ;
         printSetup.endOfLine( appendable ) ;
-        final Evaluator.Combinator< ?, ? > forCombinator = ( Evaluator.Combinator ) evaluator ;
+        final Evaluator.Combinator< ?, ?, ? > forCombinator = ( Evaluator.Combinator ) evaluator ;
         final int lastIndex = forCombinator.children.size() - 1 ;
         for( int i = 0 ; i <= lastIndex ; i ++ ) {
           final Evaluator child = forCombinator.children.get( i ) ;
@@ -95,7 +94,7 @@ public final class EvaluatorPrinter {
 
     public Setup(
         final String indent,
-        final Function< QueryField, String > queryFieldNameExtractor,
+        final Function<QueryField, String > queryFieldNameExtractor,
         final String openingParenthesis,
         final String closingParenthesis,
         final String collectionItemSeparator,

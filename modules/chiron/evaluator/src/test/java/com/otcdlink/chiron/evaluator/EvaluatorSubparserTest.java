@@ -67,11 +67,15 @@ class EvaluatorSubparserTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger( EvaluatorSubparserTest.class ) ;
 
-  private static final ImmutableSet< EvaluatorFixture.MyEntitiyField< ?, ?, ? > > QUERY_FIELDS_SET =
-      EvaluatorFixture.MyEntitiyField.SET ;
+  private static final ImmutableSet< EvaluatorFixture.MyEntitiyField< ?, ?, ?, ? > >
+      QUERY_FIELDS_SET = EvaluatorFixture.MyEntitiyField.SET ;
 
-  private EvaluatorParser< EvaluatorFixture.MyEntity, EvaluatorFixture.MyEntitiyField< ?, ?, ? > >
-  evaluatorParser = new EvaluatorParser<>( QUERY_FIELDS_SET, Operator.Contextualizer.NULL ) ;
+  private EvaluatorParser<
+        EvaluatorFixture.MyEntity,
+        EvaluatorFixture.MyContext,
+        EvaluatorFixture.MyEntitiyField< ?, ?, ?, ? >
+    >
+  evaluatorParser = new EvaluatorParser<>( Evaluator.empty( null, QUERY_FIELDS_SET ) ) ;
 
 
 }

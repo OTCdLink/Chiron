@@ -4,13 +4,12 @@ import com.google.common.base.Converter;
 import com.google.common.primitives.Ints;
 import com.otcdlink.chiron.toolbox.ComparatorTools;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeComparator;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 import java.util.function.IntPredicate;
 import java.util.regex.Pattern;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Pre-built instances of {@link Operator}.
@@ -34,19 +33,18 @@ public interface QueryOperators {
     }
 
   }
+  enum DateTimeOperator implements Operator< DateTime, DateTime, DateTime > {
 
-  @SuppressWarnings( "unused" )
-  enum IntegerOperator implements Operator< Integer, Integer > {
-    STRICTLY_GREATER_THAN( ScalarOrdering.STRICTLY_GREATER_THAN ),
-    GREATER_THAN_OR_EQUAL_TO( ScalarOrdering.GREATER_THAN_OR_EQUAL_TO ),
-    EQUAL_TO( ScalarOrdering.EQUAL_TO ),
-    STRICTLY_LOWER_THAN( ScalarOrdering.STRICTLY_LOWER_THAN ),
-    LOWER_THAN_OR_EQUAL_TO( ScalarOrdering.LOWER_THAN_OR_EQUAL_TO ),
+    STRICTLY_LOWER_THAN( QueryOperators.ScalarOrdering.STRICTLY_LOWER_THAN ),
+    LOWER_THAN_OR_EQUAL_TO( QueryOperators.ScalarOrdering.LOWER_THAN_OR_EQUAL_TO ),
+    EQUAL_TO( QueryOperators.ScalarOrdering.EQUAL_TO ),
+    GREATER_THAN_OR_EQUAL_TO( QueryOperators.ScalarOrdering.GREATER_THAN_OR_EQUAL_TO ),
+    STRICTLY_GREATER_THAN( QueryOperators.ScalarOrdering.STRICTLY_GREATER_THAN ),
     ;
 
-    private final ScalarOrdering scalarOrdering ;
+    private final QueryOperators.ScalarOrdering scalarOrdering ;
 
-    IntegerOperator( final ScalarOrdering scalarOrdering ) {
+    DateTimeOperator( final QueryOperators.ScalarOrdering scalarOrdering ) {
       this.scalarOrdering = scalarOrdering ;
     }
 
@@ -56,153 +54,128 @@ public interface QueryOperators {
     }
 
     @Override
-    public boolean apply( final Integer parameter, final Integer value ) {
-      final int comparison = ComparatorTools.INTEGER_COMPARATOR.compare( value, parameter ) ;
-      return scalarOrdering.comparisonResultEvaluator.test( comparison ) ;
-    }
-
-    public static final QueryField.Conversion< Integer, IntegerOperator, Integer > CONVERSION =
-        new QueryField.Conversion<>(
-            QueryField.Conversion.fromEnum( IntegerOperator.class ),
-            Ints.stringConverter()
-        )
-    ;
-
-  }
-
-  @SuppressWarnings( "unused" )
-  enum DateTimeOperator implements Operator< DateTime, DateTime > {
-    STRICTLY_GREATER_THAN( ScalarOrdering.STRICTLY_GREATER_THAN ),
-    GREATER_THAN_OR_EQUAL_TO( ScalarOrdering.GREATER_THAN_OR_EQUAL_TO ),
-    EQUAL_TO( ScalarOrdering.EQUAL_TO ),
-    STRICTLY_LOWER_THAN( ScalarOrdering.STRICTLY_LOWER_THAN ),
-    LOWER_THAN_OR_EQUAL_TO( ScalarOrdering.LOWER_THAN_OR_EQUAL_TO ),
-    ;
-
-    private final ScalarOrdering scalarOrdering ;
-
-    DateTimeOperator( final ScalarOrdering scalarOrdering ) {
-      this.scalarOrdering = scalarOrdering ;
-    }
-
-    @Override
-    public String symbol() {
-      return scalarOrdering.symbol ;
-    }
-
-    @Override
-    public boolean apply( final DateTime parameter, final DateTime value ) {
-      final int comparison = ComparatorTools.DATETIME_COMPARATOR.compare( value, parameter ) ;
-      return scalarOrdering.comparisonResultEvaluator.test( comparison ) ;
-    }
-
-
-    private static class ContextualizedDelegator extends Operator.Delegator< DateTime, DateTime > {
-      private final DateTime now ;
-
-      public ContextualizedDelegator(
-          final Operator< DateTime, DateTime > delegate,
-          final DateTime now
-      ) {
-        super( delegate ) ;
-        this.now = checkNotNull( now ) ;
-      }
-
-      @Override
-      public boolean apply( final DateTime parameter, final DateTime value ) {
-        return delegate.apply( parameter == null ? now : parameter, value ) ;
-      }
-    }
-
-    public static class NullAsMagicValue implements Contextualizer {
-      private final DateTime meaning ;
-
-      public NullAsMagicValue( final DateTime meaning ) {
-        this.meaning = checkNotNull( meaning ) ;
-      }
-
-      @Override
-      public Operator contextualize( final Operator operator ) {
-        if( operator instanceof DateTimeOperator ) {
-          return new ContextualizedDelegator( operator, meaning ) ;
-        } else {
-          return operator ;
-        }
-      }
+    public boolean apply(
+        final DateTime context,
+        final DateTime parameter,
+        final DateTime value
+    ) {
+      final DateTime dateTime = parameter == null ? context : parameter ;
+      return scalarOrdering.comparisonResultEvaluator.test(
+          DateTimeComparator.getInstance().compare( dateTime, value ) ) ;
     }
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER =
         DateTimeFormat.forPattern( "YYYY-MM-dd_HH:mm:ss:SSS" ).withZoneUTC() ;
 
-    private static final Converter< String, DateTime > DATE_TIME_CONVERTER = Converter.from(
+    public static final Converter< String, DateTime > DATE_TIME_CONVERTER = Converter.from(
         DATE_TIME_FORMATTER::parseDateTime,
         DATE_TIME_FORMATTER::print
     ) ;
 
-    public static final QueryField.Conversion< DateTime, DateTimeOperator, DateTime > CONVERSION =
-        new QueryField.Conversion<>(
-            QueryField.Conversion.fromEnum( DateTimeOperator.class ),
+    public static final OperatorCare< DateTimeOperator, DateTime, DateTime, DateTime > CARE =
+        OperatorCare.newFromEnum(
+            DateTimeOperator.class,
             DATE_TIME_CONVERTER
         )
     ;
 
   }
 
-  enum TextOperator implements Operator< Pattern, String > {
-    MATCHES_PATTERN {
-      @Override
-      public boolean apply( final Pattern pattern, final String s ) {
-        if( pattern == null ) {
-          return s == null ;
-        } else {
-          return pattern.matcher( s ).matches() ;
-        }
-      }
-      @Override
-      public String symbol() {
-        return "~=" ;
-      }
-    }
-    ,
+  enum TextOperator implements Operator< Void, Pattern, String > {
+
+    MATCHES( "~=" ),
     ;
 
-    private static final Converter< String, Pattern > PATTERN_CONVERTER = Converter.from(
+    private final String symbol ;
+
+    TextOperator( final String symbol ) {
+      this.symbol = symbol ;
+    }
+
+    @Override
+    public String symbol() {
+      return symbol ;
+    }
+
+    @Override
+    public boolean apply( final Void context, final Pattern parameter, final String value ) {
+      return parameter.matcher( value ).matches() ;
+    }
+
+    public static final Converter< String, Pattern > PATTERN_CONVERTER = Converter.from(
         Pattern::compile,
         pattern -> pattern != null ? pattern.pattern() : null
     ) ;
 
-    public static final QueryField.Conversion< Pattern, TextOperator, String > CONVERSION =
-        new QueryField.Conversion<>(
-            QueryField.Conversion.fromEnum( TextOperator.class ),
-            PATTERN_CONVERTER
-        )
-    ;
 
+    public static final OperatorCare< TextOperator, Void, Pattern, String > CARE =
+        OperatorCare.newFromEnum(
+            TextOperator.class,
+            QueryOperators.TextOperator.PATTERN_CONVERTER
+        )
+        ;
   }
 
-  enum StringOperator implements Operator< String, String > {
-    EQUAL_TO {
-      @Override
-      public boolean apply( final String parameter, final String value ) {
-        if( parameter == null ) {
-          return value == null ;
-        } else {
-          return parameter.equals( value ) ;
-        }
-      }
-      @Override
-      public String symbol() {
-        return "==" ;
-      }
-    }
-    ,
+  enum StringOperator implements Operator< Void, String, String > {
+
+    EQUAL_TO( "==" ),
     ;
-    public static final QueryField.Conversion< String, StringOperator, String > CONVERSION =
-        new QueryField.Conversion<>(
-            QueryField.Conversion.fromEnum( StringOperator.class ),
+
+    private final String symbol ;
+
+    StringOperator( final String symbol ) {
+      this.symbol = symbol ;
+    }
+
+    @Override
+    public String symbol() {
+      return symbol ;
+    }
+
+    @Override
+    public boolean apply( final Void context, final String parameter, final String value ) {
+      return ComparatorTools.STRING_COMPARATOR.compare( parameter, value ) == 0 ;
+    }
+
+    public static final OperatorCare< StringOperator, Void, String, String > CARE =
+        OperatorCare.newFromEnum(
+            StringOperator.class,
             Converter.identity()
         )
+        ;
+  }
+  enum IntegerOperator implements Operator< Void, Integer, Integer > {
+
+    STRICTLY_LOWER_THAN( QueryOperators.ScalarOrdering.STRICTLY_LOWER_THAN ),
+    LOWER_THAN_OR_EQUAL_TO( QueryOperators.ScalarOrdering.LOWER_THAN_OR_EQUAL_TO ),
+    EQUAL_TO( QueryOperators.ScalarOrdering.EQUAL_TO ),
+    GREATER_THAN_OR_EQUAL_TO( QueryOperators.ScalarOrdering.GREATER_THAN_OR_EQUAL_TO ),
+    STRICTLY_GREATER_THAN( QueryOperators.ScalarOrdering.STRICTLY_GREATER_THAN ),
     ;
 
+    private final QueryOperators.ScalarOrdering scalarOrdering ;
+
+    IntegerOperator( final QueryOperators.ScalarOrdering scalarOrdering ) {
+      this.scalarOrdering = scalarOrdering ;
+    }
+
+    @Override
+    public String symbol() {
+      return scalarOrdering.symbol ;
+    }
+
+    @Override
+    public boolean apply( final Void context, final Integer parameter, final Integer value ) {
+      return scalarOrdering.comparisonResultEvaluator.test(
+          ComparatorTools.INTEGER_COMPARATOR.compare( parameter, value ) ) ;
+    }
+
+    public static final OperatorCare<IntegerOperator, Void, Integer, Integer > CARE =
+        OperatorCare.newFromEnum(
+            IntegerOperator.class,
+            Ints.stringConverter()
+        )
+        ;
   }
+
 }
