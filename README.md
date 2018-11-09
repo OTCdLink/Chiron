@@ -22,3 +22,4 @@ More articles! (still in French)
 
 - [Chiron-mockster](https://groups.google.com/d/msg/techos/n0KVG_u-ltI/H489Xk95CQAJ)
 - [Chiron-wire](https://groups.google.com/d/msg/techos/bVvkawKy7Ac/E6CjfIuKCQAJ)
+- [Chiron-evaluator](https://groups.google.com/d/msg/techos/rvChS9OdlR8/QFEQFkL8AQAJ)
